@@ -1,14 +1,17 @@
-# Codex Closed-Loop Task 003 Review Package
+# Codex Closed-Loop Task 004 Review Package
 
 ## Metadata
 
-- as_of: `2026-07-03T23:47:58+08:00`
+- as_of: `2026-07-04T06:07:14+08:00`
 - project_root: `E:\abc`
 - pr_url: `https://github.com/jongyawjong0514/abc-quant/pull/2`
 - branch: `codex/file-closed-loop-guard`
-- head_sha: `35d1a58e0340426aee14ae1e97babfded411b32e`
-- status_excludes_output_file: true
+- source_head_sha_at_generation: `949d87618c390a0fafb903def4dc34250d00781d`
+- review_package_commit_sha: `unavailable_self_reference`
+- review_package_output_file: reviews/review_package_002.md
 - output_file: reviews/review_package_002.md
+- status_excludes_output_file: true
+- diff_check_excludes_output_file: true
 
 ## Objective
 
@@ -36,100 +39,44 @@ Output-file entries excluded from assert-clean:
 
 ## Git Diff Check
 
-Command: `git diff --check`
+Command: `git diff --check -- . :!reviews/review_package_002.md`
 
 ```text
-reviews/review_package_002.md:171: trailing whitespace.
-++
-reviews/review_package_002.md:187: trailing whitespace.
-++
-reviews/review_package_002.md:191: trailing whitespace.
-++
-reviews/review_package_002.md:355: trailing whitespace.
-++
-reviews/review_package_002.md:359: trailing whitespace.
-++
-reviews/review_package_002.md:405: trailing whitespace.
-++
-reviews/review_package_002.md:417: trailing whitespace.
-++
-reviews/review_package_002.md:473: trailing whitespace.
-++
-reviews/review_package_002.md:681: trailing whitespace.
-++
-reviews/review_package_002.md:699: trailing whitespace.
-++
-reviews/review_package_002.md:727: trailing whitespace.
-++
-reviews/review_package_002.md:773: trailing whitespace.
-++
-reviews/review_package_002.md:801: trailing whitespace.
-++
-reviews/review_package_002.md:1243: trailing whitespace.
-++
-reviews/review_package_002.md:8483: trailing whitespace.
-+
-reviews/review_package_002.md:8491: trailing whitespace.
-+
-reviews/review_package_002.md:8493: trailing whitespace.
-+
-reviews/review_package_002.md:8575: trailing whitespace.
-+
-reviews/review_package_002.md:8577: trailing whitespace.
-+
-reviews/review_package_002.md:8600: trailing whitespace.
-+
-reviews/review_package_002.md:8606: trailing whitespace.
-+
-reviews/review_package_002.md:8634: trailing whitespace.
-+
-reviews/review_package_002.md:8738: trailing whitespace.
-+
-reviews/review_package_002.md:8747: trailing whitespace.
-+
-reviews/review_package_002.md:8761: trailing whitespace.
-+
-reviews/review_package_002.md:8784: trailing whitespace.
-+
-reviews/review_package_002.md:8798: trailing whitespace.
-+
-reviews/review_package_002.md:9019: trailing whitespace.
-+
-(exit_code=2)
+
+(exit_code=0)
 ```
 
 ## Branch Diff Stat Versus Main
 
-Command: `git diff --stat main...HEAD`
+Command: `git diff --stat main...HEAD -- . :!reviews/review_package_002.md`
 
 ```text
  .gitignore                             |   2 +
- CHANGELOG.md                           |   4 +
+ CHANGELOG.md                           |   7 +
  FILE_MANIFEST.txt                      |  24 +-
  INBOX.md                               |  43 ++-
- OUTBOX.md                              | 102 ++++++
+ OUTBOX.md                              | 138 ++++++++
  README.md                              |  12 +
- STATUS.md                              |   8 +
+ STATUS.md                              |  10 +
  TECH_LEAD_PROTOCOL.md                  |  18 +-
  TODO.md                                |   2 +
  configs/codex_closed_loop.yaml         |  73 ++++
  docs/codex_closed_loop.md              |  82 +++++
  prompts/codex_closed_loop_runner.md    |  14 +
  pyproject.toml                         |   2 +-
- reviews/review_package_002.md          | 136 ++++++++
- scripts/build_review_package.py        | 408 +++++++++++++++++++++++
+ scripts/build_review_package.py        | 541 +++++++++++++++++++++++++++++
  scripts/codex_loop_guard.py            |  31 ++
  scripts/run_codex_closed_loop.ps1      |  27 ++
  src/abc_quant/governance/__init__.py   |   2 +
- src/abc_quant/governance/codex_loop.py | 590 +++++++++++++++++++++++++++++++++
- tests/test_codex_loop_guard.py         | 214 ++++++++++++
- 20 files changed, 1776 insertions(+), 18 deletions(-)
+ src/abc_quant/governance/codex_loop.py | 602 +++++++++++++++++++++++++++++++++
+ tests/test_codex_loop_guard.py         | 292 ++++++++++++++++
+ 19 files changed, 1904 insertions(+), 18 deletions(-)
 (exit_code=0)
 ```
 
 ## Branch Changed Files Versus Main
 
-Command: `git diff --name-only main...HEAD`
+Command: `git diff --name-only main...HEAD -- . :!reviews/review_package_002.md`
 
 ```text
 .gitignore
@@ -145,7 +92,6 @@ configs/codex_closed_loop.yaml
 docs/codex_closed_loop.md
 prompts/codex_closed_loop_runner.md
 pyproject.toml
-reviews/review_package_002.md
 scripts/build_review_package.py
 scripts/codex_loop_guard.py
 scripts/run_codex_closed_loop.ps1
@@ -157,7 +103,7 @@ tests/test_codex_loop_guard.py
 
 ## Branch Diff Versus Main
 
-Command: `git diff main...HEAD`
+Command: `git diff main...HEAD -- . :!reviews/review_package_002.md`
 
 ```text
 diff --git a/.gitignore b/.gitignore
@@ -176,13 +122,16 @@ index 57d4c81..10c7fc9 100644
  abc_project_E_drive_ready/
  abc_project_E_drive_ready.zip
 diff --git a/CHANGELOG.md b/CHANGELOG.md
-index 2586add..28110f5 100644
+index 2586add..ac7bbf4 100644
 --- a/CHANGELOG.md
 +++ b/CHANGELOG.md
-@@ -2,6 +2,10 @@
+@@ -2,6 +2,13 @@
 
  ## Unreleased
 
++- 修正 review package final audit，將 output file 從 repo diff-check 中排除，並單獨驗證輸出檔沒有 trailing whitespace。
++- 調整 review package SHA metadata，改用 `source_head_sha_at_generation` 與 `review_package_commit_sha: unavailable_self_reference`，避免把 package 產生前 SHA 誤標為最終 head。
++- 保留 closed-loop guard 內建 blocked content/path patterns；config 現在只能增加 blockers，不能移除 `token`、`.git`、`data/raw` 等預設防線。
 +- 強化 Codex closed-loop guard：即使 `risk_level: normal`，仍會封鎖破壞性、憑證、外部網路、絕對路徑、repo 外路徑與資料原始區目標。
 +- 擴充 `scripts/build_review_package.py`，支援完整 diff、完整檔案內容、驗證結果、完整 HEAD SHA 與排除輸出檔的 `--assert-clean`。
 +- 新增 tracked review package 生成腳本與本輪 `reviews/review_package_002.md`，取代根目錄一次性 review 輸出。
@@ -318,12 +267,48 @@ index 5790cf3..81cd033 100644
 +# risk_level: normal
 +```
 diff --git a/OUTBOX.md b/OUTBOX.md
-index 4d6402a..5b789a4 100644
+index 4d6402a..a35da05 100644
 --- a/OUTBOX.md
 +++ b/OUTBOX.md
-@@ -1,5 +1,107 @@
+@@ -1,5 +1,143 @@
  # OUTBOX
 
++## 2026-07-04 Closed-Loop Task 004 - Final Review Audit and Guard Defaults
++
++## 修改檔案
++- `src/abc_quant/governance/codex_loop.py`: preserved built-in blocked content/path patterns when config adds custom patterns.
++- `tests/test_codex_loop_guard.py`: added regression tests proving config cannot remove default `token` or `.git` blockers and cannot enable auto-merge.
++- `scripts/build_review_package.py`: added two-pass final audit, output-file trailing-whitespace check, diff-check exclusion for the output file, and clearer SHA metadata.
++- `reviews/review_package_002.md`: regenerated as the Task 004 review package after source changes were committed.
++- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`: recorded Task 004 governance results.
++
++## 實作摘要
++- `blocked_content_patterns` and `blocked_path_patterns` now merge config additions onto built-in defaults; config can no longer weaken the default guard.
++- `allowed_risk_levels` still filters to `normal` only, and `allow_auto_merge` remains forced to `false`.
++- Review package metadata now uses `source_head_sha_at_generation`, `review_package_output_file`, and `review_package_commit_sha: unavailable_self_reference`.
++- Review package generation excludes `reviews/review_package_002.md` from repo-level diff checks to avoid self-reference, then separately audits the generated output file for trailing whitespace.
++
++## 測試方式
++- `python -m pytest`
++- `python -m compileall src tests`
++- `ruff check .`
++- `git diff --check`
++- `python scripts\build_review_package.py --output reviews\review_package_002.md --title "Codex Closed-Loop Task 004 Review Package" --pr-url "https://github.com/jongyawjong0514/abc-quant/pull/2" --run-validation --include-diff --include-file-contents --assert-clean`
++
++## 測試結果
++- `pytest`: 32 passed in 1.18s.
++- `compileall`: passed for `src` and `tests`.
++- `ruff`: unavailable in the current shell; no package was installed.
++- `git diff --check`: passed before source commit; final check after package generation also passed.
++
++## 已知限制
++- `review_package_commit_sha` remains `unavailable_self_reference` because committing the review package changes the final commit SHA.
++- The package excludes itself from repo-level diff sections to prevent recursive package growth, but it audits the output file directly for trailing whitespace.
++
++## 下一步建議
++- Ask ChatGPT Pro to re-review `reviews/review_package_002.md` on PR #2.
++- Merge only after review approval; closed-loop policy still forbids auto-merge.
++
 +## 2026-07-03 Closed-Loop Task 003 - Guard Hardening and Reproducible Review Package
 +
 +## 修改檔案
@@ -453,10 +438,10 @@ index dbf1b48..0cb65d9 100644
 
  在 Windows PowerShell：
 diff --git a/STATUS.md b/STATUS.md
-index 6a2408e..d1b658a 100644
+index 6a2408e..bc2a8be 100644
 --- a/STATUS.md
 +++ b/STATUS.md
-@@ -4,3 +4,11 @@
+@@ -4,3 +4,13 @@
  - 2026-07-03: Technical-lead operating model recorded. ChatGPT Pro may own specs, next tasks, and review notes for `E:\abc`; Codex remains implementation engineer. Override of system/safety/direct-user rules was not accepted.
  - 2026-07-03: Completed `RUN_CODEX_NEXT.md` first implementation round. Editable install succeeded as `abc-quant==0.0.2` and `pytest` passed: 13 passed, 1 pytest cache warning from `E:\abc\.pytest_cache` access denied.
  - 2026-07-03: Completed ChatGPT Review 001, added PR hygiene `.gitignore`, fixed pytest temp/cache behavior, and revalidated `pytest`: 13 passed in 0.83s.
@@ -468,6 +453,8 @@ index 6a2408e..d1b658a 100644
 +- 2026-07-03: Final task 001 direct validation passed: `pytest` 19 passed in 0.94s; closed-loop guard returned `status=no_task`.
 +- 2026-07-03: Started closed-loop task 003 to harden the guard against disguised risky normal tasks and make `reviews/review_package_002.md` reproducible.
 +- 2026-07-03: Task 003 validation passed with `pytest` 29 passed and `compileall src tests`; `ruff check .` is unavailable in the current shell.
++- 2026-07-04: Started closed-loop task 004 to fix final review package audit metadata and preserve built-in guard blockers when config adds custom blockers.
++- 2026-07-04: Task 004 validation passed with `pytest` 32 passed, `compileall src tests`, and `git diff --check`; `ruff check .` is unavailable in the current shell.
 diff --git a/TECH_LEAD_PROTOCOL.md b/TECH_LEAD_PROTOCOL.md
 index 3fd7bfc..c5934dc 100644
 --- a/TECH_LEAD_PROTOCOL.md
@@ -711,154 +698,12 @@ index fc38fb3..e0194cb 100644
 
  [tool.ruff]
  line-length = 100
-diff --git a/reviews/review_package_002.md b/reviews/review_package_002.md
-new file mode 100644
-index 0000000..b7385d6
---- /dev/null
-+++ b/reviews/review_package_002.md
-@@ -0,0 +1,136 @@
-+# Codex Closed-Loop Task 001 Review Package
-+
-+- as_of: `2026-07-03T22:28:24+08:00`
-+- project_root: `E:\abc`
-+- branch: `codex/file-closed-loop-guard`
-+- head_commit: `efcfde6`
-+- pr_url: `https://github.com/jongyawjong0514/abc-quant/pull/2`
-+
-+## Objective
-+
-+Finish repository hygiene, provide a tracked review package, verify the project, and push the current work to GitHub for ChatGPT Pro review.
-+
-+## Git Status
-+
-+```text
-+## codex/file-closed-loop-guard...origin/codex/file-closed-loop-guard
-+ M .gitignore
-+ M CHANGELOG.md
-+ M FILE_MANIFEST.txt
-+ M OUTBOX.md
-+ M STATUS.md
-+?? reviews/review_package_002.md
-+?? scripts/build_review_package.py
-+(exit_code=0)
-+```
-+
-+## Branch Diff Stat Versus Main
-+
-+```text
-+ .gitignore                             |   1 +
-+ CHANGELOG.md                           |   1 +
-+ FILE_MANIFEST.txt                      |  22 +++-
-+ INBOX.md                               |  43 ++++--
-+ OUTBOX.md                              |  36 ++++++
-+ README.md                              |  12 ++
-+ STATUS.md                              |   3 +
-+ TECH_LEAD_PROTOCOL.md                  |  18 ++-
-+ TODO.md                                |   2 +
-+ configs/codex_closed_loop.yaml         |  16 +++
-+ docs/codex_closed_loop.md              |  82 ++++++++++++
-+ prompts/codex_closed_loop_runner.md    |  14 ++
-+ pyproject.toml                         |   2 +-
-+ scripts/codex_loop_guard.py            |  31 +++++
-+ scripts/run_codex_closed_loop.ps1      |  27 ++++
-+ src/abc_quant/governance/__init__.py   |   2 +
-+ src/abc_quant/governance/codex_loop.py | 230 +++++++++++++++++++++++++++++++++
-+ tests/test_codex_loop_guard.py         |  91 +++++++++++++
-+ 18 files changed, 615 insertions(+), 18 deletions(-)
-+(exit_code=0)
-+```
-+
-+## Branch Changed Files Versus Main
-+
-+```text
-+.gitignore
-+CHANGELOG.md
-+FILE_MANIFEST.txt
-+INBOX.md
-+OUTBOX.md
-+README.md
-+STATUS.md
-+TECH_LEAD_PROTOCOL.md
-+TODO.md
-+configs/codex_closed_loop.yaml
-+docs/codex_closed_loop.md
-+prompts/codex_closed_loop_runner.md
-+pyproject.toml
-+scripts/codex_loop_guard.py
-+scripts/run_codex_closed_loop.ps1
-+src/abc_quant/governance/__init__.py
-+src/abc_quant/governance/codex_loop.py
-+tests/test_codex_loop_guard.py
-+(exit_code=0)
-+```
-+
-+## Working Tree Diff Stat
-+
-+```text
-+ .gitignore        |  1 +
-+ CHANGELOG.md      |  1 +
-+ FILE_MANIFEST.txt |  2 ++
-+ OUTBOX.md         | 27 +++++++++++++++++++++++++++
-+ STATUS.md         |  1 +
-+ 5 files changed, 32 insertions(+)
-+(exit_code=0)
-+```
-+
-+## Validation
-+
-+### pytest
-+
-+```text
-+============================= test session starts =============================
-+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0
-+rootdir: E:\abc
-+configfile: pyproject.toml
-+testpaths: tests
-+collected 19 items
-+
-+tests\test_codex_loop_guard.py ......                                    [ 31%]
-+tests\test_config_settings.py ..                                         [ 42%]
-+tests\test_data_validation.py ....                                       [ 63%]
-+tests\test_features_price_volume.py .                                    [ 68%]
-+tests\test_labels_returns.py ..                                          [ 78%]
-+tests\test_metrics_performance.py ..                                     [ 89%]
-+tests\test_project_bootstrap.py ..                                       [100%]
-+
-+============================= 19 passed in 0.84s ==============================
-+(exit_code=0)
-+```
-+
-+### closed-loop guard
-+
-+```text
-+status=no_task
-+report=E:\abc\reports\codex_loop\latest.md
-+(exit_code=0)
-+```
-+
-+## Review Pointers
-+
-+- `docs/codex_closed_loop.md`: closed-loop protocol and safety boundaries.
-+- `src/abc_quant/governance/codex_loop.py`: guard implementation.
-+- `tests/test_codex_loop_guard.py`: guard behavior coverage.
-+- `OUTBOX.md`: Codex execution summary.
-+- `STATUS.md`: project status log.
-+
-+## Known Local Artifacts
-+
-+- `.venv/`, `.tmp_pytest/`, `state/codex_context/`, and `reports/codex_loop/` are local/ignored artifacts.
-+- Old root-level `CODEX_REVIEW_PACKAGE.md` and `CODEX_TEST_RESULT.txt` are superseded by this tracked review package.
-+- `.pytest_cache/` may remain as a Windows ACL residue on this machine; it is ignored and not part of Git history.
-+
-+## Promotion Boundary
-+
-+This package contains repository governance work only. It does not add trading strategy logic, model training, broker integration, or formal signal promotion.
 diff --git a/scripts/build_review_package.py b/scripts/build_review_package.py
 new file mode 100644
-index 0000000..d7ad5fa
+index 0000000..5734336
 --- /dev/null
 +++ b/scripts/build_review_package.py
-@@ -0,0 +1,408 @@
+@@ -0,0 +1,541 @@
 +"""Build a tracked Markdown review package for ChatGPT Pro review."""
 +
 +from __future__ import annotations
@@ -909,6 +754,16 @@ index 0000000..d7ad5fa
 +        return not self.dirty_entries_excluding_output
 +
 +
++@dataclass(frozen=True)
++class FinalAudit:
++    """Audit facts checked after the review package is generated."""
++
++    final_output_trailing_whitespace: bool
++    final_git_diff_check_excluding_output: str
++    final_clean_excluding_output_file: bool
++    diff_check_result: CommandResult
++
++
 +def main() -> int:
 +    parser = argparse.ArgumentParser(description="Build an ABC Quant review package.")
 +    parser.add_argument("--output", type=Path, required=True, help="Markdown file to write.")
@@ -938,10 +793,10 @@ index 0000000..d7ad5fa
 +
 +    root = Path.cwd()
 +    output = resolve_output(root, args.output)
-+    clean_status = inspect_clean_status(root, output)
-+    if args.assert_clean and not clean_status.is_clean_excluding_output:
++    initial_clean_status = inspect_clean_status(root, output)
++    if args.assert_clean and not initial_clean_status.is_clean_excluding_output:
 +        print("Working tree is dirty outside the review package output file:", file=sys.stderr)
-+        for entry in clean_status.dirty_entries_excluding_output:
++        for entry in initial_clean_status.dirty_entries_excluding_output:
 +            print(entry, file=sys.stderr)
 +        return 2
 +
@@ -950,7 +805,8 @@ index 0000000..d7ad5fa
 +        validations.extend(run_validations(root))
 +
 +    output.parent.mkdir(parents=True, exist_ok=True)
-+    package_text = strip_trailing_whitespace(
++    write_package(
++        output,
 +        render_package(
 +            root=root,
 +            output=output,
@@ -959,13 +815,58 @@ index 0000000..d7ad5fa
 +            validations=validations,
 +            include_diff=args.include_diff,
 +            include_file_contents=args.include_file_contents,
-+            clean_status=clean_status,
-+        )
++            clean_status=initial_clean_status,
++            final_audit=None,
++        ),
 +    )
-+    with output.open("w", encoding="utf-8", newline="\n") as handle:
-+        handle.write(package_text)
++    final_audit = audit_generated_package(root, output)
++    final_clean_status = inspect_clean_status(root, output)
++    write_package(
++        output,
++        render_package(
++            root=root,
++            output=output,
++            title=args.title,
++            pr_url=args.pr_url,
++            validations=validations,
++            include_diff=args.include_diff,
++            include_file_contents=args.include_file_contents,
++            clean_status=final_clean_status,
++            final_audit=final_audit,
++        ),
++    )
++    final_audit = audit_generated_package(root, output)
++    if (
++        final_audit.final_output_trailing_whitespace
++        or final_audit.final_git_diff_check_excluding_output != "passed"
++        or not final_audit.final_clean_excluding_output_file
++    ):
++        print("Final review package audit failed:", file=sys.stderr)
++        print(
++            f"final_output_trailing_whitespace="
++            f"{final_audit.final_output_trailing_whitespace}",
++            file=sys.stderr,
++        )
++        print(
++            f"final_git_diff_check_excluding_output="
++            f"{final_audit.final_git_diff_check_excluding_output}",
++            file=sys.stderr,
++        )
++        print(
++            f"final_clean_excluding_output_file="
++            f"{final_audit.final_clean_excluding_output_file}",
++            file=sys.stderr,
++        )
++        return 3
 +    print(output)
 +    return 0
++
++
++def write_package(output: Path, text: str) -> None:
++    """Write generated Markdown with stable line endings and no trailing whitespace."""
++
++    with output.open("w", encoding="utf-8", newline="\n") as handle:
++        handle.write(strip_trailing_whitespace(text))
 +
 +
 +def resolve_output(root: Path, output: Path) -> Path:
@@ -996,17 +897,27 @@ index 0000000..d7ad5fa
 +    include_diff: bool,
 +    include_file_contents: bool,
 +    clean_status: CleanStatus,
++    final_audit: FinalAudit | None,
 +) -> str:
 +    as_of = datetime.now(ZoneInfo("Asia/Taipei")).isoformat(timespec="seconds")
 +    output_relative = relative_to_root(output, root)
 +    branch = git_value(["branch", "--show-current"], root)
-+    head_sha = git_value(["rev-parse", "HEAD"], root)
++    source_head_sha = git_value(["rev-parse", "HEAD"], root)
 +    git_status = git(["status", "--short", "--branch"], root)
-+    diff_check = git(["diff", "--check"], root)
-+    diff_stat = git(["diff", "--stat", "main...HEAD"], root)
-+    diff_names_result = run_command(["git", "diff", "--name-only", "main...HEAD"], root)
++    diff_check = git_diff_check_excluding_output(root, output)
++    diff_stat = git(
++        ["diff", "--stat", "main...HEAD", "--", ".", f":!{output_relative}"], root
++    )
++    diff_names_result = run_command(
++        ["git", "diff", "--name-only", "main...HEAD", "--", ".", f":!{output_relative}"],
++        root,
++    )
 +    diff_names = diff_names_result.output.rstrip() + f"\n(exit_code={diff_names_result.exit_code})"
-+    full_diff = git(["diff", "main...HEAD"], root) if include_diff else "_Not requested._"
++    full_diff = (
++        git(["diff", "main...HEAD", "--", ".", f":!{output_relative}"], root)
++        if include_diff
++        else "_Not requested._"
++    )
 +
 +    sections = [
 +        f"# {title}",
@@ -1017,9 +928,12 @@ index 0000000..d7ad5fa
 +        f"- project_root: `{root}`",
 +        f"- pr_url: `{pr_url}`" if pr_url else "- pr_url: ``",
 +        f"- branch: `{branch}`",
-+        f"- head_sha: `{head_sha}`",
-+        f"- status_excludes_output_file: {str(clean_status.status_excludes_output_file).lower()}",
++        f"- source_head_sha_at_generation: `{source_head_sha}`",
++        "- review_package_commit_sha: `unavailable_self_reference`",
++        f"- review_package_output_file: {output_relative}",
 +        f"- output_file: {output_relative}",
++        f"- status_excludes_output_file: {str(clean_status.status_excludes_output_file).lower()}",
++        "- diff_check_excludes_output_file: true",
 +        "",
 +        "## Objective",
 +        "",
@@ -1045,25 +959,25 @@ index 0000000..d7ad5fa
 +        [
 +            "## Git Diff Check",
 +            "",
-+            "Command: `git diff --check`",
++            f"Command: `git diff --check -- . :!{output_relative}`",
 +            "",
-+            fenced(diff_check),
++            fenced(diff_check.output.rstrip() + f"\n(exit_code={diff_check.exit_code})"),
 +            "",
 +            "## Branch Diff Stat Versus Main",
 +            "",
-+            "Command: `git diff --stat main...HEAD`",
++            f"Command: `git diff --stat main...HEAD -- . :!{output_relative}`",
 +            "",
 +            fenced(diff_stat),
 +            "",
 +            "## Branch Changed Files Versus Main",
 +            "",
-+            "Command: `git diff --name-only main...HEAD`",
++            f"Command: `git diff --name-only main...HEAD -- . :!{output_relative}`",
 +            "",
 +            fenced(diff_names),
 +            "",
 +            "## Branch Diff Versus Main",
 +            "",
-+            "Command: `git diff main...HEAD`",
++            f"Command: `git diff main...HEAD -- . :!{output_relative}`",
 +            "",
 +            fenced(full_diff),
 +            "",
@@ -1087,6 +1001,40 @@ index 0000000..d7ad5fa
 +    else:
 +        sections.append("_No validation commands were run by the package builder._")
 +
++    if final_audit:
++        sections.extend(
++            [
++                "",
++                "## Final Audit",
++                "",
++                (
++                    f"- final_output_trailing_whitespace: "
++                    f"{str(final_audit.final_output_trailing_whitespace).lower()}"
++                ),
++                (
++                    f"- final_git_diff_check_excluding_output: "
++                    f"{final_audit.final_git_diff_check_excluding_output}"
++                ),
++                (
++                    f"- final_clean_excluding_output_file: "
++                    f"{str(final_audit.final_clean_excluding_output_file).lower()}"
++                ),
++                "",
++            ]
++        )
++    else:
++        sections.extend(
++            [
++                "",
++                "## Final Audit",
++                "",
++                "- final_output_trailing_whitespace: pending",
++                "- final_git_diff_check_excluding_output: pending",
++                "- final_clean_excluding_output_file: pending",
++                "",
++            ]
++        )
++
 +    if include_file_contents:
 +        sections.extend(render_file_contents(root, output, diff_names_result.output))
 +    else:
@@ -1107,6 +1055,31 @@ index 0000000..d7ad5fa
 +        ]
 +    )
 +    return "\n".join(sections)
++
++
++def audit_generated_package(root: Path, output: Path) -> FinalAudit:
++    """Audit the actual generated review package file."""
++
++    diff_check = git_diff_check_excluding_output(root, output)
++    clean_status = inspect_clean_status(root, output)
++    return FinalAudit(
++        final_output_trailing_whitespace=file_has_trailing_whitespace(output),
++        final_git_diff_check_excluding_output=(
++            "passed" if diff_check.exit_code == 0 else f"failed_exit_{diff_check.exit_code}"
++        ),
++        final_clean_excluding_output_file=clean_status.is_clean_excluding_output,
++        diff_check_result=diff_check,
++    )
++
++
++def file_has_trailing_whitespace(path: Path) -> bool:
++    """Return true when any generated output line ends with space or tab."""
++
++    try:
++        text = path.read_text(encoding="utf-8", errors="replace")
++    except OSError:
++        return True
++    return any(line.endswith((" ", "\t")) for line in text.splitlines())
 +
 +
 +def render_file_contents(root: Path, output: Path, diff_names: str) -> list[str]:
@@ -1198,6 +1171,11 @@ index 0000000..d7ad5fa
 +def git(args: list[str], cwd: Path) -> str:
 +    result = run_command(["git", *args], cwd)
 +    return result.output.rstrip() + f"\n(exit_code={result.exit_code})"
++
++
++def git_diff_check_excluding_output(root: Path, output: Path) -> CommandResult:
++    output_relative = relative_to_root(output, root)
++    return run_command(["git", "diff", "--check", "--", ".", f":!{output_relative}"], root)
 +
 +
 +def git_value(args: list[str], cwd: Path) -> str:
@@ -1347,10 +1325,10 @@ index 0000000..12cd50a
 +
 diff --git a/src/abc_quant/governance/codex_loop.py b/src/abc_quant/governance/codex_loop.py
 new file mode 100644
-index 0000000..c429ec8
+index 0000000..abc02cc
 --- /dev/null
 +++ b/src/abc_quant/governance/codex_loop.py
-@@ -0,0 +1,590 @@
+@@ -0,0 +1,602 @@
 +"""Guard rails for the file-based Codex/ChatGPT closed loop."""
 +
 +from __future__ import annotations
@@ -1522,11 +1500,11 @@ index 0000000..c429ec8
 +        report_dir=Path(str(data.get("report_dir", defaults.report_dir))),
 +        allowed_risk_levels=allowed,
 +        blocked_risk_levels=blocked.union(defaults.blocked_risk_levels),
-+        blocked_path_patterns=_string_tuple(
-+            data.get("blocked_path_patterns"), defaults.blocked_path_patterns
++        blocked_path_patterns=_merge_string_tuple(
++            defaults.blocked_path_patterns, data.get("blocked_path_patterns")
 +        ),
-+        blocked_content_patterns=_string_tuple(
-+            data.get("blocked_content_patterns"), defaults.blocked_content_patterns
++        blocked_content_patterns=_merge_string_tuple(
++            defaults.blocked_content_patterns, data.get("blocked_content_patterns")
 +        ),
 +        allowed_target_roots=_string_tuple(
 +            data.get("allowed_target_roots"), defaults.allowed_target_roots
@@ -1927,6 +1905,18 @@ index 0000000..c429ec8
 +    return tuple(str(item).strip() for item in _as_list(value) if str(item).strip())
 +
 +
++def _merge_string_tuple(default: tuple[str, ...], value: Any) -> tuple[str, ...]:
++    merged = list(default)
++    seen = {_normalize_text(item) for item in default}
++    for item in _as_list(value):
++        text = str(item).strip()
++        key = _normalize_text(text)
++        if text and key not in seen:
++            merged.append(text)
++            seen.add(key)
++    return tuple(merged)
++
++
 +def _string_set(value: Any, default: frozenset[str]) -> frozenset[str]:
 +    if value is None:
 +        return default
@@ -1943,10 +1933,10 @@ index 0000000..c429ec8
 +    return output
 diff --git a/tests/test_codex_loop_guard.py b/tests/test_codex_loop_guard.py
 new file mode 100644
-index 0000000..b573c59
+index 0000000..71d4161
 --- /dev/null
 +++ b/tests/test_codex_loop_guard.py
-@@ -0,0 +1,214 @@
+@@ -0,0 +1,292 @@
 +import json
 +
 +from abc_quant.governance.codex_loop import evaluate_inbox, load_guard_config, run_guard
@@ -2146,6 +2136,84 @@ index 0000000..b573c59
 +    assert (tmp_path / "custom_reports/latest.json").exists()
 +
 +
++def test_config_cannot_remove_default_blocked_content_patterns(tmp_path) -> None:
++    config_dir = tmp_path / "configs"
++    config_dir.mkdir()
++    (config_dir / "codex_closed_loop.yaml").write_text(
++        """
++loop:
++  allowed_risk_levels:
++    - normal
++  blocked_content_patterns:
++    - custom-risk
++  blocked_path_patterns:
++    - custom-blocked-path
++  allow_auto_merge: true
++""",
++        encoding="utf-8",
++    )
++    (tmp_path / "INBOX.md").write_text(_task_yaml(task="read token"), encoding="utf-8")
++
++    config = load_guard_config(tmp_path)
++    result = run_guard(root=tmp_path)
++
++    assert "token" in config.blocked_content_patterns
++    assert "custom-risk" in config.blocked_content_patterns
++    assert result.status == "blocked_risky"
++    assert any("token" in message for message in result.messages)
++
++
++def test_config_cannot_remove_default_blocked_path_patterns(tmp_path) -> None:
++    config_dir = tmp_path / "configs"
++    config_dir.mkdir()
++    (config_dir / "codex_closed_loop.yaml").write_text(
++        """
++loop:
++  allowed_risk_levels:
++    - normal
++  blocked_content_patterns:
++    - custom-risk
++  blocked_path_patterns:
++    - custom-blocked-path
++  allow_auto_merge: true
++""",
++        encoding="utf-8",
++    )
++    (tmp_path / "INBOX.md").write_text(
++        _task_yaml(target_files_or_folders=[".git/config"]), encoding="utf-8"
++    )
++
++    config = load_guard_config(tmp_path)
++    result = run_guard(root=tmp_path)
++
++    assert ".git" in config.blocked_path_patterns
++    assert "custom-blocked-path" in config.blocked_path_patterns
++    assert result.status == "blocked_risky"
++    assert any(".git" in message for message in result.messages)
++
++
++def test_config_cannot_enable_auto_merge(tmp_path) -> None:
++    config_dir = tmp_path / "configs"
++    config_dir.mkdir()
++    (config_dir / "codex_closed_loop.yaml").write_text(
++        """
++loop:
++  allowed_risk_levels:
++    - normal
++  blocked_content_patterns:
++    - custom-risk
++  blocked_path_patterns:
++    - custom-blocked-path
++  allow_auto_merge: true
++""",
++        encoding="utf-8",
++    )
++
++    config = load_guard_config(tmp_path)
++
++    assert not config.allow_auto_merge
++
++
 +def test_anything_not_allowed_alone_does_not_block() -> None:
 +    result = evaluate_inbox(
 +        _task_yaml(task="Add a local docs test.", anything_not_allowed=["No download"])
@@ -2177,17 +2245,17 @@ rootdir: E:\abc
 configfile: pyproject.toml
 testpaths: tests
 plugins: anyio-4.13.0
-collected 29 items
+collected 32 items
 
-tests\test_codex_loop_guard.py ................                          [ 55%]
-tests\test_config_settings.py ..                                         [ 62%]
-tests\test_data_validation.py ....                                       [ 75%]
-tests\test_features_price_volume.py .                                    [ 79%]
-tests\test_labels_returns.py ..                                          [ 86%]
+tests\test_codex_loop_guard.py ...................                       [ 59%]
+tests\test_config_settings.py ..                                         [ 65%]
+tests\test_data_validation.py ....                                       [ 78%]
+tests\test_features_price_volume.py .                                    [ 81%]
+tests\test_labels_returns.py ..                                          [ 87%]
 tests\test_metrics_performance.py ..                                     [ 93%]
 tests\test_project_bootstrap.py ..                                       [100%]
 
-============================= 29 passed in 1.13s ==============================
+============================= 32 passed in 1.09s ==============================
 (exit_code=0)
 ```
 
@@ -2221,6 +2289,13 @@ Command: `ruff check .`
 unavailable: `ruff` executable was not found
 (exit_code=unavailable)
 ```
+
+
+## Final Audit
+
+- final_output_trailing_whitespace: false
+- final_git_diff_check_excluding_output: passed
+- final_clean_excluding_output_file: true
 
 
 ## File Contents
@@ -2262,6 +2337,9 @@ CODEX_TEST_RESULT.txt
 
 ## Unreleased
 
+- 修正 review package final audit，將 output file 從 repo diff-check 中排除，並單獨驗證輸出檔沒有 trailing whitespace。
+- 調整 review package SHA metadata，改用 `source_head_sha_at_generation` 與 `review_package_commit_sha: unavailable_self_reference`，避免把 package 產生前 SHA 誤標為最終 head。
+- 保留 closed-loop guard 內建 blocked content/path patterns；config 現在只能增加 blockers，不能移除 `token`、`.git`、`data/raw` 等預設防線。
 - 強化 Codex closed-loop guard：即使 `risk_level: normal`，仍會封鎖破壞性、憑證、外部網路、絕對路徑、repo 外路徑與資料原始區目標。
 - 擴充 `scripts/build_review_package.py`，支援完整 diff、完整檔案內容、驗證結果、完整 HEAD SHA 與排除輸出檔的 `--assert-clean`。
 - 新增 tracked review package 生成腳本與本輪 `reviews/review_package_002.md`，取代根目錄一次性 review 輸出。
@@ -2406,6 +2484,42 @@ Current task:
 
 ```text
 # OUTBOX
+
+## 2026-07-04 Closed-Loop Task 004 - Final Review Audit and Guard Defaults
+
+## 修改檔案
+- `src/abc_quant/governance/codex_loop.py`: preserved built-in blocked content/path patterns when config adds custom patterns.
+- `tests/test_codex_loop_guard.py`: added regression tests proving config cannot remove default `token` or `.git` blockers and cannot enable auto-merge.
+- `scripts/build_review_package.py`: added two-pass final audit, output-file trailing-whitespace check, diff-check exclusion for the output file, and clearer SHA metadata.
+- `reviews/review_package_002.md`: regenerated as the Task 004 review package after source changes were committed.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`: recorded Task 004 governance results.
+
+## 實作摘要
+- `blocked_content_patterns` and `blocked_path_patterns` now merge config additions onto built-in defaults; config can no longer weaken the default guard.
+- `allowed_risk_levels` still filters to `normal` only, and `allow_auto_merge` remains forced to `false`.
+- Review package metadata now uses `source_head_sha_at_generation`, `review_package_output_file`, and `review_package_commit_sha: unavailable_self_reference`.
+- Review package generation excludes `reviews/review_package_002.md` from repo-level diff checks to avoid self-reference, then separately audits the generated output file for trailing whitespace.
+
+## 測試方式
+- `python -m pytest`
+- `python -m compileall src tests`
+- `ruff check .`
+- `git diff --check`
+- `python scripts\build_review_package.py --output reviews\review_package_002.md --title "Codex Closed-Loop Task 004 Review Package" --pr-url "https://github.com/jongyawjong0514/abc-quant/pull/2" --run-validation --include-diff --include-file-contents --assert-clean`
+
+## 測試結果
+- `pytest`: 32 passed in 1.18s.
+- `compileall`: passed for `src` and `tests`.
+- `ruff`: unavailable in the current shell; no package was installed.
+- `git diff --check`: passed before source commit; final check after package generation also passed.
+
+## 已知限制
+- `review_package_commit_sha` remains `unavailable_self_reference` because committing the review package changes the final commit SHA.
+- The package excludes itself from repo-level diff sections to prevent recursive package growth, but it audits the output file directly for trailing whitespace.
+
+## 下一步建議
+- Ask ChatGPT Pro to re-review `reviews/review_package_002.md` on PR #2.
+- Merge only after review approval; closed-loop policy still forbids auto-merge.
 
 ## 2026-07-03 Closed-Loop Task 003 - Guard Hardening and Reproducible Review Package
 
@@ -2690,6 +2804,8 @@ Codex 不應直接「自由發揮」整套系統。每次任務都應包含：
 - 2026-07-03: Final task 001 direct validation passed: `pytest` 19 passed in 0.94s; closed-loop guard returned `status=no_task`.
 - 2026-07-03: Started closed-loop task 003 to harden the guard against disguised risky normal tasks and make `reviews/review_package_002.md` reproducible.
 - 2026-07-03: Task 003 validation passed with `pytest` 29 passed and `compileall src tests`; `ruff check .` is unavailable in the current shell.
+- 2026-07-04: Started closed-loop task 004 to fix final review package audit metadata and preserve built-in guard blockers when config adds custom blockers.
+- 2026-07-04: Task 004 validation passed with `pytest` 32 passed, `compileall src tests`, and `git diff --check`; `ruff check .` is unavailable in the current shell.
 ```
 
 ### `TECH_LEAD_PROTOCOL.md`
@@ -3022,10 +3138,6 @@ ignore_missing_imports = true
 strict = false
 ```
 
-### `reviews/review_package_002.md`
-
-_Skipped output file to avoid recursive package growth._
-
 ### `scripts/build_review_package.py`
 
 ```text
@@ -3079,6 +3191,16 @@ class CleanStatus:
         return not self.dirty_entries_excluding_output
 
 
+@dataclass(frozen=True)
+class FinalAudit:
+    """Audit facts checked after the review package is generated."""
+
+    final_output_trailing_whitespace: bool
+    final_git_diff_check_excluding_output: str
+    final_clean_excluding_output_file: bool
+    diff_check_result: CommandResult
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build an ABC Quant review package.")
     parser.add_argument("--output", type=Path, required=True, help="Markdown file to write.")
@@ -3108,10 +3230,10 @@ def main() -> int:
 
     root = Path.cwd()
     output = resolve_output(root, args.output)
-    clean_status = inspect_clean_status(root, output)
-    if args.assert_clean and not clean_status.is_clean_excluding_output:
+    initial_clean_status = inspect_clean_status(root, output)
+    if args.assert_clean and not initial_clean_status.is_clean_excluding_output:
         print("Working tree is dirty outside the review package output file:", file=sys.stderr)
-        for entry in clean_status.dirty_entries_excluding_output:
+        for entry in initial_clean_status.dirty_entries_excluding_output:
             print(entry, file=sys.stderr)
         return 2
 
@@ -3120,7 +3242,8 @@ def main() -> int:
         validations.extend(run_validations(root))
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    package_text = strip_trailing_whitespace(
+    write_package(
+        output,
         render_package(
             root=root,
             output=output,
@@ -3129,13 +3252,58 @@ def main() -> int:
             validations=validations,
             include_diff=args.include_diff,
             include_file_contents=args.include_file_contents,
-            clean_status=clean_status,
-        )
+            clean_status=initial_clean_status,
+            final_audit=None,
+        ),
     )
-    with output.open("w", encoding="utf-8", newline="\n") as handle:
-        handle.write(package_text)
+    final_audit = audit_generated_package(root, output)
+    final_clean_status = inspect_clean_status(root, output)
+    write_package(
+        output,
+        render_package(
+            root=root,
+            output=output,
+            title=args.title,
+            pr_url=args.pr_url,
+            validations=validations,
+            include_diff=args.include_diff,
+            include_file_contents=args.include_file_contents,
+            clean_status=final_clean_status,
+            final_audit=final_audit,
+        ),
+    )
+    final_audit = audit_generated_package(root, output)
+    if (
+        final_audit.final_output_trailing_whitespace
+        or final_audit.final_git_diff_check_excluding_output != "passed"
+        or not final_audit.final_clean_excluding_output_file
+    ):
+        print("Final review package audit failed:", file=sys.stderr)
+        print(
+            f"final_output_trailing_whitespace="
+            f"{final_audit.final_output_trailing_whitespace}",
+            file=sys.stderr,
+        )
+        print(
+            f"final_git_diff_check_excluding_output="
+            f"{final_audit.final_git_diff_check_excluding_output}",
+            file=sys.stderr,
+        )
+        print(
+            f"final_clean_excluding_output_file="
+            f"{final_audit.final_clean_excluding_output_file}",
+            file=sys.stderr,
+        )
+        return 3
     print(output)
     return 0
+
+
+def write_package(output: Path, text: str) -> None:
+    """Write generated Markdown with stable line endings and no trailing whitespace."""
+
+    with output.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(strip_trailing_whitespace(text))
 
 
 def resolve_output(root: Path, output: Path) -> Path:
@@ -3166,17 +3334,27 @@ def render_package(
     include_diff: bool,
     include_file_contents: bool,
     clean_status: CleanStatus,
+    final_audit: FinalAudit | None,
 ) -> str:
     as_of = datetime.now(ZoneInfo("Asia/Taipei")).isoformat(timespec="seconds")
     output_relative = relative_to_root(output, root)
     branch = git_value(["branch", "--show-current"], root)
-    head_sha = git_value(["rev-parse", "HEAD"], root)
+    source_head_sha = git_value(["rev-parse", "HEAD"], root)
     git_status = git(["status", "--short", "--branch"], root)
-    diff_check = git(["diff", "--check"], root)
-    diff_stat = git(["diff", "--stat", "main...HEAD"], root)
-    diff_names_result = run_command(["git", "diff", "--name-only", "main...HEAD"], root)
+    diff_check = git_diff_check_excluding_output(root, output)
+    diff_stat = git(
+        ["diff", "--stat", "main...HEAD", "--", ".", f":!{output_relative}"], root
+    )
+    diff_names_result = run_command(
+        ["git", "diff", "--name-only", "main...HEAD", "--", ".", f":!{output_relative}"],
+        root,
+    )
     diff_names = diff_names_result.output.rstrip() + f"\n(exit_code={diff_names_result.exit_code})"
-    full_diff = git(["diff", "main...HEAD"], root) if include_diff else "_Not requested._"
+    full_diff = (
+        git(["diff", "main...HEAD", "--", ".", f":!{output_relative}"], root)
+        if include_diff
+        else "_Not requested._"
+    )
 
     sections = [
         f"# {title}",
@@ -3187,9 +3365,12 @@ def render_package(
         f"- project_root: `{root}`",
         f"- pr_url: `{pr_url}`" if pr_url else "- pr_url: ``",
         f"- branch: `{branch}`",
-        f"- head_sha: `{head_sha}`",
-        f"- status_excludes_output_file: {str(clean_status.status_excludes_output_file).lower()}",
+        f"- source_head_sha_at_generation: `{source_head_sha}`",
+        "- review_package_commit_sha: `unavailable_self_reference`",
+        f"- review_package_output_file: {output_relative}",
         f"- output_file: {output_relative}",
+        f"- status_excludes_output_file: {str(clean_status.status_excludes_output_file).lower()}",
+        "- diff_check_excludes_output_file: true",
         "",
         "## Objective",
         "",
@@ -3215,25 +3396,25 @@ def render_package(
         [
             "## Git Diff Check",
             "",
-            "Command: `git diff --check`",
+            f"Command: `git diff --check -- . :!{output_relative}`",
             "",
-            fenced(diff_check),
+            fenced(diff_check.output.rstrip() + f"\n(exit_code={diff_check.exit_code})"),
             "",
             "## Branch Diff Stat Versus Main",
             "",
-            "Command: `git diff --stat main...HEAD`",
+            f"Command: `git diff --stat main...HEAD -- . :!{output_relative}`",
             "",
             fenced(diff_stat),
             "",
             "## Branch Changed Files Versus Main",
             "",
-            "Command: `git diff --name-only main...HEAD`",
+            f"Command: `git diff --name-only main...HEAD -- . :!{output_relative}`",
             "",
             fenced(diff_names),
             "",
             "## Branch Diff Versus Main",
             "",
-            "Command: `git diff main...HEAD`",
+            f"Command: `git diff main...HEAD -- . :!{output_relative}`",
             "",
             fenced(full_diff),
             "",
@@ -3257,6 +3438,40 @@ def render_package(
     else:
         sections.append("_No validation commands were run by the package builder._")
 
+    if final_audit:
+        sections.extend(
+            [
+                "",
+                "## Final Audit",
+                "",
+                (
+                    f"- final_output_trailing_whitespace: "
+                    f"{str(final_audit.final_output_trailing_whitespace).lower()}"
+                ),
+                (
+                    f"- final_git_diff_check_excluding_output: "
+                    f"{final_audit.final_git_diff_check_excluding_output}"
+                ),
+                (
+                    f"- final_clean_excluding_output_file: "
+                    f"{str(final_audit.final_clean_excluding_output_file).lower()}"
+                ),
+                "",
+            ]
+        )
+    else:
+        sections.extend(
+            [
+                "",
+                "## Final Audit",
+                "",
+                "- final_output_trailing_whitespace: pending",
+                "- final_git_diff_check_excluding_output: pending",
+                "- final_clean_excluding_output_file: pending",
+                "",
+            ]
+        )
+
     if include_file_contents:
         sections.extend(render_file_contents(root, output, diff_names_result.output))
     else:
@@ -3277,6 +3492,31 @@ def render_package(
         ]
     )
     return "\n".join(sections)
+
+
+def audit_generated_package(root: Path, output: Path) -> FinalAudit:
+    """Audit the actual generated review package file."""
+
+    diff_check = git_diff_check_excluding_output(root, output)
+    clean_status = inspect_clean_status(root, output)
+    return FinalAudit(
+        final_output_trailing_whitespace=file_has_trailing_whitespace(output),
+        final_git_diff_check_excluding_output=(
+            "passed" if diff_check.exit_code == 0 else f"failed_exit_{diff_check.exit_code}"
+        ),
+        final_clean_excluding_output_file=clean_status.is_clean_excluding_output,
+        diff_check_result=diff_check,
+    )
+
+
+def file_has_trailing_whitespace(path: Path) -> bool:
+    """Return true when any generated output line ends with space or tab."""
+
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return True
+    return any(line.endswith((" ", "\t")) for line in text.splitlines())
 
 
 def render_file_contents(root: Path, output: Path, diff_names: str) -> list[str]:
@@ -3368,6 +3608,11 @@ def normalize_path(path: str) -> str:
 def git(args: list[str], cwd: Path) -> str:
     result = run_command(["git", *args], cwd)
     return result.output.rstrip() + f"\n(exit_code={result.exit_code})"
+
+
+def git_diff_check_excluding_output(root: Path, output: Path) -> CommandResult:
+    output_relative = relative_to_root(output, root)
+    return run_command(["git", "diff", "--check", "--", ".", f":!{output_relative}"], root)
 
 
 def git_value(args: list[str], cwd: Path) -> str:
@@ -3687,11 +3932,11 @@ def load_guard_config(root: Path, config_path: Path | None = None) -> LoopGuardC
         report_dir=Path(str(data.get("report_dir", defaults.report_dir))),
         allowed_risk_levels=allowed,
         blocked_risk_levels=blocked.union(defaults.blocked_risk_levels),
-        blocked_path_patterns=_string_tuple(
-            data.get("blocked_path_patterns"), defaults.blocked_path_patterns
+        blocked_path_patterns=_merge_string_tuple(
+            defaults.blocked_path_patterns, data.get("blocked_path_patterns")
         ),
-        blocked_content_patterns=_string_tuple(
-            data.get("blocked_content_patterns"), defaults.blocked_content_patterns
+        blocked_content_patterns=_merge_string_tuple(
+            defaults.blocked_content_patterns, data.get("blocked_content_patterns")
         ),
         allowed_target_roots=_string_tuple(
             data.get("allowed_target_roots"), defaults.allowed_target_roots
@@ -4092,6 +4337,18 @@ def _string_tuple(value: Any, default: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(str(item).strip() for item in _as_list(value) if str(item).strip())
 
 
+def _merge_string_tuple(default: tuple[str, ...], value: Any) -> tuple[str, ...]:
+    merged = list(default)
+    seen = {_normalize_text(item) for item in default}
+    for item in _as_list(value):
+        text = str(item).strip()
+        key = _normalize_text(text)
+        if text and key not in seen:
+            merged.append(text)
+            seen.add(key)
+    return tuple(merged)
+
+
 def _string_set(value: Any, default: frozenset[str]) -> frozenset[str]:
     if value is None:
         return default
@@ -4308,6 +4565,84 @@ loop:
     assert not config.allow_auto_merge
     assert result.status == "blocked_risky"
     assert (tmp_path / "custom_reports/latest.json").exists()
+
+
+def test_config_cannot_remove_default_blocked_content_patterns(tmp_path) -> None:
+    config_dir = tmp_path / "configs"
+    config_dir.mkdir()
+    (config_dir / "codex_closed_loop.yaml").write_text(
+        """
+loop:
+  allowed_risk_levels:
+    - normal
+  blocked_content_patterns:
+    - custom-risk
+  blocked_path_patterns:
+    - custom-blocked-path
+  allow_auto_merge: true
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "INBOX.md").write_text(_task_yaml(task="read token"), encoding="utf-8")
+
+    config = load_guard_config(tmp_path)
+    result = run_guard(root=tmp_path)
+
+    assert "token" in config.blocked_content_patterns
+    assert "custom-risk" in config.blocked_content_patterns
+    assert result.status == "blocked_risky"
+    assert any("token" in message for message in result.messages)
+
+
+def test_config_cannot_remove_default_blocked_path_patterns(tmp_path) -> None:
+    config_dir = tmp_path / "configs"
+    config_dir.mkdir()
+    (config_dir / "codex_closed_loop.yaml").write_text(
+        """
+loop:
+  allowed_risk_levels:
+    - normal
+  blocked_content_patterns:
+    - custom-risk
+  blocked_path_patterns:
+    - custom-blocked-path
+  allow_auto_merge: true
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "INBOX.md").write_text(
+        _task_yaml(target_files_or_folders=[".git/config"]), encoding="utf-8"
+    )
+
+    config = load_guard_config(tmp_path)
+    result = run_guard(root=tmp_path)
+
+    assert ".git" in config.blocked_path_patterns
+    assert "custom-blocked-path" in config.blocked_path_patterns
+    assert result.status == "blocked_risky"
+    assert any(".git" in message for message in result.messages)
+
+
+def test_config_cannot_enable_auto_merge(tmp_path) -> None:
+    config_dir = tmp_path / "configs"
+    config_dir.mkdir()
+    (config_dir / "codex_closed_loop.yaml").write_text(
+        """
+loop:
+  allowed_risk_levels:
+    - normal
+  blocked_content_patterns:
+    - custom-risk
+  blocked_path_patterns:
+    - custom-blocked-path
+  allow_auto_merge: true
+""",
+        encoding="utf-8",
+    )
+
+    config = load_guard_config(tmp_path)
+
+    assert not config.allow_auto_merge
 
 
 def test_anything_not_allowed_alone_does_not_block() -> None:
