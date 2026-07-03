@@ -1,0 +1,30 @@
+project:
+  name: abc_quant
+  timezone: Asia/Taipei
+
+data:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  required_market_columns:
+    - date
+    - ticker
+    - open
+    - high
+    - low
+    - close
+    - volume
+
+features:
+  momentum_windows: [5, 20, 60]
+  volatility_windows: [10, 20]
+  volume_windows: [5, 20]
+
+labels:
+  forward_return_horizon: 20
+  entry_lag: 1
+
+backtest:
+  initial_capital: 1000000
+  trading_days_per_year: 252
+  transaction_cost_bps: 14.25
+  slippage_bps: 5
