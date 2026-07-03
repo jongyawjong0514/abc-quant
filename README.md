@@ -62,6 +62,16 @@ It installs the project with development dependencies and runs:
 
 The workflow uses Python 3.11 and 3.12 because the project declares Python 3.11+ support.
 
+## Deterministic Smoke Pipeline
+
+The first data contract and smoke pipeline live in:
+
+- `src/abc_quant/data/schema.py`
+- `src/abc_quant/data/sample.py`
+- `src/abc_quant/pipeline/smoke.py`
+
+The sample fixture is synthetic and deterministic. It is only for local smoke checks and is not a trading signal, market data source, backtest, or performance claim.
+
 ## 快速開始
 
 在 Windows PowerShell：

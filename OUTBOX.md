@@ -1,5 +1,44 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 007 - Data Contract Smoke Pipeline
+
+## 修改檔案
+- `src/abc_quant/data/schema.py`: added required market columns, numeric columns, and dtype-intent constants.
+- `src/abc_quant/data/sample.py`: added deterministic two-ticker OHLCV sample data for smoke checks.
+- `src/abc_quant/pipeline/__init__.py`: added pipeline package marker.
+- `src/abc_quant/pipeline/smoke.py`: added the deterministic validate -> feature -> label -> metrics smoke pipeline.
+- `tests/test_data_schema.py`: added schema and sample fixture tests.
+- `tests/test_pipeline_smoke.py`: added smoke pipeline summary, feature, label, metric, and multi-ticker isolation tests.
+- `docs/data_pipeline.md`, `README.md`: documented the smoke fixture boundary and no-signal/no-performance-claim status.
+- `INBOX.md`: reset the active Task 007 block to the commented empty template before PR handoff.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 007 progress.
+
+## 實作摘要
+- The schema contract defines `date`, `ticker`, `open`, `high`, `low`, `close`, and `volume`.
+- The synthetic fixture returns two tickers with 12 deterministic rows each.
+- The smoke pipeline validates the fixture, creates price/volume features, creates one 3-day forward-return label with next-period entry, computes basic metrics, and returns a summary dictionary.
+- The pipeline remains local and deterministic only; it adds no data download, broker integration, strategy logic, model training, or full backtest engine.
+
+## 測試方式
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- `pytest`: 38 passed in 1.18s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- `python -m ruff check .`: unavailable in the current shell (`No module named ruff`); this was not part of Task 007 expected validation.
+
+## 已知限制
+- The sample fixture is synthetic and only proves local contracts and wiring.
+- The metrics summary is smoke evidence only, not a trading signal, backtest result, or performance claim.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 006 - GitHub Actions CI
 
 ## 修改檔案
