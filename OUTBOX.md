@@ -1,5 +1,66 @@
 # OUTBOX
 
+## 2026-07-04 PR #3 Review Follow-up - INBOX Closeout
+
+## 修改檔案
+- `INBOX.md`: reset the active Task 005 YAML block back to the commented empty template.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`: recorded that Task 005 is complete and the inbox was cleared.
+
+## 實作摘要
+- Closed the loop after Task 005 so a merged PR does not leave an active task that returns `status=ready`.
+- `scripts/run_codex_closed_loop.ps1` now returns `status=no_task`.
+- No `.github/workflows/ci.yml` file was created.
+- No trading, data, model, FinLab, broker API, data download, strategy, or backtest code changed.
+
+## 測試方式
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+
+## 測試結果
+- `run_codex_closed_loop.ps1`: `status=no_task`.
+- `pytest`: 34 passed in 1.11s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `.github/workflows/ci.yml`: absent.
+
+## 已知限制
+- This is a closeout-only commit for PR #3 review feedback.
+
+## 下一步建議
+- Re-run ChatGPT Tech Lead review on PR #3.
+
+## 2026-07-04 Closed-Loop Task 005 - CI Target Root Preparation
+
+## 修改檔案
+- `configs/codex_closed_loop.yaml`: added `.github/` to `allowed_target_roots`.
+- `tests/test_codex_loop_guard.py`: added tests proving `.github/workflows/ci.yml` is allowed while `.git/config` remains blocked.
+- `docs/codex_closed_loop.md`: documented the CI target preparation boundary.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 005 governance progress.
+
+## 實作摘要
+- Prepared the guard for a later reviewed CI workflow task without creating any workflow file.
+- `.github/` is now an explicit allowed repository target root.
+- `.git/` remains blocked through built-in blocked path defaults.
+- Built-in blocked content/path defaults remain preserved when config adds custom blockers.
+- No trading, data, model, broker, strategy, or backtest code changed.
+
+## 測試方式
+- `python -m pytest`
+- `python -m compileall src tests`
+
+## 測試結果
+- `pytest`: 34 passed in 1.22s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+
+## 已知限制
+- This task only prepares the guard target root; CI workflow files are intentionally not created.
+
+## 下一步建議
+- Have ChatGPT Pro review this governance-only PR before any future task adds workflow files.
+
 ## 2026-07-04 Closed-Loop Task 004 - Final Review Audit and Guard Defaults
 
 ## 修改檔案

@@ -24,6 +24,7 @@ ChatGPT Pro writes one bounded task
 - 不自動 merge PR。
 - 不自動提升正式交易規則、正式 champion、正式買賣權重或實盤流程。
 - 不透過 ChatGPT Pro 網頁 UI 互貼內容；結果以檔案、GitHub PR、GitHub comment 或明確 API/connector 傳遞。
+- Guard 設定允許 `.github/` 作為未來 CI workflow 的 repository target root，但本輪不建立 workflow 檔；`.git/` 仍是 blocked path。
 
 ## 任務格式
 
@@ -80,3 +81,7 @@ Codex automation 或人工 Codex thread 應先看 guard 結果：
 4. 完成後執行測試，更新 `STATUS.md` 與 `OUTBOX.md`。
 5. 開 draft PR 或把結果寫入可審查檔案。
 6. 若 guard 不是 `ready`，只回報原因，不改程式。
+
+## CI Target Preparation
+
+`.github/` is an allowed closed-loop target root so a later reviewed task can add workflow files. This does not grant access to `.git/`, credentials, external APIs, data downloads, or auto-merge behavior.

@@ -60,6 +60,7 @@ loop:
     - STATUS.md
     - TECH_LEAD_PROTOCOL.md
     - TODO.md
+    - .github/
     - configs/
     - docs/
     - prompts/
