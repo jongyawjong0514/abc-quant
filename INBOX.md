@@ -23,21 +23,38 @@ Rules:
 Current task:
 
 ```yaml
-# Leave this block empty or replace it with one bounded task.
-# role: technical_lead
-# task: "One focused, verifiable implementation task."
-# target_files_or_folders:
-#   - "src/abc_quant/..."
-# current_spec_or_decision: "Why this should be done now."
-# constraints:
-#   - "No unrelated refactor."
-# acceptance_criteria:
-#   - "Specific observable pass condition."
-# validation_expected:
-#   - "python -m pytest"
-# review_notes_or_defects:
-#   - "none"
-# anything_not_allowed:
-#   - "No external API calls."
-# risk_level: normal
+role: technical_lead
+task: "Prepare the closed-loop guard for a future CI workflow target by allowing the `.github/` repository folder and adding tests that prove `.git/` remains blocked."
+target_files_or_folders:
+  - "configs/codex_closed_loop.yaml"
+  - "tests/test_codex_loop_guard.py"
+  - "docs/codex_closed_loop.md"
+  - "STATUS.md"
+  - "OUTBOX.md"
+  - "CHANGELOG.md"
+  - "TODO.md"
+current_spec_or_decision: "PR #2 has been merged. The next governance step is to prepare the guard for a later CI workflow round. The current guard allows only known repository roots, so `.github/` must be made explicit before workflow files are added later."
+constraints:
+  - "Keep this round limited to guard configuration, documentation, and tests."
+  - "Do not create workflow files in this round."
+  - "Do not change trading, data, model, broker, strategy, or backtest code."
+  - "Preserve all built-in blocked content and blocked path defaults."
+acceptance_criteria:
+  - "`configs/codex_closed_loop.yaml` includes `.github/` as an allowed target root."
+  - "Tests prove `.github/workflows/ci.yml` is allowed as a target."
+  - "Tests prove `.git/config` remains blocked."
+  - "Tests prove built-in blocked content patterns are still preserved when config adds custom patterns."
+  - "`pytest` passes."
+validation_expected:
+  - "python -m pytest"
+  - "python -m compileall src tests"
+review_notes_or_defects:
+  - "This is a preparatory governance task after PR #2 merge."
+  - "A later task may add CI files after this guard update is reviewed."
+anything_not_allowed:
+  - "No workflow file creation in this round."
+  - "No data acquisition."
+  - "No broker integration."
+  - "No model training."
+risk_level: normal
 ```
