@@ -34,6 +34,8 @@ research/experiments.md
 research/ideas.md
 research/papers.md
 reviews/review_001.md
+reviews/review_package_002.md
+scripts/build_review_package.py
 scripts/check_project.ps1
 scripts/check_project.sh
 scripts/codex_loop_guard.py

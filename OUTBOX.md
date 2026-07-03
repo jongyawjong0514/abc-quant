@@ -1,5 +1,36 @@
 # OUTBOX
 
+## 2026-07-03 Closed-Loop Task 001 - Repository Hygiene and Review Package
+
+## 修改檔案
+- `scripts/build_review_package.py`: added a repeatable review-package builder.
+- `reviews/review_package_002.md`: generated tracked review package for ChatGPT Pro review.
+- `.gitignore`: explicitly ignored local `_archive/` artifacts.
+- `FILE_MANIFEST.txt`, `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: updated project governance records.
+
+## 實作摘要
+- Root-level stale `CODEX_REVIEW_PACKAGE.md` and `CODEX_TEST_RESULT.txt` are superseded by a tracked review package under `reviews/`.
+- Review package includes branch status, diff summary, changed files, validation output, review pointers, and known local artifacts.
+- No strategy, model, broker API, formal signal, or trading-rule logic changed.
+
+## 測試方式
+- `E:\abc\.venv\Scripts\python.exe -m pytest`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `E:\abc\.venv\Scripts\python.exe .\scripts\build_review_package.py --output reviews\review_package_002.md --title "Codex Closed-Loop Task 001 Review Package" --pr-url "https://github.com/jongyawjong0514/abc-quant/pull/2" --run-validation`
+
+## 測試結果
+- `scripts/build_review_package.py --run-validation`: regenerated `reviews/review_package_002.md`.
+- Embedded validation in the review package: `pytest` 19 passed in 0.84s.
+- Embedded closed-loop guard check: `status=no_task`, expected because `INBOX.md` currently contains only the commented template.
+- Final direct validation: `pytest` 19 passed in 0.94s; `run_codex_closed_loop.ps1` returned `status=no_task`.
+
+## 已知限制
+- `.pytest_cache/` may remain as a local Windows ACL residue; it is ignored and not tracked by Git.
+
+## 下一步建議
+- Push the updated branch to GitHub PR #2 and have ChatGPT Pro review `reviews/review_package_002.md`.
+- Merge PR #2 only after review; the closed-loop policy still forbids auto-merge.
+
 ## 2026-07-03 File-Based Closed Loop Guard
 
 ## 修改檔案

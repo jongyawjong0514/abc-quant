@@ -7,6 +7,7 @@ __pycache__/
 .tmp_pytest/
 .mypy_cache/
 .ruff_cache/
+_archive/
 
 abc_project_E_drive_ready/
 abc_project_E_drive_ready.zip
