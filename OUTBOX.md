@@ -1,5 +1,40 @@
 # OUTBOX
 
+## 2026-07-03 Closed-Loop Task 003 - Guard Hardening and Reproducible Review Package
+
+## 修改檔案
+- `src/abc_quant/governance/codex_loop.py`: added configurable closed-loop guard policy, content/path risk scanning, safe config loading, and safe failure reports.
+- `configs/codex_closed_loop.yaml`: recorded conservative allowed risk levels, blocked content/path patterns, and allowed target roots.
+- `tests/test_codex_loop_guard.py`: added adversarial guard coverage for disguised risky normal tasks, blocked paths, missing inbox, config loading, and `anything_not_allowed` contradictions.
+- `scripts/build_review_package.py`: added reproducible review package flags for diff, full file contents, validation capture, and assert-clean behavior excluding only the output file.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`: updated governance status and heartbeat wording.
+
+## 實作摘要
+- `risk_level: normal` no longer auto-passes if actionable task fields mention destructive, credential, external/network, data/raw, absolute path, or repo-outside operations.
+- `anything_not_allowed` is not scanned as an actionable field by itself, but a task that contradicts it is blocked.
+- Missing `INBOX.md`, unreadable inbox, invalid task YAML, or invalid guard config now fail closed and still write `reports/codex_loop/latest.json` and `latest.md`.
+- Review package generation can now include `git diff main...HEAD`, full file contents, validation output, full HEAD SHA, and an assert-clean check that excludes `reviews/review_package_002.md` only.
+
+## 測試方式
+- `python -m pytest`
+- `python -m compileall src tests`
+- `ruff check .`
+- `python scripts\build_review_package.py --output reviews\review_package_002.md --title "Codex Closed-Loop Task 003 Review Package" --pr-url "https://github.com/jongyawjong0514/abc-quant/pull/2" --run-validation --include-diff --include-file-contents --assert-clean`
+
+## 測試結果
+- `pytest`: 29 passed in 1.22s.
+- `compileall`: passed for `src` and `tests`.
+- `ruff`: unavailable in the current shell; no package was installed.
+- `build_review_package --assert-clean`: intentionally fails while source files are dirty; final package is generated after the code changes are committed so the assert-clean check is meaningful.
+
+## 已知限制
+- A committed review package cannot record its own final Git SHA without creating an infinite self-reference; the package records the HEAD SHA at generation time.
+- Existing PR #2 remains draft/review-only; no auto-merge is performed.
+
+## 下一步建議
+- Have ChatGPT Pro review `reviews/review_package_002.md` on PR #2.
+- Keep future closed-loop tasks limited to one bounded YAML task in `INBOX.md`.
+
 ## 2026-07-03 Closed-Loop Task 001 - Repository Hygiene and Review Package
 
 ## 修改檔案
@@ -48,7 +83,7 @@
 - Empty tasks return `no_task`; incomplete tasks return `blocked_invalid`; risky tasks return `blocked_risky`.
 - Generated guard reports are written under `reports/codex_loop/`, which remains an ignored local/report artifact path.
 - The design deliberately avoids automating ChatGPT Pro web UI and does not allow auto-merge.
-- Active Codex thread heartbeat automation was created: `abc-quant-closed-loop-inbox-runner`, hourly.
+- Prepared instructions for an optional hourly Codex heartbeat automation; external scheduler status is not tracked in this repository.
 
 ## 測試方式
 - `E:\abc\.venv\Scripts\python.exe -m pytest`
