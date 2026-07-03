@@ -1,0 +1,73 @@
+loop:
+  inbox_path: INBOX.md
+  report_dir: reports/codex_loop
+  allowed_risk_levels:
+    - normal
+  blocked_risk_levels:
+    - destructive
+    - credentialed
+    - external
+    - materially_risky
+  blocked_path_patterns:
+    - .git
+    - .venv
+    - _archive
+    - data/raw
+    - data/processed
+    - state/codex_context
+    - credentials
+    - secrets
+    - "C:\\"
+    - "E:\\"
+    - ..
+  blocked_content_patterns:
+    - delete
+    - remove-item
+    - rm -rf
+    - rmdir
+    - format
+    - reset --hard
+    - clean data/raw
+    - erase
+    - purge
+    - token
+    - password
+    - secret
+    - api_key
+    - apikey
+    - ssh key
+    - credential
+    - .env
+    - curl
+    - wget
+    - requests.get
+    - requests.post
+    - download
+    - upload
+    - external api
+    - broker api
+    - finlab download
+  allowed_target_roots:
+    - .gitignore
+    - AGENTS.md
+    - CHANGELOG.md
+    - FILE_MANIFEST.txt
+    - INBOX.md
+    - OUTBOX.md
+    - PROJECT_RULES.md
+    - README.md
+    - RUN_CODEX_NEXT.md
+    - STATUS.md
+    - TECH_LEAD_PROTOCOL.md
+    - TODO.md
+    - configs/
+    - docs/
+    - prompts/
+    - research/
+    - reviews/
+    - scripts/
+    - src/
+    - tests/
+    - pyproject.toml
+    - requirements.txt
+  allow_auto_merge: false

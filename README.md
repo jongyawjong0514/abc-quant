@@ -39,6 +39,18 @@ abc/
 4. ChatGPT 根據 `PROJECT_RULES.md` 審查，產生下一輪修正 Prompt。
 5. 重複以上流程。
 
+## 檔案式閉環
+
+本專案支援保守的 Codex/ChatGPT Pro 閉環：
+
+1. ChatGPT Pro 將一個 bounded task 寫入 `INBOX.md` 的 YAML 區塊。
+2. Codex 執行 `.\scripts\run_codex_closed_loop.ps1`。
+3. 只有 guard 回傳 `status=ready` 且 `risk_level=normal` 時才執行。
+4. Codex 完成後更新 `OUTBOX.md`、`STATUS.md`，必要時開 draft PR。
+5. ChatGPT Pro 讀回結果，再產生下一輪任務。
+
+詳細規則見 `docs/codex_closed_loop.md`。
+
 ## 快速開始
 
 在 Windows PowerShell：
