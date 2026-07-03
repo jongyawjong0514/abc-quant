@@ -22,6 +22,23 @@ close
 volume
 ```
 
+`src/abc_quant/data/schema.py` 定義第一版 deterministic market data contract：
+
+- `MARKET_REQUIRED_COLUMNS`: `date`, `ticker`, `open`, `high`, `low`, `close`, `volume`
+- `MARKET_NUMERIC_COLUMNS`: `open`, `high`, `low`, `close`, `volume`
+- `MARKET_DTYPE_INTENT`: 每個欄位的預期 dtype 意圖
+
+## Deterministic Smoke Fixture
+
+`src/abc_quant/data/sample.py` 提供 `sample_market_data()`，只用於本地 smoke checks。
+
+此 fixture 是合成資料，不是實際市場資料，不是交易訊號，也不是績效主張。它的用途是讓資料驗證、價量特徵、forward-return label 與 basic metrics 可以用固定輸入做端到端檢查。
+
+`src/abc_quant/pipeline/smoke.py` 提供：
+
+- `build_smoke_frame()`: validate sample -> add price/volume features -> add one forward-return label
+- `run_smoke_pipeline()`: 回傳 row count、ticker count、feature columns、label column、metric keys 與 basic metrics summary
+
 ## 資料品質檢查
 
 必須檢查：

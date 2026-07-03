@@ -20,3 +20,5 @@
 - 2026-07-04: PR #3 closeout validation passed with `pytest` 34 passed, `compileall src tests`, `git diff --check`, and no `.github/workflows/ci.yml` file created.
 - 2026-07-04: Started closed-loop task 006 to add a minimal GitHub Actions CI workflow for pull requests and pushes to `main`.
 - 2026-07-04: Task 006 validation passed with `pytest` 34 passed, `compileall src tests`, `git diff --check`, and closed-loop guard `status=no_task` after `INBOX.md` reset.
+- 2026-07-04: Started closed-loop task 007 to add a deterministic market data contract, synthetic sample fixture, and end-to-end smoke pipeline.
+- 2026-07-04: Task 007 validation passed with `pytest` 38 passed, `compileall src tests`, `git diff --check`, and closed-loop guard `status=no_task` after `INBOX.md` reset.

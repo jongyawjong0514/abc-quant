@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 deterministic market data contract、合成 sample fixture 與端到端 smoke pipeline，串接資料驗證、價量特徵、forward-return label 與 basic metrics summary。
 - 新增最小 GitHub Actions CI workflow，於 pull request 與 push to main 執行 ruff、pytest、compileall，並使用 Python 3.11/3.12 matrix。
 - 清空 Task 005 後的 `INBOX.md` active task，讓 closed-loop guard 回到 `status=no_task`，避免 PR #3 merge 後重複執行同一任務。
 - 準備未來 CI workflow governance target：closed-loop guard 設定允許 `.github/`，測試確認 `.github/workflows/ci.yml` 可作為 target 且 `.git/config` 仍被封鎖。
