@@ -1,5 +1,36 @@
 # OUTBOX
 
+## 2026-07-04 PR #3 Review Follow-up - INBOX Closeout
+
+## 修改檔案
+- `INBOX.md`: reset the active Task 005 YAML block back to the commented empty template.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`: recorded that Task 005 is complete and the inbox was cleared.
+
+## 實作摘要
+- Closed the loop after Task 005 so a merged PR does not leave an active task that returns `status=ready`.
+- `scripts/run_codex_closed_loop.ps1` now returns `status=no_task`.
+- No `.github/workflows/ci.yml` file was created.
+- No trading, data, model, FinLab, broker API, data download, strategy, or backtest code changed.
+
+## 測試方式
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+
+## 測試結果
+- `run_codex_closed_loop.ps1`: `status=no_task`.
+- `pytest`: 34 passed in 1.11s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `.github/workflows/ci.yml`: absent.
+
+## 已知限制
+- This is a closeout-only commit for PR #3 review feedback.
+
+## 下一步建議
+- Re-run ChatGPT Tech Lead review on PR #3.
+
 ## 2026-07-04 Closed-Loop Task 005 - CI Target Root Preparation
 
 ## 修改檔案

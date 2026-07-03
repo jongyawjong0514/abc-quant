@@ -16,3 +16,5 @@
 - 2026-07-04: Task 004 validation passed with `pytest` 32 passed, `compileall src tests`, and `git diff --check`; `ruff check .` is unavailable in the current shell.
 - 2026-07-04: Started closed-loop task 005 to allow `.github/` as a future CI workflow target root while keeping `.git/` blocked and preserving built-in guard blockers.
 - 2026-07-04: Task 005 validation passed with `pytest` 34 passed, `compileall src tests`, and `git diff --check`.
+- 2026-07-04: PR #3 review follow-up reset `INBOX.md` to the commented empty template; `run_codex_closed_loop.ps1` now returns `status=no_task`.
+- 2026-07-04: PR #3 closeout validation passed with `pytest` 34 passed, `compileall src tests`, `git diff --check`, and no `.github/workflows/ci.yml` file created.
