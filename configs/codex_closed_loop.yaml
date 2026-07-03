@@ -1,0 +1,16 @@
+loop:
+  inbox_path: INBOX.md
+  outbox_path: OUTBOX.md
+  status_path: STATUS.md
+  report_dir: reports/codex_loop
+  allowed_risk_levels:
+    - normal
+  blocked_risk_levels:
+    - destructive
+    - credentialed
+    - external
+    - materially_risky
+  require_validation: true
+  open_pull_requests_as_draft: true
+  allow_auto_merge: false
+  allow_chatgpt_web_ui_automation: false

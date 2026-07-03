@@ -4,3 +4,6 @@
 - 2026-07-03: Technical-lead operating model recorded. ChatGPT Pro may own specs, next tasks, and review notes for `E:\abc`; Codex remains implementation engineer. Override of system/safety/direct-user rules was not accepted.
 - 2026-07-03: Completed `RUN_CODEX_NEXT.md` first implementation round. Editable install succeeded as `abc-quant==0.0.2` and `pytest` passed: 13 passed, 1 pytest cache warning from `E:\abc\.pytest_cache` access denied.
 - 2026-07-03: Completed ChatGPT Review 001, added PR hygiene `.gitignore`, fixed pytest temp/cache behavior, and revalidated `pytest`: 13 passed in 0.83s.
+- 2026-07-03: Added file-based Codex/ChatGPT Pro closed-loop guard, runnable PowerShell entrypoint, documentation, prompt, and tests.
+- 2026-07-03: Closed-loop guard validation passed with `pytest` 19 passed in 0.86s and `run_codex_closed_loop.ps1` returned expected `no_task` for the empty commented inbox template.
+- 2026-07-03: Created active Codex thread heartbeat automation `abc-quant-closed-loop-inbox-runner` to check `E:\abc\INBOX.md` hourly with the closed-loop guard.

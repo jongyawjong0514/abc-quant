@@ -14,11 +14,12 @@ Authority:
 
 Workflow:
 1. ChatGPT Pro writes one bounded task into `INBOX.md`.
-2. Codex inspects the relevant files before editing.
-3. Codex implements the smallest reversible change that satisfies the task.
-4. Codex validates with the narrowest meaningful local check first.
-5. Codex records status in `STATUS.md` and completion evidence in `OUTBOX.md`.
-6. ChatGPT Pro reviews `OUTBOX.md`, then either accepts or writes the next bounded task.
+2. Codex runs `scripts/run_codex_closed_loop.ps1` to validate task completeness and risk.
+3. Codex inspects the relevant files before editing.
+4. Codex implements the smallest reversible change that satisfies the task.
+5. Codex validates with the narrowest meaningful local check first.
+6. Codex records status in `STATUS.md` and completion evidence in `OUTBOX.md`.
+7. ChatGPT Pro reviews `OUTBOX.md`, then either accepts or writes the next bounded task.
 
 Task quality bar:
 - Include objective, target files/folders, constraints, acceptance criteria, and validation expected.
@@ -30,3 +31,10 @@ Review quality bar:
 - Lead with defects, regressions, missing tests, or violated acceptance criteria.
 - Cite files and exact commands or artifacts when possible.
 - Convert broad feedback into the next bounded implementation task.
+
+Closed-loop guard:
+- The automated loop may execute only when guard status is `ready`.
+- Empty or incomplete `INBOX.md` means no work should be invented.
+- Non-`normal` risk levels require explicit user confirmation outside `INBOX.md`.
+- Closed-loop runs may open draft PRs, but must not auto-merge.
+- See `docs/codex_closed_loop.md` for the runnable protocol.

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 建立 Codex/ChatGPT Pro 檔案式閉環守門器、閉環文件、automation prompt 與測試。
 - 完成 ChatGPT Review 001，確認第一輪 scaffold 可接受並記錄下一輪修正 prompt。
 - 固定 pytest 本地暫存目錄並停用 cache provider，避免 Windows 受限暫存/cache 目錄造成驗收失敗或警告。
 - 新增 `.gitignore`，排除 venv、cache、egg-info、打包 zip、解壓副本與本機 Codex context capsule。

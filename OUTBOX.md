@@ -1,5 +1,41 @@
 # OUTBOX
 
+## 2026-07-03 File-Based Closed Loop Guard
+
+## 修改檔案
+- `docs/codex_closed_loop.md`: documented the safe file-based closed-loop protocol.
+- `configs/codex_closed_loop.yaml`: recorded loop paths, allowed risk levels, and no-auto-merge/no-web-UI boundaries.
+- `src/abc_quant/governance/codex_loop.py`: added testable guard logic for `INBOX.md` task validation.
+- `scripts/codex_loop_guard.py`: added CLI wrapper for guard execution.
+- `scripts/run_codex_closed_loop.ps1`: added PowerShell entrypoint for Codex automation or manual checks.
+- `prompts/codex_closed_loop_runner.md`: added reusable automation prompt.
+- `tests/test_codex_loop_guard.py`: added guard behavior tests.
+- `INBOX.md`, `TECH_LEAD_PROTOCOL.md`, `README.md`, `TODO.md`, `CHANGELOG.md`, `STATUS.md`: updated project workflow records.
+
+## 實作摘要
+- The loop executes only when `INBOX.md` contains one complete YAML task with `risk_level: normal`.
+- Empty tasks return `no_task`; incomplete tasks return `blocked_invalid`; risky tasks return `blocked_risky`.
+- Generated guard reports are written under `reports/codex_loop/`, which remains an ignored local/report artifact path.
+- The design deliberately avoids automating ChatGPT Pro web UI and does not allow auto-merge.
+- Active Codex thread heartbeat automation was created: `abc-quant-closed-loop-inbox-runner`, hourly.
+
+## 測試方式
+- `E:\abc\.venv\Scripts\python.exe -m pytest`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- `pytest --basetemp=.tmp_pytest`: 19 passed in 0.87s, then 19 passed in 0.84s.
+- `E:\abc\.venv\Scripts\python.exe -m pytest`: 19 passed in 0.86s.
+- `scripts/run_codex_closed_loop.ps1`: status `no_task`, which is expected because `INBOX.md` currently contains only a commented template.
+
+## 已知限制
+- This is a guard and workflow scaffold, not a recursive self-launcher.
+- Real unattended automation still needs a Codex app automation schedule and review of the first few runs.
+
+## 下一步建議
+- Ask ChatGPT Pro to place the next bounded task into `INBOX.md`.
+- Review the first few heartbeat runs and adjust cadence if it is too frequent or too quiet.
+
 ## 2026-07-03 ChatGPT Review 001 and PR Hygiene
 
 ## 修改檔案
