@@ -1,5 +1,39 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 006 - GitHub Actions CI
+
+## 修改檔案
+- `.github/workflows/ci.yml`: added minimal GitHub Actions CI for pull requests and pushes to `main`.
+- `README.md`: documented CI quality gates and Python matrix.
+- `docs/codex_closed_loop.md`: documented CI workflow behavior and boundaries.
+- `INBOX.md`: reset the active Task 006 block to the commented empty template before PR handoff.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 006 governance progress.
+
+## 實作摘要
+- CI uses official `actions/checkout@v7` and `actions/setup-python@v6`.
+- CI runs Python 3.11 and 3.12 because the project declares Python 3.11+ support.
+- CI installs `.[dev]`, then runs `ruff check .`, `python -m pytest`, and `python -m compileall src tests`.
+- No deployment, publishing, secrets, data acquisition, broker integration, model training, or trading signal changes were added.
+
+## 測試方式
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- `pytest`: 34 passed in 1.14s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- `.github/workflows/ci.yml`: exists.
+
+## 已知限制
+- Local `ruff` is not required by the task validation command set; CI installs `ruff` through `.[dev]`.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 PR #3 Review Follow-up - INBOX Closeout
 
 ## 修改檔案
