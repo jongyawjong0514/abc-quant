@@ -51,4 +51,5 @@
 - [x] 每輪 ChatGPT Review 寫入 `reviews/`。
 - [x] 建立 Codex/ChatGPT Pro 檔案式閉環守門器。
 - [x] 準備 `.github/` 作為未來 CI workflow 的 closed-loop target root。
+- [x] 建立最小 GitHub Actions CI quality gates。
 - [ ] 審查第一輪自動化閉環輸出並調整 cadence。

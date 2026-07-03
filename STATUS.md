@@ -18,3 +18,5 @@
 - 2026-07-04: Task 005 validation passed with `pytest` 34 passed, `compileall src tests`, and `git diff --check`.
 - 2026-07-04: PR #3 review follow-up reset `INBOX.md` to the commented empty template; `run_codex_closed_loop.ps1` now returns `status=no_task`.
 - 2026-07-04: PR #3 closeout validation passed with `pytest` 34 passed, `compileall src tests`, `git diff --check`, and no `.github/workflows/ci.yml` file created.
+- 2026-07-04: Started closed-loop task 006 to add a minimal GitHub Actions CI workflow for pull requests and pushes to `main`.
+- 2026-07-04: Task 006 validation passed with `pytest` 34 passed, `compileall src tests`, `git diff --check`, and closed-loop guard `status=no_task` after `INBOX.md` reset.

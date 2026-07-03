@@ -85,3 +85,13 @@ Codex automation 或人工 Codex thread 應先看 guard 結果：
 ## CI Target Preparation
 
 `.github/` is an allowed closed-loop target root so a later reviewed task can add workflow files. This does not grant access to `.git/`, credentials, external APIs, data downloads, or auto-merge behavior.
+
+## CI Workflow
+
+The repository CI workflow lives at `.github/workflows/ci.yml`. It runs on pull requests and pushes to `main`, uses official GitHub Actions for checkout and Python setup, installs `.[dev]`, and executes:
+
+- `ruff check .`
+- `python -m pytest`
+- `python -m compileall src tests`
+
+The matrix covers Python 3.11 and 3.12 to match the repository's Python 3.11+ support boundary.

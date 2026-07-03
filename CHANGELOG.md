@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增最小 GitHub Actions CI workflow，於 pull request 與 push to main 執行 ruff、pytest、compileall，並使用 Python 3.11/3.12 matrix。
 - 清空 Task 005 後的 `INBOX.md` active task，讓 closed-loop guard 回到 `status=no_task`，避免 PR #3 merge 後重複執行同一任務。
 - 準備未來 CI workflow governance target：closed-loop guard 設定允許 `.github/`，測試確認 `.github/workflows/ci.yml` 可作為 target 且 `.git/config` 仍被封鎖。
 - 修正 review package final audit，將 output file 從 repo diff-check 中排除，並單獨驗證輸出檔沒有 trailing whitespace。

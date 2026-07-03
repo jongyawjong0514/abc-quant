@@ -51,6 +51,17 @@ abc/
 
 詳細規則見 `docs/codex_closed_loop.md`。
 
+## CI Quality Gates
+
+GitHub Actions workflow `.github/workflows/ci.yml` runs on pull requests and pushes to `main`.
+It installs the project with development dependencies and runs:
+
+- `ruff check .`
+- `python -m pytest`
+- `python -m compileall src tests`
+
+The workflow uses Python 3.11 and 3.12 because the project declares Python 3.11+ support.
+
 ## 快速開始
 
 在 Windows PowerShell：
