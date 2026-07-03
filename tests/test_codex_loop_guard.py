@@ -275,6 +275,62 @@ loop:
     assert not config.allow_auto_merge
 
 
+def test_config_allows_github_workflow_target(tmp_path) -> None:
+    config_dir = tmp_path / "configs"
+    config_dir.mkdir()
+    (config_dir / "codex_closed_loop.yaml").write_text(
+        """
+loop:
+  allowed_risk_levels:
+    - normal
+  blocked_content_patterns:
+    - custom-risk
+  blocked_path_patterns:
+    - custom-blocked-path
+  allowed_target_roots:
+    - .github/
+  allow_auto_merge: true
+""",
+        encoding="utf-8",
+    )
+
+    config = load_guard_config(tmp_path)
+    result = evaluate_inbox(
+        _task_yaml(target_files_or_folders=[".github/workflows/ci.yml"]),
+        config=config,
+    )
+
+    assert ".github/" in config.allowed_target_roots
+    assert result.status == "ready"
+
+
+def test_config_allows_github_but_keeps_dot_git_blocked(tmp_path) -> None:
+    config_dir = tmp_path / "configs"
+    config_dir.mkdir()
+    (config_dir / "codex_closed_loop.yaml").write_text(
+        """
+loop:
+  allowed_risk_levels:
+    - normal
+  blocked_content_patterns:
+    - custom-risk
+  blocked_path_patterns:
+    - custom-blocked-path
+  allowed_target_roots:
+    - .github/
+  allow_auto_merge: true
+""",
+        encoding="utf-8",
+    )
+
+    config = load_guard_config(tmp_path)
+    result = evaluate_inbox(_task_yaml(target_files_or_folders=[".git/config"]), config=config)
+
+    assert ".git" in config.blocked_path_patterns
+    assert result.status == "blocked_risky"
+    assert any(".git" in message for message in result.messages)
+
+
 def test_anything_not_allowed_alone_does_not_block() -> None:
     result = evaluate_inbox(
         _task_yaml(task="Add a local docs test.", anything_not_allowed=["No download"])

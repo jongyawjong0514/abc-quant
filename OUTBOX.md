@@ -1,5 +1,35 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 005 - CI Target Root Preparation
+
+## 修改檔案
+- `configs/codex_closed_loop.yaml`: added `.github/` to `allowed_target_roots`.
+- `tests/test_codex_loop_guard.py`: added tests proving `.github/workflows/ci.yml` is allowed while `.git/config` remains blocked.
+- `docs/codex_closed_loop.md`: documented the CI target preparation boundary.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 005 governance progress.
+
+## 實作摘要
+- Prepared the guard for a later reviewed CI workflow task without creating any workflow file.
+- `.github/` is now an explicit allowed repository target root.
+- `.git/` remains blocked through built-in blocked path defaults.
+- Built-in blocked content/path defaults remain preserved when config adds custom blockers.
+- No trading, data, model, broker, strategy, or backtest code changed.
+
+## 測試方式
+- `python -m pytest`
+- `python -m compileall src tests`
+
+## 測試結果
+- `pytest`: 34 passed in 1.22s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+
+## 已知限制
+- This task only prepares the guard target root; CI workflow files are intentionally not created.
+
+## 下一步建議
+- Have ChatGPT Pro review this governance-only PR before any future task adds workflow files.
+
 ## 2026-07-04 Closed-Loop Task 004 - Final Review Audit and Guard Defaults
 
 ## 修改檔案
