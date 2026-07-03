@@ -169,11 +169,11 @@ def load_guard_config(root: Path, config_path: Path | None = None) -> LoopGuardC
         report_dir=Path(str(data.get("report_dir", defaults.report_dir))),
         allowed_risk_levels=allowed,
         blocked_risk_levels=blocked.union(defaults.blocked_risk_levels),
-        blocked_path_patterns=_string_tuple(
-            data.get("blocked_path_patterns"), defaults.blocked_path_patterns
+        blocked_path_patterns=_merge_string_tuple(
+            defaults.blocked_path_patterns, data.get("blocked_path_patterns")
         ),
-        blocked_content_patterns=_string_tuple(
-            data.get("blocked_content_patterns"), defaults.blocked_content_patterns
+        blocked_content_patterns=_merge_string_tuple(
+            defaults.blocked_content_patterns, data.get("blocked_content_patterns")
         ),
         allowed_target_roots=_string_tuple(
             data.get("allowed_target_roots"), defaults.allowed_target_roots
@@ -572,6 +572,18 @@ def _string_tuple(value: Any, default: tuple[str, ...]) -> tuple[str, ...]:
     if value is None:
         return default
     return tuple(str(item).strip() for item in _as_list(value) if str(item).strip())
+
+
+def _merge_string_tuple(default: tuple[str, ...], value: Any) -> tuple[str, ...]:
+    merged = list(default)
+    seen = {_normalize_text(item) for item in default}
+    for item in _as_list(value):
+        text = str(item).strip()
+        key = _normalize_text(text)
+        if text and key not in seen:
+            merged.append(text)
+            seen.add(key)
+    return tuple(merged)
 
 
 def _string_set(value: Any, default: frozenset[str]) -> frozenset[str]:

@@ -12,3 +12,5 @@
 - 2026-07-03: Final task 001 direct validation passed: `pytest` 19 passed in 0.94s; closed-loop guard returned `status=no_task`.
 - 2026-07-03: Started closed-loop task 003 to harden the guard against disguised risky normal tasks and make `reviews/review_package_002.md` reproducible.
 - 2026-07-03: Task 003 validation passed with `pytest` 29 passed and `compileall src tests`; `ruff check .` is unavailable in the current shell.
+- 2026-07-04: Started closed-loop task 004 to fix final review package audit metadata and preserve built-in guard blockers when config adds custom blockers.
+- 2026-07-04: Task 004 validation passed with `pytest` 32 passed, `compileall src tests`, and `git diff --check`; `ruff check .` is unavailable in the current shell.

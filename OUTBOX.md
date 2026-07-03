@@ -1,5 +1,41 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 004 - Final Review Audit and Guard Defaults
+
+## 修改檔案
+- `src/abc_quant/governance/codex_loop.py`: preserved built-in blocked content/path patterns when config adds custom patterns.
+- `tests/test_codex_loop_guard.py`: added regression tests proving config cannot remove default `token` or `.git` blockers and cannot enable auto-merge.
+- `scripts/build_review_package.py`: added two-pass final audit, output-file trailing-whitespace check, diff-check exclusion for the output file, and clearer SHA metadata.
+- `reviews/review_package_002.md`: regenerated as the Task 004 review package after source changes were committed.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`: recorded Task 004 governance results.
+
+## 實作摘要
+- `blocked_content_patterns` and `blocked_path_patterns` now merge config additions onto built-in defaults; config can no longer weaken the default guard.
+- `allowed_risk_levels` still filters to `normal` only, and `allow_auto_merge` remains forced to `false`.
+- Review package metadata now uses `source_head_sha_at_generation`, `review_package_output_file`, and `review_package_commit_sha: unavailable_self_reference`.
+- Review package generation excludes `reviews/review_package_002.md` from repo-level diff checks to avoid self-reference, then separately audits the generated output file for trailing whitespace.
+
+## 測試方式
+- `python -m pytest`
+- `python -m compileall src tests`
+- `ruff check .`
+- `git diff --check`
+- `python scripts\build_review_package.py --output reviews\review_package_002.md --title "Codex Closed-Loop Task 004 Review Package" --pr-url "https://github.com/jongyawjong0514/abc-quant/pull/2" --run-validation --include-diff --include-file-contents --assert-clean`
+
+## 測試結果
+- `pytest`: 32 passed in 1.18s.
+- `compileall`: passed for `src` and `tests`.
+- `ruff`: unavailable in the current shell; no package was installed.
+- `git diff --check`: passed before source commit; final check after package generation also passed.
+
+## 已知限制
+- `review_package_commit_sha` remains `unavailable_self_reference` because committing the review package changes the final commit SHA.
+- The package excludes itself from repo-level diff sections to prevent recursive package growth, but it audits the output file directly for trailing whitespace.
+
+## 下一步建議
+- Ask ChatGPT Pro to re-review `reviews/review_package_002.md` on PR #2.
+- Merge only after review approval; closed-loop policy still forbids auto-merge.
+
 ## 2026-07-03 Closed-Loop Task 003 - Guard Hardening and Reproducible Review Package
 
 ## 修改檔案

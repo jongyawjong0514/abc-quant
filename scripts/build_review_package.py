@@ -48,6 +48,16 @@ class CleanStatus:
         return not self.dirty_entries_excluding_output
 
 
+@dataclass(frozen=True)
+class FinalAudit:
+    """Audit facts checked after the review package is generated."""
+
+    final_output_trailing_whitespace: bool
+    final_git_diff_check_excluding_output: str
+    final_clean_excluding_output_file: bool
+    diff_check_result: CommandResult
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build an ABC Quant review package.")
     parser.add_argument("--output", type=Path, required=True, help="Markdown file to write.")
@@ -77,10 +87,10 @@ def main() -> int:
 
     root = Path.cwd()
     output = resolve_output(root, args.output)
-    clean_status = inspect_clean_status(root, output)
-    if args.assert_clean and not clean_status.is_clean_excluding_output:
+    initial_clean_status = inspect_clean_status(root, output)
+    if args.assert_clean and not initial_clean_status.is_clean_excluding_output:
         print("Working tree is dirty outside the review package output file:", file=sys.stderr)
-        for entry in clean_status.dirty_entries_excluding_output:
+        for entry in initial_clean_status.dirty_entries_excluding_output:
             print(entry, file=sys.stderr)
         return 2
 
@@ -89,7 +99,8 @@ def main() -> int:
         validations.extend(run_validations(root))
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    package_text = strip_trailing_whitespace(
+    write_package(
+        output,
         render_package(
             root=root,
             output=output,
@@ -98,13 +109,58 @@ def main() -> int:
             validations=validations,
             include_diff=args.include_diff,
             include_file_contents=args.include_file_contents,
-            clean_status=clean_status,
-        )
+            clean_status=initial_clean_status,
+            final_audit=None,
+        ),
     )
-    with output.open("w", encoding="utf-8", newline="\n") as handle:
-        handle.write(package_text)
+    final_audit = audit_generated_package(root, output)
+    final_clean_status = inspect_clean_status(root, output)
+    write_package(
+        output,
+        render_package(
+            root=root,
+            output=output,
+            title=args.title,
+            pr_url=args.pr_url,
+            validations=validations,
+            include_diff=args.include_diff,
+            include_file_contents=args.include_file_contents,
+            clean_status=final_clean_status,
+            final_audit=final_audit,
+        ),
+    )
+    final_audit = audit_generated_package(root, output)
+    if (
+        final_audit.final_output_trailing_whitespace
+        or final_audit.final_git_diff_check_excluding_output != "passed"
+        or not final_audit.final_clean_excluding_output_file
+    ):
+        print("Final review package audit failed:", file=sys.stderr)
+        print(
+            f"final_output_trailing_whitespace="
+            f"{final_audit.final_output_trailing_whitespace}",
+            file=sys.stderr,
+        )
+        print(
+            f"final_git_diff_check_excluding_output="
+            f"{final_audit.final_git_diff_check_excluding_output}",
+            file=sys.stderr,
+        )
+        print(
+            f"final_clean_excluding_output_file="
+            f"{final_audit.final_clean_excluding_output_file}",
+            file=sys.stderr,
+        )
+        return 3
     print(output)
     return 0
+
+
+def write_package(output: Path, text: str) -> None:
+    """Write generated Markdown with stable line endings and no trailing whitespace."""
+
+    with output.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(strip_trailing_whitespace(text))
 
 
 def resolve_output(root: Path, output: Path) -> Path:
@@ -135,17 +191,27 @@ def render_package(
     include_diff: bool,
     include_file_contents: bool,
     clean_status: CleanStatus,
+    final_audit: FinalAudit | None,
 ) -> str:
     as_of = datetime.now(ZoneInfo("Asia/Taipei")).isoformat(timespec="seconds")
     output_relative = relative_to_root(output, root)
     branch = git_value(["branch", "--show-current"], root)
-    head_sha = git_value(["rev-parse", "HEAD"], root)
+    source_head_sha = git_value(["rev-parse", "HEAD"], root)
     git_status = git(["status", "--short", "--branch"], root)
-    diff_check = git(["diff", "--check"], root)
-    diff_stat = git(["diff", "--stat", "main...HEAD"], root)
-    diff_names_result = run_command(["git", "diff", "--name-only", "main...HEAD"], root)
+    diff_check = git_diff_check_excluding_output(root, output)
+    diff_stat = git(
+        ["diff", "--stat", "main...HEAD", "--", ".", f":!{output_relative}"], root
+    )
+    diff_names_result = run_command(
+        ["git", "diff", "--name-only", "main...HEAD", "--", ".", f":!{output_relative}"],
+        root,
+    )
     diff_names = diff_names_result.output.rstrip() + f"\n(exit_code={diff_names_result.exit_code})"
-    full_diff = git(["diff", "main...HEAD"], root) if include_diff else "_Not requested._"
+    full_diff = (
+        git(["diff", "main...HEAD", "--", ".", f":!{output_relative}"], root)
+        if include_diff
+        else "_Not requested._"
+    )
 
     sections = [
         f"# {title}",
@@ -156,9 +222,12 @@ def render_package(
         f"- project_root: `{root}`",
         f"- pr_url: `{pr_url}`" if pr_url else "- pr_url: ``",
         f"- branch: `{branch}`",
-        f"- head_sha: `{head_sha}`",
-        f"- status_excludes_output_file: {str(clean_status.status_excludes_output_file).lower()}",
+        f"- source_head_sha_at_generation: `{source_head_sha}`",
+        "- review_package_commit_sha: `unavailable_self_reference`",
+        f"- review_package_output_file: {output_relative}",
         f"- output_file: {output_relative}",
+        f"- status_excludes_output_file: {str(clean_status.status_excludes_output_file).lower()}",
+        "- diff_check_excludes_output_file: true",
         "",
         "## Objective",
         "",
@@ -184,25 +253,25 @@ def render_package(
         [
             "## Git Diff Check",
             "",
-            "Command: `git diff --check`",
+            f"Command: `git diff --check -- . :!{output_relative}`",
             "",
-            fenced(diff_check),
+            fenced(diff_check.output.rstrip() + f"\n(exit_code={diff_check.exit_code})"),
             "",
             "## Branch Diff Stat Versus Main",
             "",
-            "Command: `git diff --stat main...HEAD`",
+            f"Command: `git diff --stat main...HEAD -- . :!{output_relative}`",
             "",
             fenced(diff_stat),
             "",
             "## Branch Changed Files Versus Main",
             "",
-            "Command: `git diff --name-only main...HEAD`",
+            f"Command: `git diff --name-only main...HEAD -- . :!{output_relative}`",
             "",
             fenced(diff_names),
             "",
             "## Branch Diff Versus Main",
             "",
-            "Command: `git diff main...HEAD`",
+            f"Command: `git diff main...HEAD -- . :!{output_relative}`",
             "",
             fenced(full_diff),
             "",
@@ -226,6 +295,40 @@ def render_package(
     else:
         sections.append("_No validation commands were run by the package builder._")
 
+    if final_audit:
+        sections.extend(
+            [
+                "",
+                "## Final Audit",
+                "",
+                (
+                    f"- final_output_trailing_whitespace: "
+                    f"{str(final_audit.final_output_trailing_whitespace).lower()}"
+                ),
+                (
+                    f"- final_git_diff_check_excluding_output: "
+                    f"{final_audit.final_git_diff_check_excluding_output}"
+                ),
+                (
+                    f"- final_clean_excluding_output_file: "
+                    f"{str(final_audit.final_clean_excluding_output_file).lower()}"
+                ),
+                "",
+            ]
+        )
+    else:
+        sections.extend(
+            [
+                "",
+                "## Final Audit",
+                "",
+                "- final_output_trailing_whitespace: pending",
+                "- final_git_diff_check_excluding_output: pending",
+                "- final_clean_excluding_output_file: pending",
+                "",
+            ]
+        )
+
     if include_file_contents:
         sections.extend(render_file_contents(root, output, diff_names_result.output))
     else:
@@ -246,6 +349,31 @@ def render_package(
         ]
     )
     return "\n".join(sections)
+
+
+def audit_generated_package(root: Path, output: Path) -> FinalAudit:
+    """Audit the actual generated review package file."""
+
+    diff_check = git_diff_check_excluding_output(root, output)
+    clean_status = inspect_clean_status(root, output)
+    return FinalAudit(
+        final_output_trailing_whitespace=file_has_trailing_whitespace(output),
+        final_git_diff_check_excluding_output=(
+            "passed" if diff_check.exit_code == 0 else f"failed_exit_{diff_check.exit_code}"
+        ),
+        final_clean_excluding_output_file=clean_status.is_clean_excluding_output,
+        diff_check_result=diff_check,
+    )
+
+
+def file_has_trailing_whitespace(path: Path) -> bool:
+    """Return true when any generated output line ends with space or tab."""
+
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return True
+    return any(line.endswith((" ", "\t")) for line in text.splitlines())
 
 
 def render_file_contents(root: Path, output: Path, diff_names: str) -> list[str]:
@@ -337,6 +465,11 @@ def normalize_path(path: str) -> str:
 def git(args: list[str], cwd: Path) -> str:
     result = run_command(["git", *args], cwd)
     return result.output.rstrip() + f"\n(exit_code={result.exit_code})"
+
+
+def git_diff_check_excluding_output(root: Path, output: Path) -> CommandResult:
+    output_relative = relative_to_root(output, root)
+    return run_command(["git", "diff", "--check", "--", ".", f":!{output_relative}"], root)
 
 
 def git_value(args: list[str], cwd: Path) -> str:
