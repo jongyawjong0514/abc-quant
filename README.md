@@ -120,6 +120,12 @@ The CLI is a thin wrapper around `run_preprocessing_smoke(...)`. It supports `--
 
 This is only a leakage guard before modeling work. It does not train estimators, drop rows, fill missing labels, create strategy logic, generate trading signals, define allocation logic, build performance curves, or run simulation engines.
 
+The supervised split dataset contract is:
+
+- `src/abc_quant/models/dataset.py`: `build_supervised_split_dataset(...)` combines `FeatureMatrix` labels with `StandardizedFeatureMatrix` train/validation/test feature frames.
+
+It aligns labels by the fitted split indices, preserves feature column order and split indices, drops missing labels independently per split by default, records `dropped_label_counts`, rejects missing labels when `drop_missing_labels=False`, rejects empty train data after filtering, and returns copied feature/label objects. This prepares in-memory supervised inputs only; it does not train estimators, change smoke outputs, change CLI behavior, or add allocation/performance/simulation logic.
+
 ## Minimal Model Baseline
 
 The first model-layer contract is:
