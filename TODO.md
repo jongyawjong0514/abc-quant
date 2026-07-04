@@ -45,6 +45,7 @@
 - [x] Wire bundle evaluation into modeling smoke pipeline。
 - [x] Train-only feature standardization contract。
 - [x] Deterministic preprocessing smoke diagnostics。
+- [x] Preprocessing smoke summary contract validator。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。

@@ -42,6 +42,27 @@ EVALUATION_METRIC_KEYS: Final[frozenset[str]] = frozenset(
     }
 )
 
+PREPROCESSING_SMOKE_SUMMARY_KEYS: Final[frozenset[str]] = frozenset(
+    {
+        "row_count",
+        "feature_columns",
+        "split_counts",
+        "fitted_means",
+        "fitted_stds",
+        "train_mean_after_scaling",
+        "train_std_after_scaling",
+        "split_shape",
+    }
+)
+
+PREPROCESSING_SMOKE_SPLITS: Final[frozenset[str]] = frozenset(
+    {"train", "validation", "test"}
+)
+
+PREPROCESSING_SMOKE_SPLIT_SHAPE_KEYS: Final[frozenset[str]] = frozenset(
+    {"rows", "columns"}
+)
+
 
 def validate_modeling_smoke_summary(summary: object) -> dict[str, Any]:
     """Validate the deterministic modeling smoke summary shape.
@@ -80,6 +101,51 @@ def validate_modeling_smoke_summary(summary: object) -> dict[str, Any]:
             f"evaluation metrics for {split_name}",
             actual_keys=metrics.keys(),
             expected_keys=EVALUATION_METRIC_KEYS,
+        )
+
+    return summary
+
+
+def validate_preprocessing_smoke_summary(summary: object) -> dict[str, Any]:
+    """Validate the deterministic preprocessing smoke summary shape.
+
+    The function returns the original summary object unchanged when valid.
+    """
+    if not isinstance(summary, dict):
+        raise ValueError("preprocessing smoke summary must be a dict")
+
+    _validate_key_set(
+        "preprocessing smoke summary",
+        actual_keys=summary.keys(),
+        expected_keys=PREPROCESSING_SMOKE_SUMMARY_KEYS,
+    )
+
+    split_counts = summary["split_counts"]
+    if not isinstance(split_counts, dict):
+        raise ValueError("preprocessing smoke summary split_counts must be a dict")
+    _validate_key_set(
+        "preprocessing smoke summary split_counts",
+        actual_keys=split_counts.keys(),
+        expected_keys=PREPROCESSING_SMOKE_SPLITS,
+    )
+
+    split_shape = summary["split_shape"]
+    if not isinstance(split_shape, dict):
+        raise ValueError("preprocessing smoke summary split_shape must be a dict")
+    _validate_key_set(
+        "preprocessing smoke summary split_shape",
+        actual_keys=split_shape.keys(),
+        expected_keys=PREPROCESSING_SMOKE_SPLITS,
+    )
+
+    for split_name in sorted(PREPROCESSING_SMOKE_SPLITS):
+        shape = split_shape[split_name]
+        if not isinstance(shape, dict):
+            raise ValueError(f"split_shape for {split_name} must be a dict")
+        _validate_key_set(
+            f"split_shape for {split_name}",
+            actual_keys=shape.keys(),
+            expected_keys=PREPROCESSING_SMOKE_SPLIT_SHAPE_KEYS,
         )
 
     return summary

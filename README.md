@@ -102,6 +102,8 @@ The deterministic preprocessing smoke diagnostic is:
 
 It reports row counts, feature columns, split counts, fitted means/stds, train scaled mean/std, and split shapes. The smoke path uses feature-complete fixture rows for scaler fitting because the rolling smoke features intentionally have missing early rows. It stays separate from the modeling smoke CLI and does not change modeling summary keys.
 
+The preprocessing smoke summary shape is centralized in `src/abc_quant/pipeline/contracts.py`. `validate_preprocessing_smoke_summary(...)` checks top-level keys, `split_counts` keys, `split_shape` split keys, and each split shape's `rows` / `columns` keys before the diagnostic is returned.
+
 This is only a leakage guard before modeling work. It does not train estimators, drop rows, fill missing labels, create strategy logic, generate trading signals, define allocation logic, build performance curves, or run simulation engines.
 
 ## Minimal Model Baseline
