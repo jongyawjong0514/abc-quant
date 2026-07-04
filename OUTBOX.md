@@ -1,5 +1,48 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 025 - Preprocessing Smoke Diagnostics
+
+## 修改檔案
+- `src/abc_quant/pipeline/preprocessing.py`: added `run_preprocessing_smoke(...)` for deterministic train-only scaling diagnostics.
+- `src/abc_quant/pipeline/__init__.py`: exported `run_preprocessing_smoke`.
+- `tests/test_pipeline_preprocessing.py`: added deterministic summary, JSON serialization, train-only fitted parameter, standardized train mean/std, and split-shape preservation tests.
+- `docs/modeling.md`: documented the preprocessing smoke diagnostic path and safety rules.
+- `README.md`: documented the preprocessing smoke diagnostic alongside modeling preparation.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 025 progress and completion evidence.
+- `INBOX.md`: reset the active Task 025 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added a deterministic preprocessing smoke path that uses `build_smoke_frame(...)`, `build_feature_matrix(...)`, `build_temporal_split(...)`, `fit_standard_scaler(...)`, and `transform_with_standard_scaler(...)`.
+- The smoke path uses feature-complete synthetic fixture rows because the existing rolling smoke features intentionally contain missing early rows for each ticker.
+- The returned plain dict is JSON-serializable and includes `row_count`, `feature_columns`, `split_counts`, `fitted_means`, `fitted_stds`, `train_mean_after_scaling`, `train_std_after_scaling`, and `split_shape`.
+- Tests compare fitted means/stds against direct train-split calculations, verify train scaled mean/std, and confirm validation/test shape preservation.
+- The new path is separate from the existing modeling smoke CLI and modeling smoke summary contract.
+- No estimator implementation, parameter search, allocation logic, performance curve, simulation engine, outside data access, live account connectivity, or modeling smoke output change was added.
+
+## 測試方式
+- `python -m pytest tests\test_pipeline_preprocessing.py`
+- `python -m pytest tests\test_pipeline_preprocessing.py tests\test_preprocessing_scaling.py tests\test_pipeline_modeling.py tests\test_cli_modeling_smoke.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `ruff check .` and `python -m ruff check .` were attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused preprocessing pipeline tests: 5 passed in 1.29s.
+- Related preprocessing/modeling tests: 27 passed in 4.70s.
+- `pytest`: 147 passed in 6.44s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`ruff` command not found; `No module named ruff`). GitHub Actions should still run ruff.
+
+## 已知限制
+- This diagnostic does not expose a CLI and does not wire scaling into model training or the modeling smoke summary.
+
+## 下一步建議
+- Run full validation after final tracking updates, then open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 024 - Train-Only Feature Standardization
 
 ## 修改檔案

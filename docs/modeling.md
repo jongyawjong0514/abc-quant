@@ -70,6 +70,50 @@ Safety rules:
   labels or metadata, create allocation logic, build performance curves, or run
   simulation engines.
 
+## Preprocessing Smoke Diagnostics
+
+`src/abc_quant/pipeline/preprocessing.py` defines
+`run_preprocessing_smoke(...)`. It is a deterministic in-memory diagnostic path
+for train-only scaling.
+
+The pipeline wires together:
+
+1. `build_smoke_frame(...)`
+2. `build_feature_matrix(...)`
+3. `build_temporal_split(...)`
+4. `fit_standard_scaler(...)`
+5. `transform_with_standard_scaler(...)`
+
+The smoke fixture's rolling features naturally contain missing values in the
+first rows for each ticker. The preprocessing smoke path therefore uses
+feature-complete fixture rows before building the `FeatureMatrix`, while still
+preserving missing labels for later diagnostics. It does not fill feature or
+label values.
+
+The returned plain dictionary is deterministic and JSON-serializable. It
+contains:
+
+- `row_count`
+- `feature_columns`
+- `split_counts`
+- `fitted_means`
+- `fitted_stds`
+- `train_mean_after_scaling`
+- `train_std_after_scaling`
+- `split_shape`
+
+Safety rules:
+
+- Fitted means and standard deviations come only from train rows.
+- Train rows are expected to scale to approximately zero mean and unit
+  population standard deviation.
+- Validation and test rows are transformed with fixed train-fitted parameters.
+- The helper stays separate from the modeling smoke CLI and modeling smoke
+  summary contract.
+- The helper does not train estimators, tune parameters, change modeling smoke
+  outputs, define allocation logic, build performance curves, or run simulation
+  engines.
+
 ## Constant Baseline Contract
 
 `src/abc_quant/models/baseline.py` defines `fit_constant_baseline(...)`.

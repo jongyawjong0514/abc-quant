@@ -44,6 +44,7 @@
 - [x] Split prediction bundle evaluator。
 - [x] Wire bundle evaluation into modeling smoke pipeline。
 - [x] Train-only feature standardization contract。
+- [x] Deterministic preprocessing smoke diagnostics。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。

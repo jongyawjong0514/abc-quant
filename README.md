@@ -96,6 +96,12 @@ Temporal splits are date-based, sorted by `date` and then `ticker` when present,
 
 The standardization contract rejects unknown, duplicate, nonnumeric, missing-training, and zero-variance training feature inputs. Its fitted means and standard deviations come only from `train_index`, so validation/test feature values cannot leak into preprocessing parameters.
 
+The deterministic preprocessing smoke diagnostic is:
+
+- `src/abc_quant/pipeline/preprocessing.py`: `run_preprocessing_smoke(...)` wires the existing synthetic smoke frame, feature matrix, temporal split, train-only scaler fit, and scaler transform into a JSON-friendly diagnostic dictionary.
+
+It reports row counts, feature columns, split counts, fitted means/stds, train scaled mean/std, and split shapes. The smoke path uses feature-complete fixture rows for scaler fitting because the rolling smoke features intentionally have missing early rows. It stays separate from the modeling smoke CLI and does not change modeling summary keys.
+
 This is only a leakage guard before modeling work. It does not train estimators, drop rows, fill missing labels, create strategy logic, generate trading signals, define allocation logic, build performance curves, or run simulation engines.
 
 ## Minimal Model Baseline
