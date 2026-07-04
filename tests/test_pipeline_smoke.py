@@ -38,6 +38,7 @@ def test_smoke_frame_has_features_label_and_ticker_isolation() -> None:
 
     assert set(SMOKE_FEATURE_COLUMNS).issubset(frame.columns)
     assert SMOKE_LABEL_COLUMN in frame.columns
+    assert SMOKE_LABEL_COLUMN not in SMOKE_FEATURE_COLUMNS
     assert frame.groupby("ticker").size().to_dict() == {"2317": 12, "2330": 12}
     assert all(
         pd.isna(group.iloc[0]["price_momentum_1d"])
