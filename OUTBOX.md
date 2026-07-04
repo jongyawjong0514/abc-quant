@@ -1,5 +1,43 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 015 - Baseline Modeling Smoke Pipeline
+
+## 修改檔案
+- `src/abc_quant/pipeline/modeling.py`: added `run_baseline_modeling_smoke(...)` for deterministic model-diagnostics wiring.
+- `src/abc_quant/pipeline/__init__.py`: exported the modeling smoke pipeline alongside existing smoke helpers.
+- `tests/test_pipeline_modeling.py`: added deterministic summary, split-count, metric-key, label-feature separation, and forbidden-output-key tests.
+- `docs/modeling.md`: documented the baseline modeling smoke pipeline and diagnostic-only boundary.
+- `README.md`: documented the model-diagnostics smoke pipeline.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 015 progress and completion evidence.
+- `INBOX.md`: reset the active Task 015 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- `run_baseline_modeling_smoke(...)` builds the existing deterministic synthetic smoke frame, assembles a `FeatureMatrix`, builds a date-based `TemporalSplit`, fits the existing constant baseline, and evaluates train/validation/test predictions.
+- The returned plain dictionary includes row counts, ticker counts, rows per ticker, `feature_columns`, `label_column`, label missing/non-missing counts, split counts, `fitted_value`, `training_label_count`, and train/validation/test evaluation metrics.
+- The default split uses `train_end="2026-01-07"` and `validation_end="2026-01-12"` against the deterministic synthetic fixture.
+- Tests verify deterministic repeated output, expected split counts, evaluation metric keys, label exclusion from feature columns, and absence of market-action, allocation, performance-curve, or simulation-result keys.
+- No source adapter, outside data access, live account connectivity, new model type, scaler fitting, hyperparameter tuning, market-action output, allocation logic, performance curve, or simulation engine was added.
+
+## 測試方式
+- `python -m pytest tests\test_pipeline_modeling.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- Focused modeling pipeline tests: 4 passed in 1.28s.
+- `pytest`: 93 passed in 2.15s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- This task only wires existing contracts into a deterministic diagnostic smoke pipeline. It is not market performance, a market-action output, allocation logic, a performance curve, or a simulation result.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 014 - Prediction Evaluation Metrics
 
 ## 修改檔案
