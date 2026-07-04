@@ -39,6 +39,37 @@ This contract is a pre-modeling guard only. Model baselines, walk-forward
 validation, scalers, feature importance, ablation studies, strategies, and
 backtests remain future tasks.
 
+## Train-Only Standardization Contract
+
+`src/abc_quant/preprocessing/scaling.py` defines `fit_standard_scaler(...)`
+and `transform_with_standard_scaler(...)` for leakage-safe numeric feature
+standardization.
+
+`fit_standard_scaler(feature_matrix, temporal_split, feature_columns=None)`
+uses only `temporal_split.train_index` rows to compute per-feature means and
+population standard deviations. Validation and test rows are never read during
+fit, so extreme later-period values cannot change fitted parameters.
+
+`transform_with_standard_scaler(feature_matrix, fitted_scaler, temporal_split)`
+applies the fitted parameters to train, validation, and test rows and returns a
+`StandardizedFeatureMatrix` with split DataFrames plus the `StandardScalerFit`.
+The transformed split frames preserve split row counts, positional split
+indices, and feature column order.
+
+Safety rules:
+
+- Feature columns default to `feature_matrix.feature_columns` or may be
+  supplied explicitly.
+- Unknown, duplicate, empty, or nonnumeric feature columns are rejected.
+- Empty train splits are rejected.
+- Missing training feature values are rejected.
+- Zero-variance training features are rejected.
+- A fitted scaler can only be transformed with the same train/validation/test
+  split indices it was fitted with.
+- The helper does not add dependencies, fit estimators, tune parameters, alter
+  labels or metadata, create allocation logic, build performance curves, or run
+  simulation engines.
+
 ## Constant Baseline Contract
 
 `src/abc_quant/models/baseline.py` defines `fit_constant_baseline(...)`.

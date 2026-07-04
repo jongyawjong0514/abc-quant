@@ -90,10 +90,13 @@ All feature builders validate OHLCV input first, return a sorted defensive copy 
 The first pre-modeling validation contract is:
 
 - `src/abc_quant/validation/temporal.py`: `build_temporal_split(...)` creates deterministic train/test or train/validation/test positional indices from in-memory metadata.
+- `src/abc_quant/preprocessing/scaling.py`: `fit_standard_scaler(...)` and `transform_with_standard_scaler(...)` fit numeric feature standardization on training rows only, then apply those fixed parameters to train/validation/test splits.
 
 Temporal splits are date-based, sorted by `date` and then `ticker` when present, and require training dates to be strictly earlier than validation/test dates. The split helper rejects missing or unsortable dates, non-increasing boundaries, empty requested splits, and rows that would fall after an explicit `test_end`.
 
-This is only a leakage guard before modeling work. It does not train models, fit scalers, drop rows, fill missing labels, create strategy logic, generate trading signals, or run backtests.
+The standardization contract rejects unknown, duplicate, nonnumeric, missing-training, and zero-variance training feature inputs. Its fitted means and standard deviations come only from `train_index`, so validation/test feature values cannot leak into preprocessing parameters.
+
+This is only a leakage guard before modeling work. It does not train estimators, drop rows, fill missing labels, create strategy logic, generate trading signals, define allocation logic, build performance curves, or run simulation engines.
 
 ## Minimal Model Baseline
 
