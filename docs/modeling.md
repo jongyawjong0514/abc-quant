@@ -97,3 +97,31 @@ Safety rules:
 - The helpers do not train models, fit scalers, tune hyperparameters, create
   trading signals, define strategies, create positions, build equity curves, or
   run backtests.
+
+## Baseline Modeling Smoke Pipeline
+
+`src/abc_quant/pipeline/modeling.py` defines
+`run_baseline_modeling_smoke(...)`. It is a deterministic in-memory smoke check
+that wires the existing modeling contracts together:
+
+1. `build_smoke_frame(...)`
+2. `build_feature_matrix(...)`
+3. `build_temporal_split(...)`
+4. `fit_constant_baseline(...)`
+5. `evaluate_constant_baseline(...)`
+
+The returned plain dictionary contains diagnostic evidence only:
+
+- row counts and rows per ticker
+- `feature_columns`
+- `label_column`
+- label missing/non-missing counts
+- train/validation/test split counts
+- baseline `fitted_value`
+- `training_label_count`
+- train/validation/test prediction evaluation metrics
+
+The smoke pipeline is deterministic and uses synthetic fixture data. It does
+not access outside data, train new model types, fit scalers, tune
+hyperparameters, create market-action outputs, define allocation logic, build
+performance curves, or run simulation engines.

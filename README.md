@@ -113,6 +113,16 @@ Evaluation aligns prediction Series against actual labels by index, counts missi
 
 This layer evaluates model outputs only. It does not create trading signals, positions, equity curves, strategy logic, portfolio logic, or backtest results.
 
+## Baseline Modeling Smoke Pipeline
+
+The first model-diagnostics pipeline is:
+
+- `src/abc_quant/pipeline/modeling.py`: `run_baseline_modeling_smoke(...)` wires the existing feature-matrix, temporal-split, constant-baseline, and prediction-evaluation contracts together.
+
+The smoke summary is a plain dictionary with row counts, feature columns, the label column, split counts, fitted baseline value, training label count, and train/validation/test evaluation metrics. It uses deterministic synthetic fixture data only and is diagnostic evidence, not market performance.
+
+This pipeline does not add source adapters, outside data access, live account connectivity, new model types, scaler fitting, hyperparameter tuning, market-action outputs, allocation logic, performance curves, or simulation engines.
+
 ## 快速開始
 
 在 Windows PowerShell：
