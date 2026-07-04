@@ -1,5 +1,46 @@
 # OUTBOX
 
+## 2026-07-05 Closed-Loop Task 032 - Supervised Dataset Smoke CLI
+
+## 修改檔案
+- `src/abc_quant/cli/supervised_smoke.py`: added the module-executable supervised dataset smoke CLI.
+- `tests/test_cli_supervised_smoke.py`: added module execution, deterministic stdout JSON, indent, custom split, invalid boundary, and forbidden-key tests.
+- `docs/modeling.md`: documented `python -m abc_quant.cli.supervised_smoke`.
+- `README.md`: documented the supervised dataset smoke CLI.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 032 progress and completion evidence.
+- `INBOX.md`: reset the active Task 032 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added `main(argv=None) -> int` in `src/abc_quant/cli/supervised_smoke.py`.
+- The CLI is a thin wrapper around `run_supervised_dataset_smoke(...)`.
+- Supports `--train-end`, `--validation-end`, and `--indent`.
+- Valid invocations write sorted deterministic JSON to stdout and return `0`.
+- Invalid temporal boundaries return non-zero and write a concise `error:` message to stderr.
+- Existing modeling and preprocessing CLI behavior remains unchanged.
+- No estimator implementation, supervised dataset calculation change, summary key change, split default change, package script change, parameter search, allocation logic, performance curve, simulation engine, outside data access, or live account connectivity was added.
+
+## 測試方式
+- `python -m pytest tests\test_cli_supervised_smoke.py tests\test_cli_preprocessing_smoke.py tests\test_cli_modeling_smoke.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `ruff check .` and `python -m ruff check .` were attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused supervised/modeling/preprocessing CLI tests: 17 passed in 8.87s.
+- `pytest`: 207 passed in 13.97s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`ruff` command not found; `No module named ruff`). GitHub Actions should still run ruff.
+
+## 已知限制
+- This task only adds a module-executable CLI. It does not add a packaged console-script alias or train estimators.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-05 Closed-Loop Task 031 - Supervised Dataset Smoke Summary Validator
 
 ## 修改檔案

@@ -51,6 +51,7 @@
 - [x] Supervised split dataset contract。
 - [x] Deterministic supervised dataset smoke diagnostics。
 - [x] Supervised dataset smoke summary contract validator。
+- [x] Supervised dataset smoke CLI diagnostics。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。

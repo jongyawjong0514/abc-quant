@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 032 supervised dataset smoke diagnostics CLI：`python -m abc_quant.cli.supervised_smoke` 以 sorted JSON 輸出既有 supervised dataset smoke summary，支援 `--train-end`、`--validation-end` 與 `--indent`，錯誤邊界會以 non-zero exit code 與簡短 stderr 回報。
 - 新增 Task 031 supervised dataset smoke summary contract validator：集中定義 `SUPERVISED_DATASET_SMOKE_SUMMARY_KEYS`、`SUPERVISED_DATASET_SMOKE_SPLITS` 與 `validate_supervised_dataset_smoke_summary(...)`，`run_supervised_dataset_smoke(...)` 回傳前會驗證 summary shape，不改預設輸出值。
 - 新增 Task 030 deterministic supervised dataset smoke diagnostics：`run_supervised_dataset_smoke(...)` 串接 deterministic smoke frame、feature matrix、temporal split、train-only scaler 與 supervised split dataset，回傳 JSON-friendly label-drop diagnostics，不訓練 estimator、不改既有 smoke CLI 或 summary。
 - 新增 Task 029 supervised split dataset contract：`SupervisedSplitDataset` 與 `build_supervised_split_dataset(...)` 將 standardized split features 與 `FeatureMatrix` labels 對齊，支援 split-level missing-label drop counts，並拒絕 missing-label no-drop 與 empty train data，不訓練 estimator。
