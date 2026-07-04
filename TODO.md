@@ -37,6 +37,7 @@
 - [x] Baseline modeling smoke pipeline。
 - [x] Baseline modeling smoke CLI diagnostics。
 - [x] Modeling smoke summary contract validator。
+- [x] Modeling smoke constant-baseline method selector。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。

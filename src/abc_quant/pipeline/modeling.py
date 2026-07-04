@@ -6,7 +6,7 @@ from dataclasses import asdict
 from typing import Any, Final
 
 from abc_quant.features.matrix import build_feature_matrix
-from abc_quant.models.baseline import fit_constant_baseline
+from abc_quant.models.baseline import ConstantBaselineMethod, fit_constant_baseline
 from abc_quant.models.evaluation import (
     ConstantBaselineEvaluationResult,
     PredictionEvaluationResult,
@@ -18,12 +18,14 @@ from abc_quant.validation.temporal import build_temporal_split
 
 DEFAULT_TRAIN_END: Final[str] = "2026-01-07"
 DEFAULT_VALIDATION_END: Final[str] = "2026-01-12"
+DEFAULT_BASELINE_METHOD: Final[ConstantBaselineMethod] = "mean"
 
 
 def run_baseline_modeling_smoke(
     *,
     train_end: str = DEFAULT_TRAIN_END,
     validation_end: str = DEFAULT_VALIDATION_END,
+    method: ConstantBaselineMethod = DEFAULT_BASELINE_METHOD,
 ) -> dict[str, Any]:
     """Run a deterministic model-diagnostics smoke check.
 
@@ -38,7 +40,7 @@ def run_baseline_modeling_smoke(
         train_end=train_end,
         validation_end=validation_end,
     )
-    baseline = fit_constant_baseline(feature_matrix, temporal_split)
+    baseline = fit_constant_baseline(feature_matrix, temporal_split, method=method)
     evaluation = evaluate_constant_baseline(feature_matrix, baseline)
 
     summary = {
@@ -58,6 +60,7 @@ def run_baseline_modeling_smoke(
             "test": len(temporal_split.test_index),
         },
         "fitted_value": float(baseline.fitted_value),
+        "baseline_method": baseline.method,
         "training_label_count": int(baseline.training_label_count),
         "evaluation": _evaluation_summary(evaluation),
     }

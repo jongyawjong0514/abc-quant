@@ -25,6 +25,17 @@ def test_validate_modeling_smoke_summary_rejects_non_dict() -> None:
         validate_modeling_smoke_summary(["not", "a", "dict"])
 
 
+def test_validate_modeling_smoke_summary_rejects_invalid_baseline_method() -> None:
+    summary = run_baseline_modeling_smoke()
+    summary["baseline_method"] = "mode"
+
+    with pytest.raises(
+        ValueError,
+        match="modeling smoke summary baseline_method must be one of: mean, median",
+    ):
+        validate_modeling_smoke_summary(summary)
+
+
 def test_validate_modeling_smoke_summary_rejects_missing_top_level_key() -> None:
     summary = run_baseline_modeling_smoke()
     del summary["row_count"]

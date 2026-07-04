@@ -1,5 +1,47 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 018 - Baseline Method Selector
+
+## 修改檔案
+- `src/abc_quant/pipeline/modeling.py`: added a `method` argument to `run_baseline_modeling_smoke(...)`, passes it to `fit_constant_baseline(...)`, and records `baseline_method`.
+- `src/abc_quant/pipeline/contracts.py`: added `baseline_method` to the summary key contract and validates that it is `mean` or `median`.
+- `src/abc_quant/cli/modeling_smoke.py`: added `--method` with `mean` and `median` choices.
+- `tests/test_pipeline_modeling.py`: added deterministic mean/median fitted-value coverage.
+- `tests/test_cli_modeling_smoke.py`: added CLI `--method median` and invalid-method coverage.
+- `tests/test_pipeline_contracts.py`: added invalid `baseline_method` summary validation.
+- `docs/modeling.md`: documented `method`, `baseline_method`, and CLI `--method`.
+- `README.md`: documented the `--method mean|median` CLI option and summary contract update.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 018 progress and completion evidence.
+- `INBOX.md`: reset the active Task 018 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- `run_baseline_modeling_smoke(method="mean")` remains the default behavior.
+- `run_baseline_modeling_smoke(method="median")` uses the existing constant-baseline median method and records `baseline_method="median"`.
+- `python -m abc_quant.cli.modeling_smoke --method median` passes the selected method through and emits deterministic JSON.
+- The smoke summary contract now includes `baseline_method` and rejects unsupported method values.
+- Tests pin the smoke fixture fitted values for mean and median to prove the method changes the existing baseline selection deterministically.
+- No estimator implementation, split construction, metric formula, file output, outside data access, live account connectivity, preprocessing fitting, parameter search, allocation logic, performance curve, or simulation engine was added.
+
+## 測試方式
+- `python -m pytest tests\test_pipeline_contracts.py tests\test_pipeline_modeling.py tests\test_cli_modeling_smoke.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- Focused contract/pipeline/CLI tests: 23 passed in 4.59s.
+- `pytest`: 112 passed in 5.77s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- This task only exposes the existing constant-baseline method selector. It does not add a new estimator or change feature, split, or metric formulas.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 017 - Modeling Summary Contract Validator
 
 ## 修改檔案

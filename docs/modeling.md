@@ -117,9 +117,14 @@ The returned plain dictionary contains diagnostic evidence only:
 - `label_column`
 - label missing/non-missing counts
 - train/validation/test split counts
+- `baseline_method`
 - baseline `fitted_value`
 - `training_label_count`
 - train/validation/test prediction evaluation metrics
+
+The smoke pipeline accepts `method="mean"` or `method="median"` and passes that
+selection through to the existing constant-baseline contract. The selected
+method is recorded as `baseline_method` in the diagnostic summary.
 
 The smoke pipeline is deterministic and uses synthetic fixture data. It does
 not access outside data, train new model types, fit scalers, tune
@@ -136,8 +141,9 @@ performance curves, or run simulation engines.
 
 The validator accepts only the documented top-level summary keys, the
 `train`/`validation`/`test` evaluation split names, and the documented
-evaluation metric keys for each split. It returns the original summary object
-unchanged when valid and raises deterministic `ValueError` messages for
+evaluation metric keys for each split. It also validates that
+`baseline_method` is either `mean` or `median`. It returns the original summary
+object unchanged when valid and raises deterministic `ValueError` messages for
 missing or unknown keys. `run_baseline_modeling_smoke(...)` validates the
 summary before returning it, so the pipeline and CLI share the same summary
 contract.
@@ -155,6 +161,7 @@ The command writes deterministic JSON to stdout with sorted keys. It supports:
 
 - `--train-end`: overrides the last train date boundary.
 - `--validation-end`: overrides the last validation date boundary.
+- `--method`: selects the existing constant-baseline method, `mean` or `median`.
 - `--indent`: optionally formats the JSON output.
 
 Invalid date boundaries return a non-zero exit code and write a concise error
