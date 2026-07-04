@@ -32,7 +32,7 @@
 ## Phase 3：模型
 
 - [x] 建立 temporal split contract。
-- [ ] Baseline 模型。
+- [x] Baseline 模型。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。

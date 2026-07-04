@@ -95,6 +95,14 @@ Temporal splits are date-based, sorted by `date` and then `ticker` when present,
 
 This is only a leakage guard before modeling work. It does not train models, fit scalers, drop rows, fill missing labels, create strategy logic, generate trading signals, or run backtests.
 
+## Minimal Model Baseline
+
+The first model-layer contract is:
+
+- `src/abc_quant/models/baseline.py`: `fit_constant_baseline(...)` creates mean or median constant predictions from non-missing training labels only.
+
+The baseline consumes a `FeatureMatrix` and `TemporalSplit`, returns train/validation/test prediction Series indexed by split positions, and records how many training labels were used. Validation and test labels cannot affect the fitted constant. This is a leakage-safe sanity baseline only; it does not fit scalers, tune hyperparameters, train complex models, create trading signals, define strategy logic, or run backtests.
+
 ## 快速開始
 
 在 Windows PowerShell：

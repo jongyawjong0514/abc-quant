@@ -1,5 +1,44 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 013 - Constant Baseline Model Contract
+
+## 修改檔案
+- `src/abc_quant/models/baseline.py`: added `ConstantBaselineResult` and `fit_constant_baseline(...)` for deterministic mean/median baseline predictions.
+- `src/abc_quant/models/__init__.py`: exported the baseline model contract.
+- `tests/test_models_baseline.py`: added tests for mean/median fitting, validation/test label isolation, missing-label behavior, prediction indices, unsupported methods, empty train split, and all-missing training labels.
+- `docs/modeling.md`: documented the constant baseline contract and leakage boundary.
+- `README.md`: documented the minimal model baseline and no-strategy/no-backtest boundary.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 013 progress.
+- `INBOX.md`: reset the active Task 013 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- `fit_constant_baseline(feature_matrix, temporal_split, method="mean")` fits a constant from non-missing labels at `temporal_split.train_index` only.
+- Supported methods are `mean` and `median`; unsupported methods raise a clear `ValueError`.
+- Empty train splits and all-missing training labels are rejected.
+- Returned train/validation/test predictions are pandas Series indexed by the split's sorted matrix positions.
+- Validation and test labels are not read when computing `fitted_value`, so they cannot leak into the baseline.
+- No new dependency, scaler fitting, hyperparameter tuning, complex ML model, strategy logic, trading signal, portfolio logic, source adapter, data download, or backtest engine was added.
+
+## 測試方式
+- `python -m pytest tests\test_models_baseline.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- Focused baseline tests: 5 passed in 1.07s.
+- `pytest`: 84 passed in 1.81s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- This is a trivial baseline contract for future model validation. It is not a production model, strategy, trading signal, portfolio rule, or performance claim.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 012 - Temporal Split Contract
 
 ## 修改檔案

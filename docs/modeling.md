@@ -38,3 +38,27 @@ Safety rules:
 This contract is a pre-modeling guard only. Model baselines, walk-forward
 validation, scalers, feature importance, ablation studies, strategies, and
 backtests remain future tasks.
+
+## Constant Baseline Contract
+
+`src/abc_quant/models/baseline.py` defines `fit_constant_baseline(...)`.
+It accepts a `FeatureMatrix`, a `TemporalSplit`, and a method of `mean` or
+`median`.
+
+The fitted constant uses only non-missing labels at `train_index`. Validation
+and test labels are never read to compute `fitted_value`, so changing
+validation/test labels cannot leak into the baseline. Predictions are returned
+as pandas Series for the train, validation, and test split positions.
+
+Safety rules:
+
+- Empty train splits are rejected.
+- All-missing training labels are rejected.
+- Unsupported baseline methods are rejected.
+- Missing validation/test labels are allowed because evaluator targets remain
+  separate from prediction generation.
+- The helper does not fit scalers, tune hyperparameters, train complex models,
+  create trading signals, define strategies, or run backtests.
+
+This is a minimal baseline contract for future model validation. It is not a
+production model, trading rule, or performance claim.
