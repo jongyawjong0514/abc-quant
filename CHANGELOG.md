@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 030 deterministic supervised dataset smoke diagnostics：`run_supervised_dataset_smoke(...)` 串接 deterministic smoke frame、feature matrix、temporal split、train-only scaler 與 supervised split dataset，回傳 JSON-friendly label-drop diagnostics，不訓練 estimator、不改既有 smoke CLI 或 summary。
 - 新增 Task 029 supervised split dataset contract：`SupervisedSplitDataset` 與 `build_supervised_split_dataset(...)` 將 standardized split features 與 `FeatureMatrix` labels 對齊，支援 split-level missing-label drop counts，並拒絕 missing-label no-drop 與 empty train data，不訓練 estimator。
 - 新增 Task 028 packaged preprocessing smoke console-script alias：`pyproject.toml` 宣告 `abc-quant-preprocessing-smoke = abc_quant.cli.preprocessing_smoke:main`，並以 `tomllib` 測試 entry point target 可解析與呼叫。
 - 新增 Task 027 preprocessing smoke diagnostics CLI：`python -m abc_quant.cli.preprocessing_smoke` 以 sorted JSON 輸出既有 preprocessing smoke summary，支援 `--train-end`、`--validation-end` 與 `--indent`，錯誤邊界會以 non-zero exit code 與簡短 stderr 回報。
