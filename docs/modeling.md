@@ -183,6 +183,47 @@ Safety rules:
   alter CLI behavior, define allocation logic, build performance curves, or run
   simulation engines.
 
+## Supervised Dataset Smoke Diagnostics
+
+`src/abc_quant/pipeline/supervised.py` defines
+`run_supervised_dataset_smoke(...)`. It is a deterministic in-memory diagnostic
+path for the supervised dataset contract.
+
+The pipeline wires together:
+
+1. `build_smoke_frame(...)`
+2. `build_feature_matrix(...)`
+3. `build_temporal_split(...)`
+4. `fit_standard_scaler(...)`
+5. `transform_with_standard_scaler(...)`
+6. `build_supervised_split_dataset(...)`
+
+The smoke path uses the same feature-complete deterministic fixture rows as the
+preprocessing smoke diagnostics, then applies the supervised dataset label-drop
+contract with `drop_missing_labels=True`.
+
+The returned plain dictionary is deterministic and JSON-serializable. It
+contains:
+
+- `row_count`
+- `feature_columns`
+- `label_column`
+- `split_counts_before_label_drop`
+- `split_counts_after_label_drop`
+- `dropped_label_counts`
+- `split_shape`
+
+Safety rules:
+
+- Split counts before label drop are derived from the standardized split
+  feature frames.
+- Split counts after label drop and `dropped_label_counts` are derived from
+  `SupervisedSplitDataset`.
+- Train data must remain non-empty after label filtering.
+- The helper does not train estimators, change existing smoke outputs, alter CLI
+  behavior, define allocation logic, build performance curves, or run simulation
+  engines.
+
 ## Constant Baseline Contract
 
 `src/abc_quant/models/baseline.py` defines `fit_constant_baseline(...)`.

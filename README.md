@@ -126,6 +126,12 @@ The supervised split dataset contract is:
 
 It aligns labels by the fitted split indices, preserves feature column order and split indices, drops missing labels independently per split by default, records `dropped_label_counts`, rejects missing labels when `drop_missing_labels=False`, rejects empty train data after filtering, and returns copied feature/label objects. This prepares in-memory supervised inputs only; it does not train estimators, change smoke outputs, change CLI behavior, or add allocation/performance/simulation logic.
 
+The deterministic supervised dataset smoke diagnostic is:
+
+- `src/abc_quant/pipeline/supervised.py`: `run_supervised_dataset_smoke(...)` wires the synthetic smoke frame, feature matrix, temporal split, train-only scaler fit/transform, and supervised split dataset builder into a JSON-friendly diagnostic dictionary.
+
+It reports row count, feature columns, label column, split counts before label drop, split counts after label drop, dropped label counts, and split shapes. The diagnostic uses `drop_missing_labels=True` and verifies the train split remains non-empty after label filtering. It does not train estimators, change existing smoke output contracts, change CLI behavior, define allocation logic, build performance curves, or run simulation engines.
+
 ## Minimal Model Baseline
 
 The first model-layer contract is:

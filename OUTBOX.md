@@ -1,5 +1,48 @@
 # OUTBOX
 
+## 2026-07-05 Closed-Loop Task 030 - Supervised Dataset Smoke Diagnostics
+
+## 修改檔案
+- `src/abc_quant/pipeline/supervised.py`: added `run_supervised_dataset_smoke(...)` and default split constants.
+- `src/abc_quant/pipeline/__init__.py`: exported `run_supervised_dataset_smoke`.
+- `tests/test_pipeline_supervised.py`: added deterministic, JSON-serializable, direct dataset parity, train non-empty, feature/label preservation, label-drop count, and forbidden-key tests.
+- `docs/modeling.md`: documented supervised dataset smoke diagnostics and safety boundaries.
+- `README.md`: documented the supervised dataset smoke diagnostic under modeling preparation.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 030 progress and completion evidence.
+- `INBOX.md`: reset the active Task 030 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added a deterministic supervised dataset smoke path that uses feature-complete synthetic smoke rows.
+- The path wires together `build_feature_matrix(...)`, `build_temporal_split(...)`, `fit_standard_scaler(...)`, `transform_with_standard_scaler(...)`, and `build_supervised_split_dataset(..., drop_missing_labels=True)`.
+- The returned summary is JSON-friendly and includes `row_count`, `feature_columns`, `label_column`, `split_counts_before_label_drop`, `split_counts_after_label_drop`, `dropped_label_counts`, and `split_shape`.
+- Split counts before label drop are derived from standardized split feature frames.
+- Split counts after label drop and dropped label counts are derived from the direct `SupervisedSplitDataset`.
+- No estimator implementation, existing smoke output change, CLI behavior change, package script change, parameter search, allocation logic, performance curve, simulation engine, outside data access, or live account connectivity was added.
+
+## 測試方式
+- `python -m pytest tests\test_pipeline_supervised.py`
+- `python -m pytest tests\test_pipeline_supervised.py tests\test_models_dataset.py tests\test_pipeline_preprocessing.py tests\test_preprocessing_scaling.py tests\test_features_matrix.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `ruff check .` and `python -m ruff check .` were attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused supervised pipeline tests: 7 passed in 1.44s.
+- Related supervised/dataset/preprocessing tests: 36 passed in 2.35s.
+- `pytest`: 183 passed in 10.46s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`ruff` command not found; `No module named ruff`). GitHub Actions should still run ruff.
+
+## 已知限制
+- This task only adds deterministic in-memory supervised dataset diagnostics. It does not train estimators or expose a new CLI.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-05 Closed-Loop Task 029 - Supervised Split Dataset Contract
 
 ## 修改檔案
