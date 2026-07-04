@@ -65,8 +65,9 @@ production model, trading rule, or performance claim.
 
 ## Prediction Evaluation Contract
 
-`src/abc_quant/models/evaluation.py` defines `evaluate_predictions(...)` and
-`evaluate_constant_baseline(...)` for model-output diagnostics.
+`src/abc_quant/models/evaluation.py` defines `evaluate_predictions(...)`,
+`evaluate_prediction_bundle(...)`, and `evaluate_constant_baseline(...)` for
+model-output diagnostics.
 
 `evaluate_predictions(actual, prediction, split_name)` treats the prediction
 Series index as the evaluated split positions and aligns it against the actual
@@ -87,6 +88,11 @@ Metrics returned for each split:
 train, validation, and test prediction Series returned by
 `fit_constant_baseline(...)` against `feature_matrix.y`.
 
+`evaluate_prediction_bundle(feature_matrix, prediction_bundle)` evaluates any
+validated `SplitPredictionBundle` against `feature_matrix.y`, preserves the
+bundle `model_name` and `method`, and returns train/validation/test
+`PredictionEvaluationResult` objects.
+
 Safety rules:
 
 - Empty split names are rejected.
@@ -94,6 +100,8 @@ Safety rules:
 - Prediction indices outside the actual-label index are rejected.
 - Splits with no non-missing actual labels are rejected.
 - Missing actual labels never contribute to `mae`, `rmse`, or `mean_error`.
+- Bundle evaluation reads only `feature_matrix.y` and the prediction Series
+  already stored in the bundle.
 - The helpers do not train models, fit scalers, tune hyperparameters, create
   trading signals, define strategies, create positions, build equity curves, or
   run backtests.

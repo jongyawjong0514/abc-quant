@@ -8,8 +8,14 @@ from abc_quant.models.baseline import fit_constant_baseline
 from abc_quant.models.evaluation import (
     ConstantBaselineEvaluationResult,
     PredictionEvaluationResult,
+    SplitPredictionBundleEvaluationResult,
     evaluate_constant_baseline,
+    evaluate_prediction_bundle,
     evaluate_predictions,
+)
+from abc_quant.models.predictions import (
+    build_constant_baseline_prediction_bundle,
+    build_split_prediction_bundle,
 )
 from abc_quant.validation.temporal import build_temporal_split
 
@@ -107,6 +113,96 @@ def test_evaluate_constant_baseline_returns_split_evaluations() -> None:
     assert result.train.prediction_mean == pytest.approx(baseline.fitted_value)
     assert result.validation.prediction_mean == pytest.approx(baseline.fitted_value)
     assert result.test.prediction_mean == pytest.approx(baseline.fitted_value)
+
+
+def test_evaluate_prediction_bundle_returns_split_evaluations() -> None:
+    matrix = build_feature_matrix(_model_frame(), LABEL_COLUMN)
+    bundle = build_split_prediction_bundle(
+        model_name="diagnostic_model",
+        method="median",
+        train_predictions=pd.Series([1.0, 3.0, 4.0, 7.0], index=[0, 1, 2, 3]),
+        validation_predictions=pd.Series([100.0, 200.0], index=[4, 5]),
+        test_predictions=pd.Series([300.0, 400.0, 500.0, 600.0], index=[6, 7, 8, 9]),
+    )
+
+    result = evaluate_prediction_bundle(matrix, bundle)
+
+    assert isinstance(result, SplitPredictionBundleEvaluationResult)
+    assert result.model_name == "diagnostic_model"
+    assert result.method == "median"
+    assert isinstance(result.train, PredictionEvaluationResult)
+    assert isinstance(result.validation, PredictionEvaluationResult)
+    assert isinstance(result.test, PredictionEvaluationResult)
+    assert result.train.split_name == "train"
+    assert result.validation.split_name == "validation"
+    assert result.test.split_name == "test"
+    assert result.train.row_count == 4
+    assert result.validation.row_count == 2
+    assert result.test.row_count == 4
+
+
+def test_evaluate_prediction_bundle_counts_missing_actuals() -> None:
+    matrix = build_feature_matrix(_model_frame(), LABEL_COLUMN)
+    bundle = build_split_prediction_bundle(
+        model_name="diagnostic_model",
+        train_predictions=pd.Series([1.0, 3.0, 7.0, 7.0], index=[0, 1, 2, 3]),
+        validation_predictions=pd.Series([100.0, 200.0], index=[4, 5]),
+        test_predictions=pd.Series([300.0, 400.0, 500.0, 600.0], index=[6, 7, 8, 9]),
+    )
+
+    result = evaluate_prediction_bundle(matrix, bundle)
+
+    assert result.train.row_count == 4
+    assert result.train.non_missing_count == 3
+    assert result.train.missing_actual_count == 1
+    assert result.train.mae == pytest.approx(0.0)
+    assert result.train.rmse == pytest.approx(0.0)
+    assert result.train.mean_error == pytest.approx(0.0)
+    assert result.train.prediction_mean == pytest.approx(18.0 / 4.0)
+    assert result.test.row_count == 4
+    assert result.test.non_missing_count == 3
+    assert result.test.missing_actual_count == 1
+
+
+def test_evaluate_prediction_bundle_rejects_invalid_inputs() -> None:
+    matrix = build_feature_matrix(_model_frame(), LABEL_COLUMN)
+    bundle = build_split_prediction_bundle(
+        model_name="diagnostic_model",
+        train_predictions=pd.Series([1.0], index=[0]),
+        validation_predictions=pd.Series([2.0], index=[1]),
+        test_predictions=pd.Series([3.0], index=[2]),
+    )
+
+    with pytest.raises(TypeError, match="feature_matrix must be a FeatureMatrix"):
+        evaluate_prediction_bundle(object(), bundle)  # type: ignore[arg-type]
+
+    with pytest.raises(
+        TypeError,
+        match="prediction_bundle must be a SplitPredictionBundle",
+    ):
+        evaluate_prediction_bundle(matrix, object())  # type: ignore[arg-type]
+
+
+def test_evaluate_constant_baseline_bundle_matches_existing_evaluation() -> None:
+    matrix = build_feature_matrix(_model_frame(), LABEL_COLUMN)
+    split = build_temporal_split(
+        matrix.metadata,
+        train_end="2026-01-02",
+        validation_end="2026-01-03",
+    )
+    baseline = fit_constant_baseline(matrix, split, method="median")
+
+    direct = evaluate_constant_baseline(matrix, baseline)
+    bundled = evaluate_prediction_bundle(
+        matrix,
+        build_constant_baseline_prediction_bundle(baseline),
+    )
+
+    assert bundled.model_name == "constant_baseline"
+    assert bundled.method == baseline.method
+    assert bundled.train == direct.train
+    assert bundled.validation == direct.validation
+    assert bundled.test == direct.test
 
 
 def _model_frame() -> pd.DataFrame:

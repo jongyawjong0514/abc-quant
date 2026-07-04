@@ -107,9 +107,11 @@ The baseline consumes a `FeatureMatrix` and `TemporalSplit`, returns train/valid
 
 The first model-output diagnostics contract is:
 
-- `src/abc_quant/models/evaluation.py`: `evaluate_predictions(...)` and `evaluate_constant_baseline(...)` compute split-level prediction error metrics.
+- `src/abc_quant/models/evaluation.py`: `evaluate_predictions(...)`, `evaluate_prediction_bundle(...)`, and `evaluate_constant_baseline(...)` compute split-level prediction error metrics.
 
 Evaluation aligns prediction Series against actual labels by index, counts missing actual labels, and excludes missing actuals from `mae`, `rmse`, and `mean_error`. It also reports `row_count`, `non_missing_count`, `missing_actual_count`, and `prediction_mean`.
+
+`evaluate_prediction_bundle(...)` evaluates any validated `SplitPredictionBundle` against `FeatureMatrix.y`, preserving the bundle `model_name` and `method` while returning train/validation/test `PredictionEvaluationResult` objects.
 
 This layer evaluates model outputs only. It does not create trading signals, positions, equity curves, strategy logic, portfolio logic, or backtest results.
 
