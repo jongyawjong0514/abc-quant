@@ -104,6 +104,14 @@ It reports row counts, feature columns, split counts, fitted means/stds, train s
 
 The preprocessing smoke summary shape is centralized in `src/abc_quant/pipeline/contracts.py`. `validate_preprocessing_smoke_summary(...)` checks top-level keys, `split_counts` keys, `split_shape` split keys, and each split shape's `rows` / `columns` keys before the diagnostic is returned.
 
+The preprocessing smoke diagnostic can be run from the command line:
+
+```powershell
+python -m abc_quant.cli.preprocessing_smoke --indent 2
+```
+
+The CLI is a thin wrapper around `run_preprocessing_smoke(...)`. It supports `--train-end`, `--validation-end`, and `--indent`, writes sorted deterministic JSON to stdout, and writes concise errors to stderr for invalid temporal boundaries.
+
 This is only a leakage guard before modeling work. It does not train estimators, drop rows, fill missing labels, create strategy logic, generate trading signals, define allocation logic, build performance curves, or run simulation engines.
 
 ## Minimal Model Baseline

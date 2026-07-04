@@ -1,5 +1,50 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 027 - Preprocessing Smoke Diagnostics CLI
+
+## 修改檔案
+- `src/abc_quant/cli/preprocessing_smoke.py`: added the module entry point for deterministic preprocessing smoke diagnostics.
+- `tests/test_cli_preprocessing_smoke.py`: added subprocess and direct-main tests for deterministic JSON, sorted keys, split arguments, error handling, and diagnostic-only keys.
+- `docs/modeling.md`: documented preprocessing smoke CLI usage, arguments, stdout/stderr behavior, and diagnostic-only boundary.
+- `README.md`: documented the preprocessing smoke CLI command and arguments.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 027 progress and completion evidence.
+- `INBOX.md`: reset the active Task 027 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added `python -m abc_quant.cli.preprocessing_smoke` as a thin wrapper around `run_preprocessing_smoke(...)`.
+- The CLI supports `--train-end`, `--validation-end`, and `--indent`.
+- Successful invocations write sorted deterministic JSON to stdout and return exit code 0.
+- Invalid temporal boundaries are caught, return non-zero, and write a concise `error: ...` message to stderr.
+- Tests verify stdout JSON equals `run_preprocessing_smoke(...)`, repeated module calls are deterministic, custom split arguments alter `split_counts`, and output keys match `PREPROCESSING_SMOKE_SUMMARY_KEYS`.
+- No preprocessing calculation, summary key, split default, modeling smoke CLI behavior, estimator implementation, parameter search, allocation logic, performance curve, simulation engine, outside data access, or live account connectivity was changed.
+
+## 測試方式
+- `python -m pytest tests\test_cli_preprocessing_smoke.py tests\test_pipeline_preprocessing.py`
+- `python -m pytest tests\test_cli_preprocessing_smoke.py tests\test_cli_modeling_smoke.py tests\test_pipeline_preprocessing.py tests\test_pipeline_contracts.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `$env:PYTHONPATH='src'; python -m abc_quant.cli.preprocessing_smoke --train-end 2026-01-08 --validation-end 2026-01-13 --indent 2`
+- `.venv\Scripts\python.exe -m abc_quant.cli.preprocessing_smoke --indent 2`
+- `ruff check .` and `python -m ruff check .` were attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused CLI/preprocessing tests: 10 passed in 4.19s.
+- Related CLI/contract/preprocessing tests: 41 passed in 8.18s.
+- `pytest`: 165 passed in 10.22s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Module smoke execution passed with `PYTHONPATH=src` and `.venv` Python.
+- Local `ruff`: unavailable (`ruff` command not found; `No module named ruff`). GitHub Actions should still run ruff.
+
+## 已知限制
+- This task only exposes preprocessing smoke diagnostics through a module CLI. It does not add a packaged console-script alias and does not wire scaling into model training.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 026 - Preprocessing Smoke Summary Validator
 
 ## 修改檔案

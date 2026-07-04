@@ -46,6 +46,7 @@
 - [x] Train-only feature standardization contract。
 - [x] Deterministic preprocessing smoke diagnostics。
 - [x] Preprocessing smoke summary contract validator。
+- [x] Preprocessing smoke CLI diagnostics。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。
