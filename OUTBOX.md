@@ -1,5 +1,42 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 012 - Temporal Split Contract
+
+## 修改檔案
+- `src/abc_quant/validation/temporal.py`: added `TemporalSplit` and `build_temporal_split(...)` for deterministic date-based train/test and train/validation/test splits.
+- `src/abc_quant/validation/__init__.py`: exported the temporal split contract.
+- `tests/test_validation_temporal.py`: added temporal split tests for train/test, train/validation/test, shuffled metadata invariance, missing-label preservation, missing/unsortable dates, non-increasing boundaries, empty splits, and explicit `test_end` no-drop behavior.
+- `docs/modeling.md`: documented the temporal split contract and pre-modeling boundary.
+- `README.md`: documented modeling-preparation split behavior and constraints.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 012 progress.
+- `INBOX.md`: reset the active Task 012 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- `build_temporal_split(metadata, train_end, validation_end=None, test_end=None, date_column="date")` validates in-memory metadata and returns positional indices for sorted metadata.
+- Rows are sorted deterministically by `date` and then `ticker` when present.
+- Train rows use dates `<= train_end`; validation rows, when requested, use dates `> train_end` and `<= validation_end`; test rows start strictly after the prior split boundary.
+- Boundaries must be increasing, and requested train/validation/test splits cannot be empty.
+- Rows after an explicit `test_end` are rejected instead of silently dropped.
+- Missing labels remain untouched; no rows are dropped or filled, and no scaler fitting, model training, strategy logic, trading signal, or backtest engine was added.
+
+## 測試方式
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- `pytest`: 79 passed in 1.74s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- This task only creates a temporal split contract. It does not add model baselines, walk-forward orchestration, scalers, feature importance, ablation, strategy logic, trading signals, portfolio logic, or a full backtest engine.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 011 - Feature Matrix Assembly Contract
 
 ## 修改檔案
