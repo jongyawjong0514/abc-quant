@@ -127,9 +127,11 @@ The generic builder normalizes model metadata, requires pandas Series with uniqu
 
 The first model-diagnostics pipeline is:
 
-- `src/abc_quant/pipeline/modeling.py`: `run_baseline_modeling_smoke(...)` wires the existing feature-matrix, temporal-split, constant-baseline, and prediction-evaluation contracts together.
+- `src/abc_quant/pipeline/modeling.py`: `run_baseline_modeling_smoke(...)` wires the existing feature-matrix, temporal-split, constant-baseline, prediction-bundle, and prediction-evaluation contracts together.
 
 The smoke summary is a plain dictionary with row counts, feature columns, the label column, split counts, fitted baseline value, training label count, and train/validation/test evaluation metrics. It uses deterministic synthetic fixture data only and is diagnostic evidence, not market performance.
+
+Internally, the pipeline converts the constant-baseline result into a `SplitPredictionBundle` and evaluates it with `evaluate_prediction_bundle(...)`. The public summary contract and CLI JSON shape remain unchanged.
 
 This pipeline does not add source adapters, outside data access, live account connectivity, new model types, scaler fitting, hyperparameter tuning, market-action outputs, allocation logic, performance curves, or simulation engines.
 

@@ -1,5 +1,44 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 023 - Modeling Smoke Bundle Evaluation Wiring
+
+## 修改檔案
+- `src/abc_quant/pipeline/modeling.py`: changed the internal baseline evaluation path to build a constant-baseline prediction bundle and evaluate it with `evaluate_prediction_bundle(...)`.
+- `tests/test_pipeline_modeling.py`: added direct bundle-evaluator parity coverage for the modeling smoke summary evaluation metrics.
+- `docs/modeling.md`: documented that the modeling smoke pipeline now uses the split prediction bundle evaluation path internally.
+- `README.md`: documented the internal bundle evaluation wiring while noting the public summary shape is unchanged.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 023 progress and completion evidence.
+- `INBOX.md`: reset the active Task 023 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- `run_baseline_modeling_smoke(...)` still builds the deterministic smoke frame, feature matrix, temporal split, and constant baseline exactly as before.
+- After fitting the baseline, it now calls `build_constant_baseline_prediction_bundle(...)` and `evaluate_prediction_bundle(...)`.
+- The returned summary remains validated by `validate_modeling_smoke_summary(...)`.
+- The top-level summary keys, nested evaluation metric keys, default method, fitted values, split counts, metric formulas, CLI arguments, and console-script behavior were not changed.
+- Tests compare pipeline evaluation metrics against direct `evaluate_prediction_bundle(...)` output for the same bundle.
+
+## 測試方式
+- `python -m pytest tests\test_pipeline_modeling.py tests\test_cli_modeling_smoke.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `ruff check .` and `python -m ruff check .` were attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused pipeline/CLI tests: 13 passed in 4.12s.
+- `pytest`: 133 passed in 5.97s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`ruff` command not found; `No module named ruff`). GitHub Actions should still run ruff.
+
+## 已知限制
+- This task only changes internal modeling smoke wiring. It does not expose prediction bundles in the summary or CLI output.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 022 - Split Prediction Bundle Evaluator
 
 ## 修改檔案

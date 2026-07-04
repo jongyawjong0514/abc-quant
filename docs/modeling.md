@@ -151,7 +151,8 @@ that wires the existing modeling contracts together:
 2. `build_feature_matrix(...)`
 3. `build_temporal_split(...)`
 4. `fit_constant_baseline(...)`
-5. `evaluate_constant_baseline(...)`
+5. `build_constant_baseline_prediction_bundle(...)`
+6. `evaluate_prediction_bundle(...)`
 
 The returned plain dictionary contains diagnostic evidence only:
 
@@ -168,6 +169,11 @@ The returned plain dictionary contains diagnostic evidence only:
 The smoke pipeline accepts `method="mean"` or `method="median"` and passes that
 selection through to the existing constant-baseline contract. The selected
 method is recorded as `baseline_method` in the diagnostic summary.
+
+After fitting the constant baseline, the pipeline evaluates predictions through
+the generic split prediction bundle contract. This keeps the public summary
+shape unchanged while sharing the same bundle validation and evaluation path as
+future diagnostic model outputs.
 
 The smoke pipeline is deterministic and uses synthetic fixture data. It does
 not access outside data, train new model types, fit scalers, tune

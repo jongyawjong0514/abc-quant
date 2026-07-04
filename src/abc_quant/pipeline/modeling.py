@@ -8,10 +8,11 @@ from typing import Any, Final
 from abc_quant.features.matrix import build_feature_matrix
 from abc_quant.models.baseline import ConstantBaselineMethod, fit_constant_baseline
 from abc_quant.models.evaluation import (
-    ConstantBaselineEvaluationResult,
     PredictionEvaluationResult,
-    evaluate_constant_baseline,
+    SplitPredictionBundleEvaluationResult,
+    evaluate_prediction_bundle,
 )
+from abc_quant.models.predictions import build_constant_baseline_prediction_bundle
 from abc_quant.pipeline.contracts import validate_modeling_smoke_summary
 from abc_quant.pipeline.smoke import SMOKE_LABEL_COLUMN, build_smoke_frame
 from abc_quant.validation.temporal import build_temporal_split
@@ -41,7 +42,8 @@ def run_baseline_modeling_smoke(
         validation_end=validation_end,
     )
     baseline = fit_constant_baseline(feature_matrix, temporal_split, method=method)
-    evaluation = evaluate_constant_baseline(feature_matrix, baseline)
+    prediction_bundle = build_constant_baseline_prediction_bundle(baseline)
+    evaluation = evaluate_prediction_bundle(feature_matrix, prediction_bundle)
 
     summary = {
         "row_count": int(len(frame)),
@@ -68,7 +70,7 @@ def run_baseline_modeling_smoke(
 
 
 def _evaluation_summary(
-    evaluation: ConstantBaselineEvaluationResult,
+    evaluation: SplitPredictionBundleEvaluationResult,
 ) -> dict[str, dict[str, object]]:
     return {
         "train": _prediction_evaluation_summary(evaluation.train),
