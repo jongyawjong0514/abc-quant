@@ -1,5 +1,44 @@
 # OUTBOX
 
+## 2026-07-05 Closed-Loop Task 033 - Supervised Smoke Console Script Alias
+
+## 修改檔案
+- `pyproject.toml`: added the `abc-quant-supervised-smoke` project script pointing to `abc_quant.cli.supervised_smoke:main`.
+- `tests/test_cli_entrypoints.py`: added supervised console-script metadata, import resolution, and callable JSON-output tests while preserving modeling/preprocessing script coverage.
+- `docs/modeling.md`: documented the installed supervised smoke console-script command alongside `python -m`.
+- `README.md`: documented the packaged supervised smoke console command.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 033 progress and completion evidence.
+- `INBOX.md`: reset the active Task 033 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added a package metadata console-script alias: `abc-quant-supervised-smoke`.
+- Kept the script target exactly `abc_quant.cli.supervised_smoke:main`.
+- Added `tomllib`-based tests for the supervised script entry in `pyproject.toml`.
+- Verified the configured target imports and resolves to the existing supervised `main` function.
+- Verified the resolved function accepts `--indent 2`, returns `0`, and emits valid JSON.
+- Existing modeling/preprocessing console-script tests and supervised CLI tests remain covered.
+- No supervised calculation, summary key, split default, CLI argument semantic, estimator implementation, parameter search, allocation logic, performance curve, simulation engine, outside data access, or live account connectivity was changed.
+
+## 測試方式
+- `python -m pytest tests\test_cli_entrypoints.py tests\test_cli_supervised_smoke.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `python -m ruff check .` was attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused entrypoint/supervised CLI tests: 14 passed in 3.91s.
+- `pytest`: 210 passed in 14.29s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- Local `ruff`: unavailable (`No module named ruff`); GitHub Actions should run `ruff check .`.
+
+## 已知限制
+- This task only exposes the existing supervised smoke CLI as an installed console script. It does not add package-script aliases for future CLIs and does not alter smoke diagnostics behavior.
+
+## 建議下一步
+- Wait for GitHub Actions on the draft PR, then have ChatGPT Pro review the pyproject script entry, entrypoint tests, and documentation wording.
+
 ## 2026-07-05 Closed-Loop Task 032 - Supervised Dataset Smoke CLI
 
 ## 修改檔案

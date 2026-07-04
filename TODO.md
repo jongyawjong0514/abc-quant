@@ -52,6 +52,7 @@
 - [x] Deterministic supervised dataset smoke diagnostics。
 - [x] Supervised dataset smoke summary contract validator。
 - [x] Supervised dataset smoke CLI diagnostics。
+- [x] Supervised dataset smoke packaged console-script alias。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。
