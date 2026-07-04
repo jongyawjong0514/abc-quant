@@ -36,12 +36,12 @@ target_files_or_folders:
   - "CHANGELOG.md"
   - "TODO.md"
   - "INBOX.md"
-current_spec_or_decision: "PR #14 merged the baseline modeling smoke pipeline. The next safe usability step is a small CLI wrapper that prints the existing deterministic diagnostic summary as JSON, without adding new modeling behavior or market-action outputs."
+current_spec_or_decision: "PR #14 merged the baseline modeling smoke pipeline. The next safe usability step is a small CLI wrapper that prints the existing deterministic diagnostic summary as JSON, without adding new modeling behavior or decision-oriented outputs."
 constraints:
   - "Keep this round limited to a CLI wrapper around the existing run_baseline_modeling_smoke(...) contract."
   - "Use only Python standard library plus existing project code."
   - "Do not add new model types, scaler fitting, hyperparameter tuning, feature importance, or ablation logic."
-  - "Do not add outside data access, live account connectivity, market-action outputs, allocation logic, performance curves, or simulation engines."
+  - "Do not add outside data access, live account connectivity, decision-oriented outputs, allocation logic, performance curves, or simulation engines."
   - "Do not write files; output JSON only to stdout and errors only to stderr."
 acceptance_criteria:
   - "Create src/abc_quant/cli/modeling_smoke.py with main(argv=None) -> int."
@@ -52,7 +52,7 @@ acceptance_criteria:
   - "Tests parse stdout JSON and verify it matches the modeling smoke summary contract."
   - "Tests verify CLI output is deterministic across repeated calls."
   - "Tests verify custom split arguments are passed through and alter split counts deterministically."
-  - "Tests verify CLI output does not expose market-action outputs, allocation outputs, performance curves, or simulation-result keys."
+  - "Tests verify CLI output does not expose decision-oriented outputs, allocation outputs, performance curves, or simulation-result keys."
   - "Update docs and tracking files."
   - "INBOX.md is reset to the commented empty template before PR handoff."
 validation_expected:
@@ -61,7 +61,7 @@ validation_expected:
   - "git diff --check"
   - "GitHub Actions CI should pass on the draft PR."
 review_notes_or_defects:
-  - "This task follows PR #14 and exposes diagnostics only; it must not introduce market-action behavior."
+  - "This task follows PR #14 and exposes diagnostics only; it must not introduce decision-oriented behavior."
   - "Open a new draft PR for ChatGPT Tech Lead review after completion."
 anything_not_allowed:
   - "No secrets."
@@ -69,7 +69,7 @@ anything_not_allowed:
   - "No live account connectivity."
   - "No scaler fitting."
   - "No hyperparameter tuning."
-  - "No market-action outputs."
+  - "No decision-oriented outputs."
   - "No allocation logic."
   - "No performance curve."
   - "No simulation engine."
