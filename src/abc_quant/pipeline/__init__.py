@@ -12,6 +12,7 @@ from abc_quant.pipeline.contracts import (
     validate_modeling_smoke_summary,
     validate_supervised_dataset_smoke_summary,
 )
+from abc_quant.pipeline.linear_modeling import run_linear_regression_smoke
 from abc_quant.pipeline.modeling import run_baseline_modeling_smoke
 from abc_quant.pipeline.preprocessing import run_preprocessing_smoke
 from abc_quant.pipeline.smoke import build_smoke_frame, run_smoke_pipeline
@@ -27,6 +28,7 @@ __all__ = [
     "SUPERVISED_DATASET_SMOKE_SUMMARY_KEYS",
     "build_smoke_frame",
     "run_baseline_modeling_smoke",
+    "run_linear_regression_smoke",
     "run_preprocessing_smoke",
     "run_supervised_dataset_smoke",
     "run_smoke_pipeline",

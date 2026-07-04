@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 035 deterministic train-only OLS smoke diagnostics：`run_linear_regression_smoke(...)` 串接 deterministic smoke frame、FeatureMatrix、TemporalSplit、train-only scaler、SupervisedSplitDataset、`fit_linear_regression(...)` 與 `evaluate_prediction_bundle(...)`，回傳 JSON-friendly OLS diagnostics，不產生 strategy/allocation/performance/simulation outputs。
 - 新增 Task 034 train-only ordinary least-squares regression model contract：`fit_linear_regression(...)` 只使用 `SupervisedSplitDataset.train_X/train_y` 以 `numpy.linalg.lstsq` 擬合，並回傳 `LinearRegressionResult` 與 `SplitPredictionBundle`，不讀 validation/test labels、不新增 sklearn。
 - 新增 Task 033 packaged supervised dataset smoke console-script alias：`pyproject.toml` 宣告 `abc-quant-supervised-smoke = abc_quant.cli.supervised_smoke:main`，並以 `tomllib` 測試 entry point target 可解析與呼叫。
 - 新增 Task 032 supervised dataset smoke diagnostics CLI：`python -m abc_quant.cli.supervised_smoke` 以 sorted JSON 輸出既有 supervised dataset smoke summary，支援 `--train-end`、`--validation-end` 與 `--indent`，錯誤邊界會以 non-zero exit code 與簡短 stderr 回報。

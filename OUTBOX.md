@@ -1,5 +1,46 @@
 # OUTBOX
 
+## 2026-07-05 Closed-Loop Task 035 - Train-Only OLS Smoke Diagnostics
+
+## 修改檔案
+- `src/abc_quant/pipeline/linear_modeling.py`: added `run_linear_regression_smoke(...)`.
+- `src/abc_quant/pipeline/__init__.py`: exported the new OLS smoke diagnostic helper.
+- `tests/test_pipeline_linear_modeling.py`: added deterministic, JSON-serializable, direct OLS-result parity, direct evaluation parity, metadata preservation, and forbidden-key tests.
+- `docs/modeling.md`: documented the OLS smoke diagnostics pipeline and safety boundaries.
+- `README.md`: documented the deterministic OLS smoke diagnostics helper.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 035 progress and completion evidence.
+- `INBOX.md`: reset the active Task 035 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added `run_linear_regression_smoke(...)` using the existing deterministic smoke frame and feature-complete rows.
+- Wired `FeatureMatrix`, `TemporalSplit`, train-only scaler fit/transform, `SupervisedSplitDataset`, `fit_linear_regression(...)`, and `evaluate_prediction_bundle(...)`.
+- Returned a JSON-friendly summary with row count, feature columns, label column, model name, method, intercept, ordered coefficients, training row count, split counts after label drop, dropped label counts, prediction counts, and train/validation/test evaluation metrics.
+- Kept OLS fitting behind the existing train-only estimator contract.
+- Did not change existing smoke outputs, CLI behavior, package scripts, preprocessing, dataset, or linear model contracts.
+- No new estimator implementation, parameter search, model selection, strategy signal output, allocation logic, performance curve, simulation engine, outside data access, or live account connectivity was added.
+
+## 測試方式
+- `python -m pytest tests\test_pipeline_linear_modeling.py`
+- `python -m pytest tests\test_pipeline_linear_modeling.py tests\test_models_linear.py tests\test_pipeline_supervised.py tests\test_models_evaluation.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `python -m ruff check .` was attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused OLS smoke tests: 5 passed in 4.21s.
+- Related pipeline/model tests: 28 passed in 2.28s.
+- `pytest`: 222 passed in 14.91s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- Local `ruff`: unavailable (`No module named ruff`); GitHub Actions should run `ruff check .`.
+
+## 已知限制
+- This task only adds an in-memory diagnostics pipeline. It does not add a CLI for OLS smoke diagnostics, a summary contract validator, model selection, or any strategy/backtest behavior.
+
+## 建議下一步
+- Wait for GitHub Actions on the draft PR, then have ChatGPT Pro review summary shape, direct evaluator parity, train-only fitting path, and forbidden-output-key coverage.
+
 ## 2026-07-05 Closed-Loop Task 034 - Train-Only OLS Regression Contract
 
 ## 修改檔案
