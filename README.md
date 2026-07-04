@@ -81,8 +81,9 @@ The first feature modules are local, deterministic, and no-lookahead:
 
 - `src/abc_quant/features/price_volume.py`: rolling price momentum, rolling return volatility, and rolling volume averages.
 - `src/abc_quant/features/technical.py`: simple SMA, EMA, and RSI indicators implemented in pure pandas.
+- `src/abc_quant/features/matrix.py`: deterministic feature-matrix assembly that separates `X`, explicit `y`, and `date`/`ticker` metadata.
 
-All feature builders validate OHLCV input first, return a sorted defensive copy by `ticker` and `date`, and compute each ticker independently. These features are research inputs only; they do not create trading signals, model predictions, portfolio decisions, or backtest results.
+All feature builders validate OHLCV input first, return a sorted defensive copy by `ticker` and `date`, and compute each ticker independently. The matrix builder excludes metadata, raw OHLCV, and `label_` columns from inferred features and preserves missing labels for evaluator handling. These features are research inputs only; they do not create trading signals, model predictions, portfolio decisions, or backtest results.
 
 ## 快速開始
 
