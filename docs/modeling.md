@@ -157,6 +157,13 @@ as a module entry point:
 python -m abc_quant.cli.modeling_smoke
 ```
 
+When installed as a package, the same CLI is also exposed through the console
+script declared in `pyproject.toml`:
+
+```powershell
+abc-quant-modeling-smoke
+```
+
 The command writes deterministic JSON to stdout with sorted keys. It supports:
 
 - `--train-end`: overrides the last train date boundary.

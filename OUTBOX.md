@@ -1,5 +1,42 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 019 - Modeling Smoke Console Script Alias
+
+## 修改檔案
+- `pyproject.toml`: added the `abc-quant-modeling-smoke` project script pointing to `abc_quant.cli.modeling_smoke:main`.
+- `tests/test_cli_entrypoints.py`: added `tomllib` metadata parsing, target import resolution, and resolved-function JSON smoke coverage.
+- `docs/modeling.md`: documented the installed console-script command alongside `python -m`.
+- `README.md`: documented the packaged console command.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 019 progress and completion evidence.
+- `INBOX.md`: reset the active Task 019 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added a package metadata console-script alias: `abc-quant-modeling-smoke`.
+- The entry point target is exactly `abc_quant.cli.modeling_smoke:main`.
+- Tests parse `pyproject.toml` with `tomllib`, import the configured target, verify it resolves to the same `main` function, and call it with `--method median` to parse valid JSON.
+- `python -m abc_quant.cli.modeling_smoke` remains unchanged.
+- No diagnostic calculation, summary key, CLI argument semantic, estimator implementation, file output, outside data access, live account connectivity, preprocessing fitting, parameter search, allocation logic, performance curve, or simulation engine was changed.
+
+## 測試方式
+- `python -m pytest tests\test_cli_entrypoints.py tests\test_cli_modeling_smoke.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- Focused entrypoint/CLI tests: 10 passed in 3.66s.
+- `pytest`: 115 passed in 5.45s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- This task only adds package-level discoverability for the existing CLI. It does not install the package globally or change CLI behavior.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 018 - Baseline Method Selector
 
 ## 修改檔案

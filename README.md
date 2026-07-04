@@ -129,6 +129,12 @@ The deterministic diagnostics can also be printed as JSON:
 python -m abc_quant.cli.modeling_smoke --indent 2
 ```
 
+After package installation, the same CLI is available as:
+
+```powershell
+abc-quant-modeling-smoke --method median --indent 2
+```
+
 The CLI is a thin wrapper around `run_baseline_modeling_smoke(...)`. It accepts
 optional `--train-end` and `--validation-end` split boundaries, plus
 `--method mean|median` for the existing constant-baseline method, and writes

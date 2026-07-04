@@ -20,6 +20,9 @@ dev = [
     "mypy>=1.8.0",
 ]
 
+[project.scripts]
+abc-quant-modeling-smoke = "abc_quant.cli.modeling_smoke:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
