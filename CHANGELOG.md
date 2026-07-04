@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 020 split prediction bundle diagnostics contract：`SplitPredictionBundle` 與 `build_split_prediction_bundle(...)` 固定 train/validation/test prediction Series 形狀，拒絕 duplicate/missing/overlap inputs，並回傳 copied Series，不改 baseline、CLI 或 summary keys。
 - 新增 Task 019 packaged console-script alias：`pyproject.toml` 宣告 `abc-quant-modeling-smoke = abc_quant.cli.modeling_smoke:main`，並以 `tomllib` 測試 entry point target 可解析與呼叫。
 - 新增 Task 018 modeling smoke baseline method selector：`run_baseline_modeling_smoke(...)` 與 CLI 支援既有 constant-baseline `mean`/`median` method，summary 新增 `baseline_method` 並同步更新 shared contract，不改 split 或 metric 公式。
 - 新增 Task 017 modeling diagnostics summary contract validator：集中定義 `MODELING_SMOKE_SUMMARY_KEYS`、`EVALUATION_METRIC_KEYS` 與 `validate_modeling_smoke_summary(...)`，pipeline 回傳前會驗證 summary shape，CLI/pipeline tests 改用共用 constants。

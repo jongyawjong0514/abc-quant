@@ -1,5 +1,44 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 020 - Split Prediction Bundle Contract
+
+## 修改檔案
+- `src/abc_quant/models/predictions.py`: added the frozen `SplitPredictionBundle` dataclass and `build_split_prediction_bundle(...)` validation helper.
+- `src/abc_quant/models/__init__.py`: exported the prediction bundle contract.
+- `tests/test_models_predictions.py`: covered valid bundles, copied Series isolation, metadata validation, non-Series inputs, empty required splits, duplicate indices, missing values, and split-index overlap.
+- `docs/modeling.md`: documented the split prediction bundle contract and safety rules.
+- `README.md`: documented the reusable train/validation/test prediction bundle contract.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 020 progress and completion evidence.
+- `INBOX.md`: reset the active Task 020 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added a reusable in-memory prediction-output contract for diagnostic workflows.
+- `SplitPredictionBundle` stores `model_name`, optional `method`, and train/validation/test prediction Series.
+- `build_split_prediction_bundle(...)` normalizes model metadata, requires pandas Series inputs, rejects empty train/test predictions, duplicate indices, missing prediction values, and overlapping split indices.
+- The builder copies all accepted Series so caller mutation after bundle creation cannot change the stored predictions.
+- Empty validation predictions are allowed for train/test-only diagnostic flows.
+- No estimator implementation, baseline fitted value, split count, metric formula, CLI argument, summary key, file output, outside data access, live account connectivity, preprocessing fitting, parameter search, allocation logic, performance curve, or simulation engine was changed.
+
+## 測試方式
+- `python -m pytest tests\test_models_predictions.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- Focused prediction bundle tests: 9 passed in 0.93s.
+- `pytest`: 124 passed in 5.47s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- This task only adds a reusable prediction bundle shape contract. It does not plug the bundle into the constant baseline, modeling smoke pipeline, or CLI yet.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 019 - Modeling Smoke Console Script Alias
 
 ## 修改檔案
