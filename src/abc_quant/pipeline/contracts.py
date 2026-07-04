@@ -63,6 +63,26 @@ PREPROCESSING_SMOKE_SPLIT_SHAPE_KEYS: Final[frozenset[str]] = frozenset(
     {"rows", "columns"}
 )
 
+SUPERVISED_DATASET_SMOKE_SUMMARY_KEYS: Final[frozenset[str]] = frozenset(
+    {
+        "row_count",
+        "feature_columns",
+        "label_column",
+        "split_counts_before_label_drop",
+        "split_counts_after_label_drop",
+        "dropped_label_counts",
+        "split_shape",
+    }
+)
+
+SUPERVISED_DATASET_SMOKE_SPLITS: Final[frozenset[str]] = frozenset(
+    {"train", "validation", "test"}
+)
+
+SUPERVISED_DATASET_SMOKE_SPLIT_SHAPE_KEYS: Final[frozenset[str]] = frozenset(
+    {"rows", "columns"}
+)
+
 
 def validate_modeling_smoke_summary(summary: object) -> dict[str, Any]:
     """Validate the deterministic modeling smoke summary shape.
@@ -149,6 +169,66 @@ def validate_preprocessing_smoke_summary(summary: object) -> dict[str, Any]:
         )
 
     return summary
+
+
+def validate_supervised_dataset_smoke_summary(summary: object) -> dict[str, Any]:
+    """Validate the deterministic supervised dataset smoke summary shape.
+
+    The function returns the original summary object unchanged when valid.
+    """
+    if not isinstance(summary, dict):
+        raise ValueError("supervised dataset smoke summary must be a dict")
+
+    _validate_key_set(
+        "supervised dataset smoke summary",
+        actual_keys=summary.keys(),
+        expected_keys=SUPERVISED_DATASET_SMOKE_SUMMARY_KEYS,
+    )
+
+    _validate_supervised_split_count_mapping(
+        summary,
+        "split_counts_before_label_drop",
+    )
+    _validate_supervised_split_count_mapping(
+        summary,
+        "split_counts_after_label_drop",
+    )
+    _validate_supervised_split_count_mapping(summary, "dropped_label_counts")
+
+    split_shape = summary["split_shape"]
+    if not isinstance(split_shape, dict):
+        raise ValueError("supervised dataset smoke summary split_shape must be a dict")
+    _validate_key_set(
+        "supervised dataset smoke summary split_shape",
+        actual_keys=split_shape.keys(),
+        expected_keys=SUPERVISED_DATASET_SMOKE_SPLITS,
+    )
+
+    for split_name in sorted(SUPERVISED_DATASET_SMOKE_SPLITS):
+        shape = split_shape[split_name]
+        if not isinstance(shape, dict):
+            raise ValueError(f"split_shape for {split_name} must be a dict")
+        _validate_key_set(
+            f"split_shape for {split_name}",
+            actual_keys=shape.keys(),
+            expected_keys=SUPERVISED_DATASET_SMOKE_SPLIT_SHAPE_KEYS,
+        )
+
+    return summary
+
+
+def _validate_supervised_split_count_mapping(
+    summary: dict[str, Any],
+    key: str,
+) -> None:
+    split_counts = summary[key]
+    if not isinstance(split_counts, dict):
+        raise ValueError(f"supervised dataset smoke summary {key} must be a dict")
+    _validate_key_set(
+        f"supervised dataset smoke summary {key}",
+        actual_keys=split_counts.keys(),
+        expected_keys=SUPERVISED_DATASET_SMOKE_SPLITS,
+    )
 
 
 def _validate_key_set(

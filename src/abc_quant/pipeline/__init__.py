@@ -5,8 +5,12 @@ from abc_quant.pipeline.contracts import (
     MODELING_SMOKE_SUMMARY_KEYS,
     PREPROCESSING_SMOKE_SPLITS,
     PREPROCESSING_SMOKE_SUMMARY_KEYS,
+    SUPERVISED_DATASET_SMOKE_SPLITS,
+    SUPERVISED_DATASET_SMOKE_SPLIT_SHAPE_KEYS,
+    SUPERVISED_DATASET_SMOKE_SUMMARY_KEYS,
     validate_preprocessing_smoke_summary,
     validate_modeling_smoke_summary,
+    validate_supervised_dataset_smoke_summary,
 )
 from abc_quant.pipeline.modeling import run_baseline_modeling_smoke
 from abc_quant.pipeline.preprocessing import run_preprocessing_smoke
@@ -18,6 +22,9 @@ __all__ = [
     "MODELING_SMOKE_SUMMARY_KEYS",
     "PREPROCESSING_SMOKE_SPLITS",
     "PREPROCESSING_SMOKE_SUMMARY_KEYS",
+    "SUPERVISED_DATASET_SMOKE_SPLITS",
+    "SUPERVISED_DATASET_SMOKE_SPLIT_SHAPE_KEYS",
+    "SUPERVISED_DATASET_SMOKE_SUMMARY_KEYS",
     "build_smoke_frame",
     "run_baseline_modeling_smoke",
     "run_preprocessing_smoke",
@@ -25,4 +32,5 @@ __all__ = [
     "run_smoke_pipeline",
     "validate_modeling_smoke_summary",
     "validate_preprocessing_smoke_summary",
+    "validate_supervised_dataset_smoke_summary",
 ]
