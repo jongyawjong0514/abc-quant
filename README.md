@@ -137,6 +137,11 @@ files, access outside data, connect to live accounts, add model behavior, fit
 scalers, tune hyperparameters, define allocation logic, build performance
 curves, or run simulation engines.
 
+The summary shape is centralized in `src/abc_quant/pipeline/contracts.py`.
+`validate_modeling_smoke_summary(...)` checks the top-level summary keys,
+train/validation/test evaluation split names, and per-split metric keys before
+the pipeline returns the summary.
+
 ## 快速開始
 
 在 Windows PowerShell：

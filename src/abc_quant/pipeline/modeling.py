@@ -12,6 +12,7 @@ from abc_quant.models.evaluation import (
     PredictionEvaluationResult,
     evaluate_constant_baseline,
 )
+from abc_quant.pipeline.contracts import validate_modeling_smoke_summary
 from abc_quant.pipeline.smoke import SMOKE_LABEL_COLUMN, build_smoke_frame
 from abc_quant.validation.temporal import build_temporal_split
 
@@ -40,7 +41,7 @@ def run_baseline_modeling_smoke(
     baseline = fit_constant_baseline(feature_matrix, temporal_split)
     evaluation = evaluate_constant_baseline(feature_matrix, baseline)
 
-    return {
+    summary = {
         "row_count": int(len(frame)),
         "ticker_count": int(frame["ticker"].nunique()),
         "rows_per_ticker": {
@@ -60,6 +61,7 @@ def run_baseline_modeling_smoke(
         "training_label_count": int(baseline.training_label_count),
         "evaluation": _evaluation_summary(evaluation),
     }
+    return validate_modeling_smoke_summary(summary)
 
 
 def _evaluation_summary(

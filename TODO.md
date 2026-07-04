@@ -36,6 +36,7 @@
 - [x] 模型預測誤差評估。
 - [x] Baseline modeling smoke pipeline。
 - [x] Baseline modeling smoke CLI diagnostics。
+- [x] Modeling smoke summary contract validator。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。

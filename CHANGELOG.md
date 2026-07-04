@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 017 modeling diagnostics summary contract validator：集中定義 `MODELING_SMOKE_SUMMARY_KEYS`、`EVALUATION_METRIC_KEYS` 與 `validate_modeling_smoke_summary(...)`，pipeline 回傳前會驗證 summary shape，CLI/pipeline tests 改用共用 constants。
 - 新增 Task 016 deterministic modeling smoke diagnostics CLI：`python -m abc_quant.cli.modeling_smoke` 以 sorted JSON 輸出既有 smoke summary，支援 `--train-end`、`--validation-end` 與 `--indent`，錯誤邊界會以 non-zero exit code 與簡短 stderr 回報。
 - 新增 Task 015 deterministic baseline modeling smoke pipeline：`run_baseline_modeling_smoke(...)` 串接 feature matrix、temporal split、constant baseline 與 prediction evaluation，回傳 plain diagnostic summary，不建立 market-action outputs、allocation logic、performance curves 或 simulation engines。
 - 新增 Task 014 prediction evaluation metrics：`evaluate_predictions(...)` 與 `evaluate_constant_baseline(...)` 對 split-aligned predictions 計算 row/missing counts、MAE、RMSE、mean error 與 prediction mean，且不產生交易訊號、部位、equity curve 或 backtest。

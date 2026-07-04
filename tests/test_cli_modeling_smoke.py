@@ -5,22 +5,8 @@ import sys
 from pathlib import Path
 
 from abc_quant.cli.modeling_smoke import main
+from abc_quant.pipeline.contracts import MODELING_SMOKE_SUMMARY_KEYS
 from abc_quant.pipeline.modeling import run_baseline_modeling_smoke
-
-
-SUMMARY_KEYS = {
-    "row_count",
-    "ticker_count",
-    "rows_per_ticker",
-    "feature_columns",
-    "label_column",
-    "label_non_missing_count",
-    "label_missing_count",
-    "split_counts",
-    "fitted_value",
-    "training_label_count",
-    "evaluation",
-}
 
 
 def test_modeling_smoke_cli_module_prints_deterministic_json() -> None:
@@ -43,7 +29,7 @@ def test_modeling_smoke_cli_main_supports_indent_and_summary_contract(capsys) ->
     assert exit_code == 0
     assert captured.err == ""
     assert captured.out.startswith("{\n")
-    assert set(payload) == SUMMARY_KEYS
+    assert set(payload) == MODELING_SMOKE_SUMMARY_KEYS
     assert payload["split_counts"] == {"train": 8, "validation": 6, "test": 10}
     assert set(payload["evaluation"]) == {"train", "validation", "test"}
 
@@ -104,7 +90,7 @@ def test_modeling_smoke_cli_output_contains_only_diagnostic_summary_keys(capsys)
     }
 
     assert exit_code == 0
-    assert set(payload) == SUMMARY_KEYS
+    assert set(payload) == MODELING_SMOKE_SUMMARY_KEYS
     assert forbidden_keys.isdisjoint(_all_dict_keys(payload))
 
 
