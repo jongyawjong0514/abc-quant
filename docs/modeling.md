@@ -126,6 +126,22 @@ not access outside data, train new model types, fit scalers, tune
 hyperparameters, create market-action outputs, define allocation logic, build
 performance curves, or run simulation engines.
 
+## Modeling Smoke Summary Contract
+
+`src/abc_quant/pipeline/contracts.py` defines the diagnostic summary shape:
+
+- `MODELING_SMOKE_SUMMARY_KEYS`
+- `EVALUATION_METRIC_KEYS`
+- `validate_modeling_smoke_summary(summary)`
+
+The validator accepts only the documented top-level summary keys, the
+`train`/`validation`/`test` evaluation split names, and the documented
+evaluation metric keys for each split. It returns the original summary object
+unchanged when valid and raises deterministic `ValueError` messages for
+missing or unknown keys. `run_baseline_modeling_smoke(...)` validates the
+summary before returning it, so the pipeline and CLI share the same summary
+contract.
+
 ## Modeling Smoke CLI
 
 `src/abc_quant/cli/modeling_smoke.py` exposes the deterministic smoke pipeline

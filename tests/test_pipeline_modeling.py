@@ -1,17 +1,10 @@
+from abc_quant.pipeline.contracts import (
+    EVALUATION_METRIC_KEYS,
+    MODELING_SMOKE_SUMMARY_KEYS,
+    validate_modeling_smoke_summary,
+)
 from abc_quant.pipeline.modeling import run_baseline_modeling_smoke
 from abc_quant.pipeline.smoke import SMOKE_FEATURE_COLUMNS, SMOKE_LABEL_COLUMN
-
-
-EVALUATION_METRIC_KEYS = {
-    "split_name",
-    "row_count",
-    "non_missing_count",
-    "missing_actual_count",
-    "mae",
-    "rmse",
-    "mean_error",
-    "prediction_mean",
-}
 
 
 def test_baseline_modeling_smoke_summary_is_deterministic() -> None:
@@ -24,19 +17,8 @@ def test_baseline_modeling_smoke_summary_is_deterministic() -> None:
 def test_baseline_modeling_smoke_summary_contains_expected_contract() -> None:
     summary = run_baseline_modeling_smoke()
 
-    assert set(summary) == {
-        "row_count",
-        "ticker_count",
-        "rows_per_ticker",
-        "feature_columns",
-        "label_column",
-        "label_non_missing_count",
-        "label_missing_count",
-        "split_counts",
-        "fitted_value",
-        "training_label_count",
-        "evaluation",
-    }
+    assert validate_modeling_smoke_summary(summary) is summary
+    assert set(summary) == MODELING_SMOKE_SUMMARY_KEYS
     assert summary["row_count"] == 24
     assert summary["ticker_count"] == 2
     assert summary["rows_per_ticker"] == {"2317": 12, "2330": 12}

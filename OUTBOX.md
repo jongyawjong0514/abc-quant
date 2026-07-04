@@ -1,5 +1,47 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 017 - Modeling Summary Contract Validator
+
+## 修改檔案
+- `src/abc_quant/pipeline/contracts.py`: added shared modeling smoke summary constants and `validate_modeling_smoke_summary(...)`.
+- `src/abc_quant/pipeline/modeling.py`: validates the modeling smoke summary before returning it.
+- `src/abc_quant/pipeline/__init__.py`: exports the contract constants and validator.
+- `tests/test_pipeline_contracts.py`: added valid and invalid summary-shape tests.
+- `tests/test_pipeline_modeling.py`: switched pipeline summary assertions to shared constants and validator.
+- `tests/test_cli_modeling_smoke.py`: switched CLI key assertions to shared constants.
+- `docs/modeling.md`: documented the summary contract validator.
+- `README.md`: documented where the summary shape is centralized.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 017 progress and completion evidence.
+- `INBOX.md`: reset the active Task 017 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added `MODELING_SMOKE_SUMMARY_KEYS` and `EVALUATION_METRIC_KEYS` as the shared diagnostic summary contract.
+- Added `validate_modeling_smoke_summary(summary)` to reject non-dict summaries, missing or unknown top-level keys, invalid evaluation containers, missing or unknown train/validation/test splits, and missing or unknown per-split metric keys.
+- The validator returns the original summary object unchanged when valid.
+- `run_baseline_modeling_smoke(...)` now validates the summary shape immediately before returning.
+- CLI and pipeline tests now import shared constants instead of duplicating key sets.
+- No numeric model calculation, prediction method, model training, preprocessing fitting, parameter search, outside data access, file writing, allocation logic, performance curve, or simulation engine was added.
+
+## 測試方式
+- `python -m pytest tests\test_pipeline_contracts.py tests\test_pipeline_modeling.py tests\test_cli_modeling_smoke.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- Focused contract/pipeline/CLI tests: 19 passed in 4.13s.
+- `pytest`: 108 passed in 5.62s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- This task validates the in-memory diagnostic summary shape only. It does not change model calculations or add new modeling behavior.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 016 - Modeling Smoke Diagnostics CLI
 
 ## 修改檔案
