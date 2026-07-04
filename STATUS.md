@@ -31,3 +31,4 @@
 - 2026-07-04: Task 012 implemented the temporal split contract for train/test and train/validation/test boundaries; validation passed with `pytest` 79 passed, `compileall src tests`, `git diff --check`, and closed-loop guard `status=no_task` after `INBOX.md` reset.
 - 2026-07-04: Started closed-loop task 013 to add a minimal constant-baseline model contract using only training labels.
 - 2026-07-04: Task 013 implemented the constant baseline model contract for mean/median predictions fit only from non-missing training labels; validation passed with `pytest` 84 passed, `compileall src tests`, `git diff --check`, and closed-loop guard `status=no_task` after `INBOX.md` reset.
+- 2026-07-04: Task 014 implemented prediction evaluation metrics for split-aligned model outputs; validation passed with focused evaluation tests 5 passed, `pytest` 89 passed, `compileall src tests`, `git diff --check`, and closed-loop guard `status=no_task` after `INBOX.md` reset.

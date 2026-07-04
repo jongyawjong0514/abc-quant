@@ -1,5 +1,44 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 014 - Prediction Evaluation Metrics
+
+## 修改檔案
+- `src/abc_quant/models/evaluation.py`: added typed prediction evaluation results plus evaluation helpers for generic predictions and constant-baseline outputs.
+- `src/abc_quant/models/__init__.py`: exported the prediction evaluation contracts.
+- `tests/test_models_evaluation.py`: added tests for perfect predictions, biased predictions, missing actual labels, invalid split/index cases, and constant-baseline train/validation/test evaluation.
+- `docs/modeling.md`: documented the prediction evaluation contract and no-trading/no-backtest boundary.
+- `README.md`: documented the model-output diagnostics layer.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 014 progress and completion evidence.
+- `INBOX.md`: reset the active Task 014 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- `evaluate_predictions(actual, prediction, split_name)` evaluates one split by aligning prediction indices against actual labels.
+- Returned metrics are `row_count`, `non_missing_count`, `missing_actual_count`, `mae`, `rmse`, `mean_error`, and `prediction_mean`.
+- Missing actual labels are counted but excluded from `mae`, `rmse`, and `mean_error`.
+- Prediction indices outside the actual-label index are rejected, as are empty split names, empty predictions, duplicate indices, missing predictions, and splits with no non-missing actual labels.
+- `evaluate_constant_baseline(feature_matrix, baseline_result)` evaluates the train, validation, and test predictions returned by `fit_constant_baseline(...)`.
+- No scaler fitting, hyperparameter tuning, trading signals, strategy logic, positions, equity curves, portfolio logic, source adapter, data download, or backtest engine was added.
+
+## 測試方式
+- `python -m pytest tests\test_models_evaluation.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- Focused evaluation tests: 5 passed in 1.09s.
+- `pytest`: 89 passed in 2.02s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- This task only evaluates model-output prediction errors. It is not a trading signal, strategy, portfolio rule, equity curve, backtest, or performance claim.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 013 - Constant Baseline Model Contract
 
 ## 修改檔案

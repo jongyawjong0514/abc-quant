@@ -62,3 +62,38 @@ Safety rules:
 
 This is a minimal baseline contract for future model validation. It is not a
 production model, trading rule, or performance claim.
+
+## Prediction Evaluation Contract
+
+`src/abc_quant/models/evaluation.py` defines `evaluate_predictions(...)` and
+`evaluate_constant_baseline(...)` for model-output diagnostics.
+
+`evaluate_predictions(actual, prediction, split_name)` treats the prediction
+Series index as the evaluated split positions and aligns it against the actual
+label Series. Prediction indices must already be present in the actual labels.
+Missing actual labels are counted but excluded from error metrics.
+
+Metrics returned for each split:
+
+- `row_count`
+- `non_missing_count`
+- `missing_actual_count`
+- `mae`
+- `rmse`
+- `mean_error`
+- `prediction_mean`
+
+`evaluate_constant_baseline(feature_matrix, baseline_result)` evaluates the
+train, validation, and test prediction Series returned by
+`fit_constant_baseline(...)` against `feature_matrix.y`.
+
+Safety rules:
+
+- Empty split names are rejected.
+- Empty prediction Series are rejected.
+- Prediction indices outside the actual-label index are rejected.
+- Splits with no non-missing actual labels are rejected.
+- Missing actual labels never contribute to `mae`, `rmse`, or `mean_error`.
+- The helpers do not train models, fit scalers, tune hyperparameters, create
+  trading signals, define strategies, create positions, build equity curves, or
+  run backtests.

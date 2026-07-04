@@ -33,6 +33,7 @@
 
 - [x] 建立 temporal split contract。
 - [x] Baseline 模型。
+- [x] 模型預測誤差評估。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。
