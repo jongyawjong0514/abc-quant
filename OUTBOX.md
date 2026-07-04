@@ -1,5 +1,38 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 010 - Technical Indicators
+
+## 修改檔案
+- `src/abc_quant/features/technical.py`: added `add_technical_indicators(...)` for pure-pandas SMA, EMA, and RSI features.
+- `tests/test_features_technical.py`: added hand-calculated indicator, ticker-isolation, shuffled-input invariance, future-row mutation, and invalid-window tests.
+- `README.md`, `docs/data_pipeline.md`, `docs/feature_engineering.md`: documented the technical feature module and no-signal/no-backtest boundary.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 010 progress.
+- `INBOX.md`: reset the active Task 010 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- The technical feature module validates OHLCV data before computation and returns a sorted defensive copy by ticker and date.
+- SMA, EMA, and RSI are computed per ticker using only current and past rows.
+- RSI uses a simple rolling average of gains and losses; flat windows map to 50, gain-only windows to 100, and loss-only windows to 0 through the standard formula behavior.
+- No TA-Lib, new dependency, source adapter, data download, broker integration, model training, strategy logic, trading signal, portfolio logic, or full backtest engine was added.
+
+## 測試方式
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- `pytest`: 64 passed in 1.65s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- The module adds research features only. It does not define trading rules, model inputs, portfolio decisions, or backtest outcomes.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 009 - Feature and Label Leakage Regression Tests
 
 ## 修改檔案
