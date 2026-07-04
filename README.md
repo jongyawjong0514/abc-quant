@@ -75,6 +75,15 @@ Validation enforces the schema constants, datetime dates, string tickers, numeri
 
 The sample fixture is synthetic and deterministic. It is only for local smoke checks and is not a trading signal, market data source, backtest, or performance claim.
 
+## Feature Engineering
+
+The first feature modules are local, deterministic, and no-lookahead:
+
+- `src/abc_quant/features/price_volume.py`: rolling price momentum, rolling return volatility, and rolling volume averages.
+- `src/abc_quant/features/technical.py`: simple SMA, EMA, and RSI indicators implemented in pure pandas.
+
+All feature builders validate OHLCV input first, return a sorted defensive copy by `ticker` and `date`, and compute each ticker independently. These features are research inputs only; they do not create trading signals, model predictions, portfolio decisions, or backtest results.
+
 ## 快速開始
 
 在 Windows PowerShell：

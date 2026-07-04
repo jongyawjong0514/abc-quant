@@ -39,6 +39,15 @@ volume
 - `build_smoke_frame()`: validate sample -> add price/volume features -> add one forward-return label
 - `run_smoke_pipeline()`: 回傳 row count、ticker count、feature columns、label column、metric keys 與 basic metrics summary
 
+## Feature Modules
+
+Feature modules consume the validated OHLCV contract and return sorted defensive copies:
+
+- `src/abc_quant/features/price_volume.py`: rolling price/volume features.
+- `src/abc_quant/features/technical.py`: pure-pandas SMA, EMA, and RSI indicators.
+
+Each feature value at row `t` is computed from the same ticker's values at or before `t`. Feature modules do not download data, train models, produce trading signals, or run backtests.
+
 ## 資料品質檢查
 
 必須檢查：

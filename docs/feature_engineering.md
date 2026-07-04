@@ -7,6 +7,9 @@
 - momentum：過去 N 日報酬。
 - volatility：過去 N 日報酬標準差。
 - volume average：過去 N 日平均成交量。
+- SMA：過去 N 日收盤價簡單移動平均。
+- EMA：過去 N 日收盤價指數移動平均。
+- RSI：過去 N 日漲跌幅簡化相對強弱指標。
 
 ## 時間安全原則
 
@@ -20,7 +23,7 @@
 
 後續可加入：
 
-- KD, MACD, RSI, William %R。
+- KD, MACD, William %R。
 - 均線排列。
 - 波動收斂。
 - 突破前高。

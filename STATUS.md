@@ -25,3 +25,4 @@
 - 2026-07-04: Started closed-loop task 008 to harden market data validation before future data adapters or richer feature work.
 - 2026-07-04: Task 008 validation passed with `pytest` 54 passed, `compileall src tests`, `git diff --check`, and closed-loop guard `status=no_task` after `INBOX.md` reset.
 - 2026-07-04: Task 009 completed feature/label leakage regression tests and opened draft PR #8; review follow-up added reusable shuffled-output helper and rolling volatility numeric assertions.
+- 2026-07-04: Task 010 implemented pure-pandas SMA/EMA/RSI technical indicators with no-lookahead regression tests; validation passed with `pytest` 64 passed, `compileall src tests`, `git diff --check`, and closed-loop guard `status=no_task` after `INBOX.md` reset.
