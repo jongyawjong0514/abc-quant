@@ -7,6 +7,7 @@ from typing import Any, Final
 import pandas as pd
 
 from abc_quant.features.matrix import build_feature_matrix
+from abc_quant.pipeline.contracts import validate_preprocessing_smoke_summary
 from abc_quant.pipeline.smoke import (
     SMOKE_FEATURE_COLUMNS,
     SMOKE_LABEL_COLUMN,
@@ -51,7 +52,7 @@ def run_preprocessing_smoke(
         temporal_split,
     )
 
-    return {
+    summary = {
         "row_count": int(len(feature_matrix.X)),
         "feature_columns": list(fitted_scaler.feature_columns),
         "split_counts": {
@@ -81,6 +82,7 @@ def run_preprocessing_smoke(
             "test": _frame_shape(standardized.test),
         },
     }
+    return validate_preprocessing_smoke_summary(summary)
 
 
 def _feature_complete_smoke_frame() -> pd.DataFrame:

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 026 preprocessing smoke summary contract validator：集中定義 `PREPROCESSING_SMOKE_SUMMARY_KEYS`、`PREPROCESSING_SMOKE_SPLITS` 與 `validate_preprocessing_smoke_summary(...)`，`run_preprocessing_smoke(...)` 回傳前會驗證 top-level keys、split counts 與 split shape，不改預設輸出值。
 - 新增 Task 025 deterministic preprocessing smoke diagnostics：`run_preprocessing_smoke(...)` 串接 deterministic smoke frame、feature matrix、temporal split、train-only scaler fit 與 transform，回傳 JSON-friendly scaling diagnostics，不改 modeling smoke CLI 或 summary contract。
 - 新增 Task 024 train-only numeric feature standardization contract：`fit_standard_scaler(...)` 只用 train split 擬合 means/stds，再由 `transform_with_standard_scaler(...)` 套用到 train/validation/test，拒絕 nonnumeric、missing train values 與 zero-variance training features，不新增 sklearn 或 estimator。
 - 新增 Task 023 modeling smoke pipeline bundle-evaluation wiring：`run_baseline_modeling_smoke(...)` 內部改用 `build_constant_baseline_prediction_bundle(...)` 與 `evaluate_prediction_bundle(...)`，保持 summary contract、CLI arguments、fitted values、split counts 與 metric formulas 不變。

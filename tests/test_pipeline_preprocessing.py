@@ -3,7 +3,12 @@ import json
 import pytest
 
 from abc_quant.features.matrix import build_feature_matrix
-from abc_quant.pipeline import run_preprocessing_smoke
+from abc_quant.pipeline import (
+    PREPROCESSING_SMOKE_SUMMARY_KEYS,
+    run_preprocessing_smoke,
+    validate_preprocessing_smoke_summary,
+)
+from abc_quant.pipeline.contracts import PREPROCESSING_SMOKE_SPLITS
 from abc_quant.pipeline.preprocessing import (
     DEFAULT_PREPROCESSING_TRAIN_END,
     DEFAULT_PREPROCESSING_VALIDATION_END,
@@ -14,18 +19,6 @@ from abc_quant.pipeline.smoke import (
     build_smoke_frame,
 )
 from abc_quant.validation.temporal import build_temporal_split
-
-
-EXPECTED_SUMMARY_KEYS = {
-    "row_count",
-    "feature_columns",
-    "split_counts",
-    "fitted_means",
-    "fitted_stds",
-    "train_mean_after_scaling",
-    "train_std_after_scaling",
-    "split_shape",
-}
 
 
 def test_preprocessing_smoke_summary_is_deterministic_and_json_serializable() -> None:
@@ -39,7 +32,10 @@ def test_preprocessing_smoke_summary_is_deterministic_and_json_serializable() ->
 def test_preprocessing_smoke_summary_contains_expected_contract() -> None:
     summary = run_preprocessing_smoke()
 
-    assert set(summary) == EXPECTED_SUMMARY_KEYS
+    assert validate_preprocessing_smoke_summary(summary) is summary
+    assert set(summary) == PREPROCESSING_SMOKE_SUMMARY_KEYS
+    assert set(summary["split_counts"]) == PREPROCESSING_SMOKE_SPLITS
+    assert set(summary["split_shape"]) == PREPROCESSING_SMOKE_SPLITS
     assert summary["row_count"] == 18
     assert summary["feature_columns"] == list(SMOKE_FEATURE_COLUMNS)
     assert summary["split_counts"] == {"train": 2, "validation": 6, "test": 10}

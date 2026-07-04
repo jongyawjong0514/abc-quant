@@ -102,6 +102,14 @@ contains:
 - `train_std_after_scaling`
 - `split_shape`
 
+`src/abc_quant/pipeline/contracts.py` centralizes the preprocessing smoke
+summary contract with `PREPROCESSING_SMOKE_SUMMARY_KEYS`,
+`PREPROCESSING_SMOKE_SPLITS`, and
+`validate_preprocessing_smoke_summary(...)`. The smoke pipeline validates the
+summary before returning it. The validator checks top-level keys,
+`split_counts` split keys, `split_shape` split keys, and the per-split
+`rows`/`columns` shape keys.
+
 Safety rules:
 
 - Fitted means and standard deviations come only from train rows.

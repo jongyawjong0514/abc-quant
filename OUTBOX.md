@@ -1,5 +1,51 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 026 - Preprocessing Smoke Summary Validator
+
+## 修改檔案
+- `src/abc_quant/pipeline/contracts.py`: added preprocessing smoke summary key constants, split constants, split-shape constants, and `validate_preprocessing_smoke_summary(...)`.
+- `src/abc_quant/pipeline/preprocessing.py`: validates the preprocessing smoke summary before returning it.
+- `src/abc_quant/pipeline/__init__.py`: exports preprocessing smoke summary constants and validator.
+- `tests/test_pipeline_preprocessing.py`: uses shared preprocessing summary constants and validates the smoke summary contract.
+- `tests/test_pipeline_contracts.py`: added focused invalid-shape coverage for preprocessing smoke summaries.
+- `docs/modeling.md`: documented the preprocessing smoke summary contract and validator.
+- `README.md`: documented the shared preprocessing smoke summary validator.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 026 progress and completion evidence.
+- `INBOX.md`: reset the active Task 026 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Centralized the preprocessing smoke summary shape in `abc_quant.pipeline.contracts`.
+- Added `PREPROCESSING_SMOKE_SUMMARY_KEYS`, `PREPROCESSING_SMOKE_SPLITS`, and `PREPROCESSING_SMOKE_SPLIT_SHAPE_KEYS`.
+- Added `validate_preprocessing_smoke_summary(...)`, which returns the original summary unchanged when valid.
+- The validator rejects non-dict summaries, top-level key drift, invalid `split_counts`, invalid `split_shape`, and per-split shape entries that are not exactly `rows` / `columns`.
+- `run_preprocessing_smoke(...)` now validates its summary before returning.
+- The default preprocessing smoke diagnostic values remained unchanged.
+- No modeling smoke summary contract, CLI argument, estimator implementation, parameter search, allocation logic, performance curve, simulation engine, outside data access, or live account connectivity was added.
+
+## 測試方式
+- `python -m pytest tests\test_pipeline_contracts.py tests\test_pipeline_preprocessing.py`
+- `python -m pytest tests\test_pipeline_contracts.py tests\test_pipeline_preprocessing.py tests\test_pipeline_modeling.py tests\test_cli_modeling_smoke.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `ruff check .` and `python -m ruff check .` were attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused contract/preprocessing tests: 29 passed in 2.53s.
+- Related pipeline/CLI tests: 42 passed in 5.66s.
+- `pytest`: 160 passed in 6.82s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`ruff` command not found; `No module named ruff`). GitHub Actions should still run ruff.
+
+## 已知限制
+- This task only hardens the preprocessing smoke diagnostics summary shape. It does not add a preprocessing CLI or wire scaling into model training.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 025 - Preprocessing Smoke Diagnostics
 
 ## 修改檔案
