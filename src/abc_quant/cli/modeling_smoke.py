@@ -9,6 +9,7 @@ from collections.abc import Sequence
 from typing import TextIO
 
 from abc_quant.pipeline.modeling import (
+    DEFAULT_BASELINE_METHOD,
     DEFAULT_TRAIN_END,
     DEFAULT_VALIDATION_END,
     run_baseline_modeling_smoke,
@@ -36,6 +37,7 @@ def _run(
         summary = run_baseline_modeling_smoke(
             train_end=args.train_end,
             validation_end=args.validation_end,
+            method=args.method,
         )
     except Exception as exc:
         print(f"error: {exc}", file=stderr)
@@ -60,6 +62,12 @@ def _build_parser() -> argparse.ArgumentParser:
         "--validation-end",
         default=DEFAULT_VALIDATION_END,
         help=f"Last validation date boundary. Default: {DEFAULT_VALIDATION_END}.",
+    )
+    parser.add_argument(
+        "--method",
+        choices=("mean", "median"),
+        default=DEFAULT_BASELINE_METHOD,
+        help=f"Constant-baseline method. Default: {DEFAULT_BASELINE_METHOD}.",
     )
     parser.add_argument(
         "--indent",

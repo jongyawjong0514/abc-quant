@@ -15,9 +15,14 @@ MODELING_SMOKE_SUMMARY_KEYS: Final[frozenset[str]] = frozenset(
         "label_missing_count",
         "split_counts",
         "fitted_value",
+        "baseline_method",
         "training_label_count",
         "evaluation",
     }
+)
+
+MODELING_SMOKE_BASELINE_METHODS: Final[frozenset[str]] = frozenset(
+    {"mean", "median"}
 )
 
 MODELING_SMOKE_EVALUATION_SPLITS: Final[frozenset[str]] = frozenset(
@@ -51,6 +56,11 @@ def validate_modeling_smoke_summary(summary: object) -> dict[str, Any]:
         actual_keys=summary.keys(),
         expected_keys=MODELING_SMOKE_SUMMARY_KEYS,
     )
+
+    if summary["baseline_method"] not in MODELING_SMOKE_BASELINE_METHODS:
+        raise ValueError(
+            "modeling smoke summary baseline_method must be one of: mean, median"
+        )
 
     evaluation = summary["evaluation"]
     if not isinstance(evaluation, dict):

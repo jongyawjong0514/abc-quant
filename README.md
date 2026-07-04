@@ -130,17 +130,18 @@ python -m abc_quant.cli.modeling_smoke --indent 2
 ```
 
 The CLI is a thin wrapper around `run_baseline_modeling_smoke(...)`. It accepts
-optional `--train-end` and `--validation-end` split boundaries and writes the
-sorted diagnostic JSON contract to stdout. Invalid date boundaries return a
-non-zero exit code with a concise stderr message. The command does not write
+optional `--train-end` and `--validation-end` split boundaries, plus
+`--method mean|median` for the existing constant-baseline method, and writes
+the sorted diagnostic JSON contract to stdout. Invalid date boundaries return
+a non-zero exit code with a concise stderr message. The command does not write
 files, access outside data, connect to live accounts, add model behavior, fit
 scalers, tune hyperparameters, define allocation logic, build performance
 curves, or run simulation engines.
 
 The summary shape is centralized in `src/abc_quant/pipeline/contracts.py`.
 `validate_modeling_smoke_summary(...)` checks the top-level summary keys,
-train/validation/test evaluation split names, and per-split metric keys before
-the pipeline returns the summary.
+train/validation/test evaluation split names, `baseline_method`, and per-split
+metric keys before the pipeline returns the summary.
 
 ## 快速開始
 

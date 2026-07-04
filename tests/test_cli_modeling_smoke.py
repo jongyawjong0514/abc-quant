@@ -31,6 +31,7 @@ def test_modeling_smoke_cli_main_supports_indent_and_summary_contract(capsys) ->
     assert captured.out.startswith("{\n")
     assert set(payload) == MODELING_SMOKE_SUMMARY_KEYS
     assert payload["split_counts"] == {"train": 8, "validation": 6, "test": 10}
+    assert payload["baseline_method"] == "mean"
     assert set(payload["evaluation"]) == {"train", "validation", "test"}
 
 
@@ -50,6 +51,28 @@ def test_modeling_smoke_cli_custom_split_arguments_change_split_counts(capsys) -
     assert captured.err == ""
     assert payload["split_counts"] == {"train": 10, "validation": 6, "test": 8}
     assert payload["training_label_count"] == 10
+
+
+def test_modeling_smoke_cli_method_argument_selects_median(capsys) -> None:
+    exit_code = main(["--method", "median"])
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    expected = _json_round_trip(run_baseline_modeling_smoke(method="median"))
+    assert exit_code == 0
+    assert captured.err == ""
+    assert payload == expected
+    assert payload["baseline_method"] == "median"
+
+
+def test_modeling_smoke_cli_invalid_method_is_rejected(capsys) -> None:
+    exit_code = main(["--method", "mode"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert captured.out == ""
+    assert "invalid choice" in captured.err
+    assert "mode" in captured.err
 
 
 def test_modeling_smoke_cli_invalid_boundaries_return_error(capsys) -> None:
@@ -94,7 +117,7 @@ def test_modeling_smoke_cli_output_contains_only_diagnostic_summary_keys(capsys)
     assert forbidden_keys.isdisjoint(_all_dict_keys(payload))
 
 
-def _run_module() -> subprocess.CompletedProcess[str]:
+def _run_module(*args: str) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     src_path = str(Path.cwd() / "src")
     env["PYTHONPATH"] = (
@@ -103,7 +126,7 @@ def _run_module() -> subprocess.CompletedProcess[str]:
         else src_path + os.pathsep + env["PYTHONPATH"]
     )
     return subprocess.run(
-        [sys.executable, "-m", "abc_quant.cli.modeling_smoke"],
+        [sys.executable, "-m", "abc_quant.cli.modeling_smoke", *args],
         check=False,
         capture_output=True,
         env=env,
