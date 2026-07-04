@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 022 split prediction bundle evaluator：`SplitPredictionBundleEvaluationResult` 與 `evaluate_prediction_bundle(...)` 使用既有 `evaluate_predictions(...)` 評估 train/validation/test bundle outputs，保留 `model_name`/`method`，不改 pipeline、CLI 或 summary keys。
 - 新增 Task 021 constant-baseline prediction bundle adapter：`build_constant_baseline_prediction_bundle(...)` 將既有 `ConstantBaselineResult` 轉成 `SplitPredictionBundle`，沿用 generic bundle validation 與 copy isolation，不改 baseline、pipeline、CLI 或 summary keys。
 - 新增 Task 020 split prediction bundle diagnostics contract：`SplitPredictionBundle` 與 `build_split_prediction_bundle(...)` 固定 train/validation/test prediction Series 形狀，拒絕 duplicate/missing/overlap inputs，並回傳 copied Series，不改 baseline、CLI 或 summary keys。
 - 新增 Task 019 packaged console-script alias：`pyproject.toml` 宣告 `abc-quant-modeling-smoke = abc_quant.cli.modeling_smoke:main`，並以 `tomllib` 測試 entry point target 可解析與呼叫。

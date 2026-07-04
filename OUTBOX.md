@@ -1,5 +1,47 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 022 - Split Prediction Bundle Evaluator
+
+## 修改檔案
+- `src/abc_quant/models/evaluation.py`: added `SplitPredictionBundleEvaluationResult` and `evaluate_prediction_bundle(...)`, delegating each split to `evaluate_predictions(...)`.
+- `src/abc_quant/models/__init__.py`: exported the bundle evaluation dataclass and evaluator.
+- `tests/test_models_evaluation.py`: added valid bundle evaluation, missing-actual handling, invalid type checks, and parity with existing constant-baseline evaluation.
+- `docs/modeling.md`: documented bundle evaluation and its safety rules.
+- `README.md`: documented `evaluate_prediction_bundle(...)` in the prediction evaluation section.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 022 progress and completion evidence.
+- `INBOX.md`: reset the active Task 022 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added a frozen `SplitPredictionBundleEvaluationResult` with `model_name`, `method`, `train`, `validation`, and `test`.
+- Added `evaluate_prediction_bundle(feature_matrix, prediction_bundle)`.
+- The evaluator requires a `FeatureMatrix` and `SplitPredictionBundle` with clear `TypeError` messages.
+- It evaluates train, validation, and test predictions by calling `evaluate_predictions(feature_matrix.y, split_predictions, split_name)`.
+- It preserves `prediction_bundle.model_name` and `prediction_bundle.method`.
+- Constant-baseline bundle evaluation now has test coverage proving split metrics match the existing `evaluate_constant_baseline(...)` output.
+- No existing metric formula, baseline calculation, pipeline behavior, CLI behavior, diagnostic summary key, estimator implementation, file output, outside data access, live account connectivity, preprocessing fitting, parameter search, allocation logic, performance curve, or simulation engine was changed.
+
+## 測試方式
+- `python -m pytest tests\test_models_evaluation.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `ruff check .` and `python -m ruff check .` were attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused evaluation tests: 9 passed in 0.98s.
+- `pytest`: 132 passed in 5.58s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`ruff` command not found; `No module named ruff`). GitHub Actions should still run ruff.
+
+## 已知限制
+- This task only evaluates already-built split prediction bundles. It does not wire bundle evaluation into pipeline summaries or CLI output.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 021 - Constant Baseline Prediction Bundle Adapter
 
 ## 修改檔案

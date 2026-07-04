@@ -9,6 +9,7 @@ import pandas as pd
 
 from abc_quant.features.matrix import FeatureMatrix
 from abc_quant.models.baseline import ConstantBaselineResult
+from abc_quant.models.predictions import SplitPredictionBundle
 
 
 @dataclass(frozen=True)
@@ -29,6 +30,17 @@ class PredictionEvaluationResult:
 class ConstantBaselineEvaluationResult:
     """Train/validation/test diagnostics for a constant baseline result."""
 
+    train: PredictionEvaluationResult
+    validation: PredictionEvaluationResult
+    test: PredictionEvaluationResult
+
+
+@dataclass(frozen=True)
+class SplitPredictionBundleEvaluationResult:
+    """Train/validation/test diagnostics for a split prediction bundle."""
+
+    model_name: str
+    method: str | None
     train: PredictionEvaluationResult
     validation: PredictionEvaluationResult
     test: PredictionEvaluationResult
@@ -87,6 +99,37 @@ def evaluate_predictions(
         rmse=float(sqrt(float((errors**2).mean()))),
         mean_error=float(errors.mean()),
         prediction_mean=float(numeric_prediction.astype("float64").mean()),
+    )
+
+
+def evaluate_prediction_bundle(
+    feature_matrix: FeatureMatrix,
+    prediction_bundle: SplitPredictionBundle,
+) -> SplitPredictionBundleEvaluationResult:
+    """Evaluate train/validation/test predictions from a prediction bundle."""
+    if not isinstance(feature_matrix, FeatureMatrix):
+        raise TypeError("feature_matrix must be a FeatureMatrix")
+    if not isinstance(prediction_bundle, SplitPredictionBundle):
+        raise TypeError("prediction_bundle must be a SplitPredictionBundle")
+
+    return SplitPredictionBundleEvaluationResult(
+        model_name=prediction_bundle.model_name,
+        method=prediction_bundle.method,
+        train=evaluate_predictions(
+            feature_matrix.y,
+            prediction_bundle.train_predictions,
+            "train",
+        ),
+        validation=evaluate_predictions(
+            feature_matrix.y,
+            prediction_bundle.validation_predictions,
+            "validation",
+        ),
+        test=evaluate_predictions(
+            feature_matrix.y,
+            prediction_bundle.test_predictions,
+            "test",
+        ),
     )
 
 
