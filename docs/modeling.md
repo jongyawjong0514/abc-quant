@@ -319,6 +319,31 @@ Safety rules:
 - The helper does not add sklearn, tune parameters, create strategy signals,
   define allocation logic, build performance curves, or run simulation engines.
 
+## Ordinary Least-Squares Smoke Diagnostics
+
+`src/abc_quant/pipeline/linear_modeling.py` defines
+`run_linear_regression_smoke(...)`.
+
+The smoke diagnostic wires the deterministic smoke frame through:
+
+- `build_feature_matrix(...)`
+- `build_temporal_split(...)`
+- `fit_standard_scaler(...)`
+- `transform_with_standard_scaler(...)`
+- `build_supervised_split_dataset(...)`
+- `fit_linear_regression(...)`
+- `evaluate_prediction_bundle(...)`
+
+The returned summary is JSON-friendly and includes row count, feature columns,
+the label column, model name, method, intercept, ordered coefficients, training
+row count, split counts after label drop, dropped label counts, prediction
+counts, and train/validation/test evaluation metrics.
+
+This diagnostic fits OLS only through the existing train-only estimator
+contract, evaluates the existing prediction bundle, and does not create
+strategy signals, allocation outputs, performance curves, orders, positions, or
+simulation results.
+
 ## Prediction Evaluation Contract
 
 `src/abc_quant/models/evaluation.py` defines `evaluate_predictions(...)`,
