@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 028 packaged preprocessing smoke console-script alias：`pyproject.toml` 宣告 `abc-quant-preprocessing-smoke = abc_quant.cli.preprocessing_smoke:main`，並以 `tomllib` 測試 entry point target 可解析與呼叫。
 - 新增 Task 027 preprocessing smoke diagnostics CLI：`python -m abc_quant.cli.preprocessing_smoke` 以 sorted JSON 輸出既有 preprocessing smoke summary，支援 `--train-end`、`--validation-end` 與 `--indent`，錯誤邊界會以 non-zero exit code 與簡短 stderr 回報。
 - 新增 Task 026 preprocessing smoke summary contract validator：集中定義 `PREPROCESSING_SMOKE_SUMMARY_KEYS`、`PREPROCESSING_SMOKE_SPLITS` 與 `validate_preprocessing_smoke_summary(...)`，`run_preprocessing_smoke(...)` 回傳前會驗證 top-level keys、split counts 與 split shape，不改預設輸出值。
 - 新增 Task 025 deterministic preprocessing smoke diagnostics：`run_preprocessing_smoke(...)` 串接 deterministic smoke frame、feature matrix、temporal split、train-only scaler fit 與 transform，回傳 JSON-friendly scaling diagnostics，不改 modeling smoke CLI 或 summary contract。

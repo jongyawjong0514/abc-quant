@@ -47,6 +47,7 @@
 - [x] Deterministic preprocessing smoke diagnostics。
 - [x] Preprocessing smoke summary contract validator。
 - [x] Preprocessing smoke CLI diagnostics。
+- [x] Preprocessing smoke packaged console-script alias。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。

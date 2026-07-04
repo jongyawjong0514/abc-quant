@@ -110,6 +110,12 @@ The preprocessing smoke diagnostic can be run from the command line:
 python -m abc_quant.cli.preprocessing_smoke --indent 2
 ```
 
+After package installation, the same CLI is available as:
+
+```powershell
+abc-quant-preprocessing-smoke --indent 2
+```
+
 The CLI is a thin wrapper around `run_preprocessing_smoke(...)`. It supports `--train-end`, `--validation-end`, and `--indent`, writes sorted deterministic JSON to stdout, and writes concise errors to stderr for invalid temporal boundaries.
 
 This is only a leakage guard before modeling work. It does not train estimators, drop rows, fill missing labels, create strategy logic, generate trading signals, define allocation logic, build performance curves, or run simulation engines.

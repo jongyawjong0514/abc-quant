@@ -131,6 +131,13 @@ preprocessing smoke diagnostic as module-executable JSON:
 python -m abc_quant.cli.preprocessing_smoke
 ```
 
+When installed as a package, the same CLI is also exposed through the console
+script:
+
+```powershell
+abc-quant-preprocessing-smoke
+```
+
 The CLI is a thin wrapper around `run_preprocessing_smoke(...)`. It accepts:
 
 - `--train-end`

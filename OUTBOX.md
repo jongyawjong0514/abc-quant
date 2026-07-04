@@ -1,5 +1,49 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 028 - Preprocessing Smoke Console Script Alias
+
+## 修改檔案
+- `pyproject.toml`: added the `abc-quant-preprocessing-smoke` project script pointing to `abc_quant.cli.preprocessing_smoke:main`.
+- `tests/test_cli_entrypoints.py`: added preprocessing console-script metadata, import resolution, and callable JSON-output tests while keeping existing modeling console-script coverage.
+- `docs/modeling.md`: documented the installed preprocessing console-script command alongside `python -m`.
+- `README.md`: documented the packaged preprocessing console command.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 028 progress and completion evidence.
+- `INBOX.md`: reset the active Task 028 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added a package metadata console-script alias: `abc-quant-preprocessing-smoke`.
+- The entry point target is exactly `abc_quant.cli.preprocessing_smoke:main`.
+- `python -m abc_quant.cli.preprocessing_smoke` remains unchanged.
+- Entry-point tests parse `pyproject.toml` with `tomllib`, import the configured target, confirm it resolves to the preprocessing `main`, and call the resolved function with `--indent 2` to verify valid JSON.
+- Existing modeling console-script tests and preprocessing CLI tests remain covered.
+- No preprocessing calculation, summary key, split default, CLI argument semantic, estimator implementation, file output, outside data access, live account connectivity, parameter search, allocation logic, performance curve, or simulation engine was changed.
+
+## 測試方式
+- `python -m pytest tests\test_cli_entrypoints.py tests\test_cli_preprocessing_smoke.py tests\test_cli_modeling_smoke.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- pyproject script-map verification with `tomllib`
+- `ruff check .` and `python -m ruff check .` were attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused entrypoint/CLI tests: 18 passed in 6.49s.
+- `pytest`: 168 passed in 9.64s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- pyproject script-map verification confirmed:
+  - `abc-quant-modeling-smoke = abc_quant.cli.modeling_smoke:main`
+  - `abc-quant-preprocessing-smoke = abc_quant.cli.preprocessing_smoke:main`
+- Local `ruff`: unavailable (`ruff` command not found; `No module named ruff`). GitHub Actions should still run ruff.
+
+## 已知限制
+- This task only adds package-level discoverability for the existing preprocessing CLI. It does not install the package globally or change CLI behavior.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 027 - Preprocessing Smoke Diagnostics CLI
 
 ## 修改檔案
