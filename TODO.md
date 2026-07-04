@@ -38,6 +38,7 @@
 - [x] Baseline modeling smoke CLI diagnostics。
 - [x] Modeling smoke summary contract validator。
 - [x] Modeling smoke constant-baseline method selector。
+- [x] Modeling smoke packaged console-script alias。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。
