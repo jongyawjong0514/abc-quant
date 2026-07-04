@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 013 constant-baseline model contract：`fit_constant_baseline(...)` 支援 mean/median 常數 baseline，只使用 train split 的非缺失 label fit，並回傳 train/validation/test positional predictions，避免 validation/test label 洩漏。
 - 新增 Task 012 temporal split contract：`build_temporal_split(...)` 支援 train/test 與 train/validation/test date-based split，防止 training dates 洩漏到 validation/test，並覆蓋 shuffled metadata invariance、non-increasing boundary、empty split 與 missing/unsortable date tests。
 - 新增 Task 011 feature-matrix assembly contract：`build_feature_matrix(...)` 將 `X`、明確 `y`、`date`/`ticker` metadata 分離，排除 raw OHLCV 與 `label_` 欄位，並覆蓋 shuffled-input invariance 與 missing-label preservation。
 - 新增 Task 010 pure-pandas technical indicators：`add_technical_indicators(...)` 支援 SMA、EMA、RSI，並以 no-lookahead、ticker isolation、shuffled-input invariance 與 future-row mutation tests 覆蓋。
