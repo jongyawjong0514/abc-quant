@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 033 packaged supervised dataset smoke console-script alias：`pyproject.toml` 宣告 `abc-quant-supervised-smoke = abc_quant.cli.supervised_smoke:main`，並以 `tomllib` 測試 entry point target 可解析與呼叫。
 - 新增 Task 032 supervised dataset smoke diagnostics CLI：`python -m abc_quant.cli.supervised_smoke` 以 sorted JSON 輸出既有 supervised dataset smoke summary，支援 `--train-end`、`--validation-end` 與 `--indent`，錯誤邊界會以 non-zero exit code 與簡短 stderr 回報。
 - 新增 Task 031 supervised dataset smoke summary contract validator：集中定義 `SUPERVISED_DATASET_SMOKE_SUMMARY_KEYS`、`SUPERVISED_DATASET_SMOKE_SPLITS` 與 `validate_supervised_dataset_smoke_summary(...)`，`run_supervised_dataset_smoke(...)` 回傳前會驗證 summary shape，不改預設輸出值。
 - 新增 Task 030 deterministic supervised dataset smoke diagnostics：`run_supervised_dataset_smoke(...)` 串接 deterministic smoke frame、feature matrix、temporal split、train-only scaler 與 supervised split dataset，回傳 JSON-friendly label-drop diagnostics，不訓練 estimator、不改既有 smoke CLI 或 summary。

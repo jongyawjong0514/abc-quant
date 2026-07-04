@@ -23,6 +23,7 @@ dev = [
 [project.scripts]
 abc-quant-modeling-smoke = "abc_quant.cli.modeling_smoke:main"
 abc-quant-preprocessing-smoke = "abc_quant.cli.preprocessing_smoke:main"
+abc-quant-supervised-smoke = "abc_quant.cli.supervised_smoke:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

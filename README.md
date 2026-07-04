@@ -140,6 +140,12 @@ The supervised dataset smoke diagnostic can be run from the command line:
 python -m abc_quant.cli.supervised_smoke --indent 2
 ```
 
+After package installation, the same CLI is available as:
+
+```powershell
+abc-quant-supervised-smoke --indent 2
+```
+
 The CLI is a thin wrapper around `run_supervised_dataset_smoke(...)`. It supports `--train-end`, `--validation-end`, and `--indent`, writes sorted deterministic JSON to stdout, and writes concise errors to stderr for invalid temporal boundaries. It does not change existing smoke outputs or modeling/preprocessing CLI behavior.
 
 ## Minimal Model Baseline

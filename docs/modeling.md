@@ -242,6 +242,13 @@ dataset smoke diagnostic as module-executable JSON:
 python -m abc_quant.cli.supervised_smoke
 ```
 
+When installed as a package, the same CLI is also exposed through the console
+script:
+
+```powershell
+abc-quant-supervised-smoke
+```
+
 The CLI is a thin wrapper around `run_supervised_dataset_smoke(...)`. It
 accepts:
 
