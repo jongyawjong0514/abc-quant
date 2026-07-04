@@ -85,6 +85,16 @@ The first feature modules are local, deterministic, and no-lookahead:
 
 All feature builders validate OHLCV input first, return a sorted defensive copy by `ticker` and `date`, and compute each ticker independently. The matrix builder excludes metadata, raw OHLCV, and `label_` columns from inferred features and preserves missing labels for evaluator handling. These features are research inputs only; they do not create trading signals, model predictions, portfolio decisions, or backtest results.
 
+## Modeling Preparation
+
+The first pre-modeling validation contract is:
+
+- `src/abc_quant/validation/temporal.py`: `build_temporal_split(...)` creates deterministic train/test or train/validation/test positional indices from in-memory metadata.
+
+Temporal splits are date-based, sorted by `date` and then `ticker` when present, and require training dates to be strictly earlier than validation/test dates. The split helper rejects missing or unsortable dates, non-increasing boundaries, empty requested splits, and rows that would fall after an explicit `test_end`.
+
+This is only a leakage guard before modeling work. It does not train models, fit scalers, drop rows, fill missing labels, create strategy logic, generate trading signals, or run backtests.
+
 ## 快速開始
 
 在 Windows PowerShell：

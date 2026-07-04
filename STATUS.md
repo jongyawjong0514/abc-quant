@@ -27,3 +27,5 @@
 - 2026-07-04: Task 009 completed feature/label leakage regression tests and opened draft PR #8; review follow-up added reusable shuffled-output helper and rolling volatility numeric assertions.
 - 2026-07-04: Task 010 implemented pure-pandas SMA/EMA/RSI technical indicators with no-lookahead regression tests; validation passed with `pytest` 64 passed, `compileall src tests`, `git diff --check`, and closed-loop guard `status=no_task` after `INBOX.md` reset.
 - 2026-07-04: Task 011 implemented the feature-matrix assembly contract separating `X`, explicit `y`, and `date`/`ticker` metadata; validation passed with `pytest` 71 passed, `compileall src tests`, `git diff --check`, and closed-loop guard `status=no_task` after `INBOX.md` reset.
+- 2026-07-04: Started closed-loop task 012 to add a temporal split contract before any model training, scaler fitting, strategy, or backtest work.
+- 2026-07-04: Task 012 implemented the temporal split contract for train/test and train/validation/test boundaries; validation passed with `pytest` 79 passed, `compileall src tests`, `git diff --check`, and closed-loop guard `status=no_task` after `INBOX.md` reset.
