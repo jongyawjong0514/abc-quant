@@ -1,5 +1,43 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 016 - Modeling Smoke Diagnostics CLI
+
+## 修改檔案
+- `src/abc_quant/cli/__init__.py`: added the CLI package marker.
+- `src/abc_quant/cli/modeling_smoke.py`: added the module entry point for deterministic modeling smoke diagnostics.
+- `tests/test_cli_modeling_smoke.py`: added subprocess and direct-main tests for deterministic JSON, split arguments, error handling, and diagnostic-only keys.
+- `docs/modeling.md`: documented the CLI usage, arguments, stdout/stderr behavior, and diagnostic-only boundary.
+- `README.md`: documented the module command and supported arguments.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 016 progress and completion evidence.
+- `INBOX.md`: reset the active Task 016 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- `python -m abc_quant.cli.modeling_smoke` prints the existing `run_baseline_modeling_smoke(...)` summary as deterministic sorted JSON.
+- The CLI supports optional `--train-end`, `--validation-end`, and `--indent` arguments.
+- Invalid temporal boundaries return a non-zero exit code and print a concise `error: ...` message to stderr.
+- Tests verify repeated module invocations are byte-identical, stdout JSON matches the pipeline contract, custom split arguments change split counts deterministically, and forbidden non-diagnostic keys are absent.
+- No file writing, outside data access, live account connectivity, new model type, scaler fitting, hyperparameter tuning, allocation logic, performance curve, or simulation engine was added.
+
+## 測試方式
+- `python -m pytest tests\test_cli_modeling_smoke.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- Focused CLI tests: 5 passed in 3.56s.
+- `pytest`: 98 passed in 4.64s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- This CLI exposes diagnostics only. It does not add model behavior or produce trading, allocation, performance-curve, or simulation outputs.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 015 - Baseline Modeling Smoke Pipeline
 
 ## 修改檔案

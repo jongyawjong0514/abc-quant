@@ -35,6 +35,7 @@
 - [x] Baseline 模型。
 - [x] 模型預測誤差評估。
 - [x] Baseline modeling smoke pipeline。
+- [x] Baseline modeling smoke CLI diagnostics。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。

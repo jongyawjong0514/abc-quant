@@ -125,3 +125,24 @@ The smoke pipeline is deterministic and uses synthetic fixture data. It does
 not access outside data, train new model types, fit scalers, tune
 hyperparameters, create market-action outputs, define allocation logic, build
 performance curves, or run simulation engines.
+
+## Modeling Smoke CLI
+
+`src/abc_quant/cli/modeling_smoke.py` exposes the deterministic smoke pipeline
+as a module entry point:
+
+```powershell
+python -m abc_quant.cli.modeling_smoke
+```
+
+The command writes deterministic JSON to stdout with sorted keys. It supports:
+
+- `--train-end`: overrides the last train date boundary.
+- `--validation-end`: overrides the last validation date boundary.
+- `--indent`: optionally formats the JSON output.
+
+Invalid date boundaries return a non-zero exit code and write a concise error
+message to stderr. The CLI is diagnostic-only: it does not write files, access
+outside data, connect to live accounts, add model types, fit scalers, tune
+hyperparameters, define allocation logic, build performance curves, or run
+simulation engines.

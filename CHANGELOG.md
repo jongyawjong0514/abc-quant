@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 016 deterministic modeling smoke diagnostics CLI：`python -m abc_quant.cli.modeling_smoke` 以 sorted JSON 輸出既有 smoke summary，支援 `--train-end`、`--validation-end` 與 `--indent`，錯誤邊界會以 non-zero exit code 與簡短 stderr 回報。
 - 新增 Task 015 deterministic baseline modeling smoke pipeline：`run_baseline_modeling_smoke(...)` 串接 feature matrix、temporal split、constant baseline 與 prediction evaluation，回傳 plain diagnostic summary，不建立 market-action outputs、allocation logic、performance curves 或 simulation engines。
 - 新增 Task 014 prediction evaluation metrics：`evaluate_predictions(...)` 與 `evaluate_constant_baseline(...)` 對 split-aligned predictions 計算 row/missing counts、MAE、RMSE、mean error 與 prediction mean，且不產生交易訊號、部位、equity curve 或 backtest。
 - 新增 Task 013 constant-baseline model contract：`fit_constant_baseline(...)` 支援 mean/median 常數 baseline，只使用 train split 的非缺失 label fit，並回傳 train/validation/test positional predictions，避免 validation/test label 洩漏。

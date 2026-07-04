@@ -123,6 +123,20 @@ The smoke summary is a plain dictionary with row counts, feature columns, the la
 
 This pipeline does not add source adapters, outside data access, live account connectivity, new model types, scaler fitting, hyperparameter tuning, market-action outputs, allocation logic, performance curves, or simulation engines.
 
+The deterministic diagnostics can also be printed as JSON:
+
+```powershell
+python -m abc_quant.cli.modeling_smoke --indent 2
+```
+
+The CLI is a thin wrapper around `run_baseline_modeling_smoke(...)`. It accepts
+optional `--train-end` and `--validation-end` split boundaries and writes the
+sorted diagnostic JSON contract to stdout. Invalid date boundaries return a
+non-zero exit code with a concise stderr message. The command does not write
+files, access outside data, connect to live accounts, add model behavior, fit
+scalers, tune hyperparameters, define allocation logic, build performance
+curves, or run simulation engines.
+
 ## 快速開始
 
 在 Windows PowerShell：
