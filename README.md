@@ -134,6 +134,14 @@ It reports row count, feature columns, label column, split counts before label d
 
 The supervised dataset smoke summary shape is centralized in `src/abc_quant/pipeline/contracts.py`. `validate_supervised_dataset_smoke_summary(...)` checks top-level keys, split count keys before and after label drop, dropped label count keys, `split_shape` split keys, and each split shape's `rows` / `columns` keys before the diagnostic is returned.
 
+The supervised dataset smoke diagnostic can be run from the command line:
+
+```powershell
+python -m abc_quant.cli.supervised_smoke --indent 2
+```
+
+The CLI is a thin wrapper around `run_supervised_dataset_smoke(...)`. It supports `--train-end`, `--validation-end`, and `--indent`, writes sorted deterministic JSON to stdout, and writes concise errors to stderr for invalid temporal boundaries. It does not change existing smoke outputs or modeling/preprocessing CLI behavior.
+
 ## Minimal Model Baseline
 
 The first model-layer contract is:

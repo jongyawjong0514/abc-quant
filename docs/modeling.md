@@ -233,6 +233,28 @@ Safety rules:
   behavior, define allocation logic, build performance curves, or run simulation
   engines.
 
+## Supervised Dataset Smoke CLI
+
+`src/abc_quant/cli/supervised_smoke.py` exposes the deterministic supervised
+dataset smoke diagnostic as module-executable JSON:
+
+```powershell
+python -m abc_quant.cli.supervised_smoke
+```
+
+The CLI is a thin wrapper around `run_supervised_dataset_smoke(...)`. It
+accepts:
+
+- `--train-end`
+- `--validation-end`
+- `--indent`
+
+It writes sorted deterministic JSON to stdout. Invalid temporal boundaries
+return a non-zero exit code and write a concise error to stderr. The CLI does
+not change supervised dataset calculations, summary keys, split defaults,
+existing smoke outputs, modeling/preprocessing CLI behavior, estimator
+implementation, allocation logic, performance curves, or simulation engines.
+
 ## Constant Baseline Contract
 
 `src/abc_quant/models/baseline.py` defines `fit_constant_baseline(...)`.
