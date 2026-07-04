@@ -68,7 +68,10 @@ The first data contract and smoke pipeline live in:
 
 - `src/abc_quant/data/schema.py`
 - `src/abc_quant/data/sample.py`
+- `src/abc_quant/data/validation.py`
 - `src/abc_quant/pipeline/smoke.py`
+
+Validation enforces the schema constants, datetime dates, string tickers, numeric and non-missing OHLCV values, non-negative volume, and OHLC high-low consistency.
 
 The sample fixture is synthetic and deterministic. It is only for local smoke checks and is not a trading signal, market data source, backtest, or performance claim.
 

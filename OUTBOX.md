@@ -1,5 +1,39 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 008 - Harden Market Data Validation
+
+## 修改檔案
+- `src/abc_quant/data/validation.py`: uses schema constants and validates numeric, missing, volume, and OHLC range rules.
+- `tests/test_data_validation.py`: added adversarial tests for schema-backed required columns, ticker string normalization, non-numeric OHLCV, missing OHLCV, negative volume, high-low inversion, and open/close range violations.
+- `docs/data_pipeline.md`, `README.md`: documented the enforced validation contract and smoke fixture boundary.
+- `INBOX.md`: reset the active Task 008 block to the commented empty template before PR handoff.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 008 progress.
+
+## 實作摘要
+- `validate_market_data()` still returns a defensive sorted copy by ticker and date.
+- Dates are normalized with `pd.to_datetime`; tickers are normalized to pandas string dtype.
+- OHLCV columns are converted with `pd.to_numeric`, then checked for missing values.
+- Negative volume, `high < low`, `open` outside high-low, and `close` outside high-low now raise `MarketDataValidationError`.
+- No data adapters, downloads, model logic, strategy logic, portfolio logic, broker integration, or full backtest logic were added.
+
+## 測試方式
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- `pytest`: 54 passed in 1.35s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- This validates the deterministic OHLCV contract only; it does not add cleaning, imputation, source freshness, or real market adapters.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review after final validation passes.
+
 ## 2026-07-04 Closed-Loop Task 007 - Data Contract Smoke Pipeline
 
 ## 修改檔案
