@@ -213,6 +213,15 @@ contains:
 - `dropped_label_counts`
 - `split_shape`
 
+`src/abc_quant/pipeline/contracts.py` centralizes the supervised dataset smoke
+summary contract with `SUPERVISED_DATASET_SMOKE_SUMMARY_KEYS`,
+`SUPERVISED_DATASET_SMOKE_SPLITS`,
+`SUPERVISED_DATASET_SMOKE_SPLIT_SHAPE_KEYS`, and
+`validate_supervised_dataset_smoke_summary(...)`. The smoke pipeline validates
+the summary before returning it. The validator checks top-level keys,
+pre-label-drop split counts, post-label-drop split counts, dropped label count
+splits, split shape splits, and the per-split `rows`/`columns` shape keys.
+
 Safety rules:
 
 - Split counts before label drop are derived from the standardized split

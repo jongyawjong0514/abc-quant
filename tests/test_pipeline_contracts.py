@@ -9,11 +9,15 @@ from abc_quant.pipeline.contracts import (
     MODELING_SMOKE_SUMMARY_KEYS,
     PREPROCESSING_SMOKE_SPLITS,
     PREPROCESSING_SMOKE_SUMMARY_KEYS,
+    SUPERVISED_DATASET_SMOKE_SPLITS,
+    SUPERVISED_DATASET_SMOKE_SUMMARY_KEYS,
     validate_modeling_smoke_summary,
     validate_preprocessing_smoke_summary,
+    validate_supervised_dataset_smoke_summary,
 )
 from abc_quant.pipeline.modeling import run_baseline_modeling_smoke
 from abc_quant.pipeline.preprocessing import run_preprocessing_smoke
+from abc_quant.pipeline.supervised import run_supervised_dataset_smoke
 
 
 def test_validate_modeling_smoke_summary_accepts_valid_summary() -> None:
@@ -279,3 +283,192 @@ def test_validate_preprocessing_smoke_summary_rejects_unknown_split_shape_key() 
         match=r"split_shape for test keys mismatch: .*unknown=\['extra'\]",
     ):
         validate_preprocessing_smoke_summary(summary)
+
+
+def test_validate_supervised_dataset_smoke_summary_accepts_valid_summary() -> None:
+    summary = run_supervised_dataset_smoke()
+
+    assert validate_supervised_dataset_smoke_summary(summary) is summary
+    assert set(summary) == SUPERVISED_DATASET_SMOKE_SUMMARY_KEYS
+    assert set(summary["split_counts_before_label_drop"]) == (
+        SUPERVISED_DATASET_SMOKE_SPLITS
+    )
+    assert set(summary["split_counts_after_label_drop"]) == (
+        SUPERVISED_DATASET_SMOKE_SPLITS
+    )
+    assert set(summary["dropped_label_counts"]) == SUPERVISED_DATASET_SMOKE_SPLITS
+    assert set(summary["split_shape"]) == SUPERVISED_DATASET_SMOKE_SPLITS
+
+
+def test_validate_supervised_dataset_smoke_summary_rejects_non_dict() -> None:
+    with pytest.raises(
+        ValueError,
+        match="supervised dataset smoke summary must be a dict",
+    ):
+        validate_supervised_dataset_smoke_summary(["not", "a", "dict"])
+
+
+def test_validate_supervised_dataset_smoke_summary_rejects_missing_top_level_key() -> None:
+    summary = run_supervised_dataset_smoke()
+    del summary["row_count"]
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"supervised dataset smoke summary keys mismatch: "
+            r".*missing=\['row_count'\]"
+        ),
+    ):
+        validate_supervised_dataset_smoke_summary(summary)
+
+
+def test_validate_supervised_dataset_smoke_summary_rejects_unknown_top_level_key() -> None:
+    summary = run_supervised_dataset_smoke()
+    summary["unexpected"] = True
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"supervised dataset smoke summary keys mismatch: "
+            r".*unknown=\['unexpected'\]"
+        ),
+    ):
+        validate_supervised_dataset_smoke_summary(summary)
+
+
+@pytest.mark.parametrize(
+    "summary_key",
+    [
+        "split_counts_before_label_drop",
+        "split_counts_after_label_drop",
+        "dropped_label_counts",
+    ],
+)
+def test_validate_supervised_dataset_smoke_summary_rejects_non_dict_split_counts(
+    summary_key: str,
+) -> None:
+    summary = run_supervised_dataset_smoke()
+    summary[summary_key] = []
+
+    with pytest.raises(
+        ValueError,
+        match=f"supervised dataset smoke summary {summary_key} must be a dict",
+    ):
+        validate_supervised_dataset_smoke_summary(summary)
+
+
+@pytest.mark.parametrize(
+    "summary_key",
+    [
+        "split_counts_before_label_drop",
+        "split_counts_after_label_drop",
+        "dropped_label_counts",
+    ],
+)
+def test_validate_supervised_dataset_smoke_summary_rejects_missing_split_key(
+    summary_key: str,
+) -> None:
+    summary = run_supervised_dataset_smoke()
+    del summary[summary_key]["test"]
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            rf"supervised dataset smoke summary {summary_key} keys mismatch: "
+            r".*missing=\['test'\]"
+        ),
+    ):
+        validate_supervised_dataset_smoke_summary(summary)
+
+
+@pytest.mark.parametrize(
+    "summary_key",
+    [
+        "split_counts_before_label_drop",
+        "split_counts_after_label_drop",
+        "dropped_label_counts",
+    ],
+)
+def test_validate_supervised_dataset_smoke_summary_rejects_unknown_split_key(
+    summary_key: str,
+) -> None:
+    summary = run_supervised_dataset_smoke()
+    summary[summary_key]["holdout"] = 0
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            rf"supervised dataset smoke summary {summary_key} keys mismatch: "
+            r".*unknown=\['holdout'\]"
+        ),
+    ):
+        validate_supervised_dataset_smoke_summary(summary)
+
+
+def test_validate_supervised_dataset_smoke_summary_rejects_non_dict_split_shape() -> None:
+    summary = run_supervised_dataset_smoke()
+    summary["split_shape"] = []
+
+    with pytest.raises(
+        ValueError,
+        match="supervised dataset smoke summary split_shape must be a dict",
+    ):
+        validate_supervised_dataset_smoke_summary(summary)
+
+
+def test_validate_supervised_dataset_smoke_summary_rejects_missing_split_shape() -> None:
+    summary = run_supervised_dataset_smoke()
+    del summary["split_shape"]["validation"]
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"supervised dataset smoke summary split_shape keys mismatch: "
+            r".*missing=\['validation'\]"
+        ),
+    ):
+        validate_supervised_dataset_smoke_summary(summary)
+
+
+def test_validate_supervised_dataset_smoke_summary_rejects_unknown_split_shape() -> None:
+    summary = run_supervised_dataset_smoke()
+    summary["split_shape"]["holdout"] = {"rows": 0, "columns": 4}
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"supervised dataset smoke summary split_shape keys mismatch: "
+            r".*unknown=\['holdout'\]"
+        ),
+    ):
+        validate_supervised_dataset_smoke_summary(summary)
+
+
+def test_validate_supervised_dataset_smoke_summary_rejects_malformed_shape() -> None:
+    summary = run_supervised_dataset_smoke()
+    summary["split_shape"]["train"] = []
+
+    with pytest.raises(ValueError, match="split_shape for train must be a dict"):
+        validate_supervised_dataset_smoke_summary(summary)
+
+
+def test_validate_supervised_dataset_smoke_summary_rejects_missing_shape_key() -> None:
+    summary = run_supervised_dataset_smoke()
+    del summary["split_shape"]["train"]["columns"]
+
+    with pytest.raises(
+        ValueError,
+        match=r"split_shape for train keys mismatch: .*missing=\['columns'\]",
+    ):
+        validate_supervised_dataset_smoke_summary(summary)
+
+
+def test_validate_supervised_dataset_smoke_summary_rejects_unknown_shape_key() -> None:
+    summary = run_supervised_dataset_smoke()
+    summary["split_shape"]["test"]["extra"] = 0
+
+    with pytest.raises(
+        ValueError,
+        match=r"split_shape for test keys mismatch: .*unknown=\['extra'\]",
+    ):
+        validate_supervised_dataset_smoke_summary(summary)

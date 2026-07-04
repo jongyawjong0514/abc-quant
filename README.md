@@ -132,6 +132,8 @@ The deterministic supervised dataset smoke diagnostic is:
 
 It reports row count, feature columns, label column, split counts before label drop, split counts after label drop, dropped label counts, and split shapes. The diagnostic uses `drop_missing_labels=True` and verifies the train split remains non-empty after label filtering. It does not train estimators, change existing smoke output contracts, change CLI behavior, define allocation logic, build performance curves, or run simulation engines.
 
+The supervised dataset smoke summary shape is centralized in `src/abc_quant/pipeline/contracts.py`. `validate_supervised_dataset_smoke_summary(...)` checks top-level keys, split count keys before and after label drop, dropped label count keys, `split_shape` split keys, and each split shape's `rows` / `columns` keys before the diagnostic is returned.
+
 ## Minimal Model Baseline
 
 The first model-layer contract is:

@@ -1,5 +1,52 @@
 # OUTBOX
 
+## 2026-07-05 Closed-Loop Task 031 - Supervised Dataset Smoke Summary Validator
+
+## 修改檔案
+- `src/abc_quant/pipeline/contracts.py`: added supervised dataset smoke summary constants and `validate_supervised_dataset_smoke_summary(...)`.
+- `src/abc_quant/pipeline/supervised.py`: validates the summary before returning it.
+- `src/abc_quant/pipeline/__init__.py`: exported the new constants and validator.
+- `tests/test_pipeline_supervised.py`: switched supervised smoke tests to shared constants and validator.
+- `tests/test_pipeline_contracts.py`: added valid and invalid supervised summary shape tests.
+- `docs/modeling.md`: documented the supervised dataset smoke summary contract validator.
+- `README.md`: documented the shared validator under modeling preparation.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 031 progress and completion evidence.
+- `INBOX.md`: reset the active Task 031 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added `SUPERVISED_DATASET_SMOKE_SUMMARY_KEYS`.
+- Added `SUPERVISED_DATASET_SMOKE_SPLITS`.
+- Added `SUPERVISED_DATASET_SMOKE_SPLIT_SHAPE_KEYS`.
+- Added `validate_supervised_dataset_smoke_summary(summary)`.
+- The validator returns the original summary object unchanged when valid.
+- The validator rejects non-dict summaries, missing/unknown top-level keys, non-dict split count mappings, missing/unknown split keys, non-dict split shape, missing/unknown split shapes, malformed split shape entries, and missing/unknown `rows` / `columns` shape keys.
+- `run_supervised_dataset_smoke(...)` now validates the summary before returning.
+- Default supervised dataset smoke output values remain unchanged.
+- Existing modeling and preprocessing smoke summary contracts remain unchanged.
+- No estimator implementation, existing smoke output value change, CLI behavior change, package script change, parameter search, allocation logic, performance curve, simulation engine, outside data access, or live account connectivity was added.
+
+## 測試方式
+- `python -m pytest tests\test_pipeline_contracts.py tests\test_pipeline_supervised.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `ruff check .` and `python -m ruff check .` were attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused contract/supervised tests: 50 passed in 3.72s.
+- `pytest`: 202 passed in 11.43s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`ruff` command not found; `No module named ruff`). GitHub Actions should still run ruff.
+
+## 已知限制
+- This task only hardens the supervised dataset smoke summary shape. It does not add a CLI or train estimators.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-05 Closed-Loop Task 030 - Supervised Dataset Smoke Diagnostics
 
 ## 修改檔案

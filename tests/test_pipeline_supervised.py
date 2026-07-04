@@ -2,7 +2,13 @@ import json
 
 from abc_quant.features.matrix import build_feature_matrix
 from abc_quant.models.dataset import build_supervised_split_dataset
-from abc_quant.pipeline import run_supervised_dataset_smoke
+from abc_quant.pipeline import (
+    SUPERVISED_DATASET_SMOKE_SPLITS,
+    SUPERVISED_DATASET_SMOKE_SUMMARY_KEYS,
+    run_supervised_dataset_smoke,
+    validate_supervised_dataset_smoke_summary,
+)
+from abc_quant.pipeline.contracts import SUPERVISED_DATASET_SMOKE_SPLIT_SHAPE_KEYS
 from abc_quant.pipeline.smoke import (
     SMOKE_FEATURE_COLUMNS,
     SMOKE_LABEL_COLUMN,
@@ -19,18 +25,6 @@ from abc_quant.preprocessing.scaling import (
 from abc_quant.validation.temporal import build_temporal_split
 
 
-EXPECTED_SUMMARY_KEYS = {
-    "row_count",
-    "feature_columns",
-    "label_column",
-    "split_counts_before_label_drop",
-    "split_counts_after_label_drop",
-    "dropped_label_counts",
-    "split_shape",
-}
-SPLIT_NAMES = {"train", "validation", "test"}
-
-
 def test_supervised_dataset_smoke_is_deterministic_and_json_serializable() -> None:
     first = run_supervised_dataset_smoke()
     second = run_supervised_dataset_smoke()
@@ -42,14 +36,19 @@ def test_supervised_dataset_smoke_is_deterministic_and_json_serializable() -> No
 def test_supervised_dataset_smoke_summary_contract() -> None:
     summary = run_supervised_dataset_smoke()
 
-    assert set(summary) == EXPECTED_SUMMARY_KEYS
+    assert validate_supervised_dataset_smoke_summary(summary) is summary
+    assert set(summary) == SUPERVISED_DATASET_SMOKE_SUMMARY_KEYS
     assert summary["row_count"] == 18
     assert summary["feature_columns"] == list(SMOKE_FEATURE_COLUMNS)
     assert summary["label_column"] == SMOKE_LABEL_COLUMN
-    assert set(summary["split_counts_before_label_drop"]) == SPLIT_NAMES
-    assert set(summary["split_counts_after_label_drop"]) == SPLIT_NAMES
-    assert set(summary["dropped_label_counts"]) == SPLIT_NAMES
-    assert set(summary["split_shape"]) == SPLIT_NAMES
+    assert set(summary["split_counts_before_label_drop"]) == (
+        SUPERVISED_DATASET_SMOKE_SPLITS
+    )
+    assert set(summary["split_counts_after_label_drop"]) == (
+        SUPERVISED_DATASET_SMOKE_SPLITS
+    )
+    assert set(summary["dropped_label_counts"]) == SUPERVISED_DATASET_SMOKE_SPLITS
+    assert set(summary["split_shape"]) == SUPERVISED_DATASET_SMOKE_SPLITS
     assert summary["split_counts_before_label_drop"] == {
         "train": 2,
         "validation": 6,
@@ -90,7 +89,10 @@ def test_supervised_dataset_smoke_preserves_feature_and_label_contract() -> None
 
     assert summary["feature_columns"] == list(SMOKE_FEATURE_COLUMNS)
     assert summary["label_column"] == SMOKE_LABEL_COLUMN
-    for split_name in sorted(SPLIT_NAMES):
+    for split_name in sorted(SUPERVISED_DATASET_SMOKE_SPLITS):
+        assert set(summary["split_shape"][split_name]) == (
+            SUPERVISED_DATASET_SMOKE_SPLIT_SHAPE_KEYS
+        )
         assert summary["split_shape"][split_name]["columns"] == len(
             SMOKE_FEATURE_COLUMNS
         )

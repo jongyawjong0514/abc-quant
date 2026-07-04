@@ -8,6 +8,7 @@ import pandas as pd
 
 from abc_quant.features.matrix import build_feature_matrix
 from abc_quant.models.dataset import build_supervised_split_dataset
+from abc_quant.pipeline.contracts import validate_supervised_dataset_smoke_summary
 from abc_quant.pipeline.preprocessing import (
     DEFAULT_PREPROCESSING_TRAIN_END,
     DEFAULT_PREPROCESSING_VALIDATION_END,
@@ -74,7 +75,7 @@ def run_supervised_dataset_smoke(
         "test": int(len(supervised_dataset.test_X)),
     }
 
-    return {
+    summary = {
         "row_count": int(len(feature_matrix.X)),
         "feature_columns": list(supervised_dataset.feature_columns),
         "label_column": supervised_dataset.label_column,
@@ -90,6 +91,7 @@ def run_supervised_dataset_smoke(
             "test": _frame_shape(supervised_dataset.test_X),
         },
     }
+    return validate_supervised_dataset_smoke_summary(summary)
 
 
 def _feature_complete_smoke_frame() -> pd.DataFrame:

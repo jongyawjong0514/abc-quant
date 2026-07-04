@@ -50,6 +50,7 @@
 - [x] Preprocessing smoke packaged console-script alias。
 - [x] Supervised split dataset contract。
 - [x] Deterministic supervised dataset smoke diagnostics。
+- [x] Supervised dataset smoke summary contract validator。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。
