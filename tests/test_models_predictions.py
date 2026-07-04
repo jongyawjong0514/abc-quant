@@ -1,7 +1,35 @@
 import pandas as pd
 import pytest
 
-from abc_quant.models import SplitPredictionBundle, build_split_prediction_bundle
+from abc_quant.models import (
+    ConstantBaselineResult,
+    SplitPredictionBundle,
+    build_constant_baseline_prediction_bundle,
+    build_split_prediction_bundle,
+)
+
+
+def _constant_baseline_result(method: str = "mean") -> ConstantBaselineResult:
+    return ConstantBaselineResult(
+        fitted_value=1.5,
+        train_predictions=pd.Series(
+            [1.5, 1.5],
+            index=[0, 1],
+            name="constant_baseline_prediction",
+        ),
+        validation_predictions=pd.Series(
+            [1.5],
+            index=[2],
+            name="constant_baseline_prediction",
+        ),
+        test_predictions=pd.Series(
+            [1.5, 1.5],
+            index=[3, 4],
+            name="constant_baseline_prediction",
+        ),
+        training_label_count=2,
+        method=method,  # type: ignore[arg-type]
+    )
 
 
 def test_build_split_prediction_bundle_accepts_valid_predictions() -> None:
@@ -19,6 +47,51 @@ def test_build_split_prediction_bundle_accepts_valid_predictions() -> None:
     assert bundle.train_predictions.to_dict() == {0: 1.0, 1: 2.0}
     assert bundle.validation_predictions.to_dict() == {2: 3.0}
     assert bundle.test_predictions.to_dict() == {3: 4.0, 4: 5.0}
+
+
+def test_build_constant_baseline_prediction_bundle_adapts_result() -> None:
+    result = _constant_baseline_result(method="median")
+
+    bundle = build_constant_baseline_prediction_bundle(result)
+
+    assert isinstance(bundle, SplitPredictionBundle)
+    assert bundle.model_name == "constant_baseline"
+    assert bundle.method == "median"
+    assert bundle.train_predictions.to_dict() == {0: 1.5, 1: 1.5}
+    assert bundle.validation_predictions.to_dict() == {2: 1.5}
+    assert bundle.test_predictions.to_dict() == {3: 1.5, 4: 1.5}
+
+
+def test_build_constant_baseline_prediction_bundle_trims_custom_model_name() -> None:
+    result = _constant_baseline_result()
+
+    bundle = build_constant_baseline_prediction_bundle(
+        result,
+        model_name=" constant_baseline_v1 ",
+    )
+
+    assert bundle.model_name == "constant_baseline_v1"
+
+
+def test_build_constant_baseline_prediction_bundle_copies_result_series() -> None:
+    result = _constant_baseline_result()
+
+    bundle = build_constant_baseline_prediction_bundle(result)
+    result.train_predictions.iloc[0] = 99.0
+    result.validation_predictions.iloc[0] = 88.0
+    result.test_predictions.iloc[0] = 77.0
+
+    assert bundle.train_predictions.iloc[0] == 1.5
+    assert bundle.validation_predictions.iloc[0] == 1.5
+    assert bundle.test_predictions.iloc[0] == 1.5
+
+
+def test_build_constant_baseline_prediction_bundle_rejects_invalid_result_type() -> None:
+    with pytest.raises(
+        TypeError,
+        match="baseline_result must be a ConstantBaselineResult",
+    ):
+        build_constant_baseline_prediction_bundle(object())  # type: ignore[arg-type]
 
 
 def test_build_split_prediction_bundle_allows_empty_validation_split() -> None:

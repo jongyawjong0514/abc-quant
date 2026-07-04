@@ -100,10 +100,11 @@ Safety rules:
 
 ## Split Prediction Bundle Contract
 
-`src/abc_quant/models/predictions.py` defines `SplitPredictionBundle` and
-`build_split_prediction_bundle(...)` for in-memory diagnostic prediction
-outputs. The bundle fixes the shape used by train, validation, and test
-prediction Series before those outputs are passed to later diagnostics.
+`src/abc_quant/models/predictions.py` defines `SplitPredictionBundle`,
+`build_split_prediction_bundle(...)`, and
+`build_constant_baseline_prediction_bundle(...)` for in-memory diagnostic
+prediction outputs. The bundle fixes the shape used by train, validation, and
+test prediction Series before those outputs are passed to later diagnostics.
 
 The frozen dataclass contains:
 
@@ -124,6 +125,10 @@ Safety rules:
 - Missing prediction values are rejected.
 - Split indices must not overlap across train, validation, and test.
 - Returned Series are copied so later caller mutation cannot change the bundle.
+- `build_constant_baseline_prediction_bundle(...)` accepts only a
+  `ConstantBaselineResult`, uses its existing prediction Series and `method`,
+  and delegates to `build_split_prediction_bundle(...)` so the same validation
+  and copy-isolation rules apply.
 - The helper does not implement estimators, alter baseline fitting, change CLI
   behavior, change summary keys, fit preprocessing, tune parameters, define
   allocation logic, build performance curves, or run simulation engines.

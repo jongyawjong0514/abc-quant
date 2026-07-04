@@ -6,6 +6,8 @@ from dataclasses import dataclass
 
 import pandas as pd
 
+from abc_quant.models.baseline import ConstantBaselineResult
+
 
 @dataclass(frozen=True)
 class SplitPredictionBundle:
@@ -63,6 +65,22 @@ def build_split_prediction_bundle(
         train_predictions=copied_train,
         validation_predictions=copied_validation,
         test_predictions=copied_test,
+    )
+
+
+def build_constant_baseline_prediction_bundle(
+    baseline_result: ConstantBaselineResult,
+    model_name: str = "constant_baseline",
+) -> SplitPredictionBundle:
+    """Adapt a constant-baseline result to the generic prediction bundle."""
+    if not isinstance(baseline_result, ConstantBaselineResult):
+        raise TypeError("baseline_result must be a ConstantBaselineResult")
+    return build_split_prediction_bundle(
+        model_name=model_name,
+        method=baseline_result.method,
+        train_predictions=baseline_result.train_predictions,
+        validation_predictions=baseline_result.validation_predictions,
+        test_predictions=baseline_result.test_predictions,
     )
 
 

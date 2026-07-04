@@ -117,9 +117,9 @@ This layer evaluates model outputs only. It does not create trading signals, pos
 
 The generic prediction-output bundle contract is:
 
-- `src/abc_quant/models/predictions.py`: `SplitPredictionBundle` and `build_split_prediction_bundle(...)` validate train/validation/test prediction Series for diagnostic workflows.
+- `src/abc_quant/models/predictions.py`: `SplitPredictionBundle`, `build_split_prediction_bundle(...)`, and `build_constant_baseline_prediction_bundle(...)` validate train/validation/test prediction Series for diagnostic workflows.
 
-The builder normalizes model metadata, requires pandas Series with unique indices, rejects missing prediction values and overlapping split indices, rejects empty train/test predictions, and copies Series to prevent later caller mutation from changing the bundle. This contract does not add an estimator, change the constant baseline, change CLI behavior, or change the modeling smoke summary keys.
+The generic builder normalizes model metadata, requires pandas Series with unique indices, rejects missing prediction values and overlapping split indices, rejects empty train/test predictions, and copies Series to prevent later caller mutation from changing the bundle. The constant-baseline adapter accepts a `ConstantBaselineResult`, propagates its method and existing prediction Series, and delegates to the generic builder. This contract does not add an estimator, change the constant baseline calculation, change CLI behavior, or change the modeling smoke summary keys.
 
 ## Baseline Modeling Smoke Pipeline
 
