@@ -122,6 +122,27 @@ Safety rules:
   outputs, define allocation logic, build performance curves, or run simulation
   engines.
 
+## Preprocessing Smoke CLI
+
+`src/abc_quant/cli/preprocessing_smoke.py` exposes the deterministic
+preprocessing smoke diagnostic as module-executable JSON:
+
+```powershell
+python -m abc_quant.cli.preprocessing_smoke
+```
+
+The CLI is a thin wrapper around `run_preprocessing_smoke(...)`. It accepts:
+
+- `--train-end`
+- `--validation-end`
+- `--indent`
+
+Successful runs write sorted deterministic JSON to stdout and return exit code
+0. Invalid temporal boundaries return a non-zero exit code and write a concise
+error message to stderr. The CLI does not write files, change preprocessing
+calculations, alter the modeling smoke CLI, train estimators, tune parameters,
+define allocation logic, build performance curves, or run simulation engines.
+
 ## Constant Baseline Contract
 
 `src/abc_quant/models/baseline.py` defines `fit_constant_baseline(...)`.
