@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 029 supervised split dataset contract：`SupervisedSplitDataset` 與 `build_supervised_split_dataset(...)` 將 standardized split features 與 `FeatureMatrix` labels 對齊，支援 split-level missing-label drop counts，並拒絕 missing-label no-drop 與 empty train data，不訓練 estimator。
 - 新增 Task 028 packaged preprocessing smoke console-script alias：`pyproject.toml` 宣告 `abc-quant-preprocessing-smoke = abc_quant.cli.preprocessing_smoke:main`，並以 `tomllib` 測試 entry point target 可解析與呼叫。
 - 新增 Task 027 preprocessing smoke diagnostics CLI：`python -m abc_quant.cli.preprocessing_smoke` 以 sorted JSON 輸出既有 preprocessing smoke summary，支援 `--train-end`、`--validation-end` 與 `--indent`，錯誤邊界會以 non-zero exit code 與簡短 stderr 回報。
 - 新增 Task 026 preprocessing smoke summary contract validator：集中定義 `PREPROCESSING_SMOKE_SUMMARY_KEYS`、`PREPROCESSING_SMOKE_SPLITS` 與 `validate_preprocessing_smoke_summary(...)`，`run_preprocessing_smoke(...)` 回傳前會驗證 top-level keys、split counts 與 split shape，不改預設輸出值。

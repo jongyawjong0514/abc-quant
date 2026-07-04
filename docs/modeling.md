@@ -150,6 +150,39 @@ error message to stderr. The CLI does not write files, change preprocessing
 calculations, alter the modeling smoke CLI, train estimators, tune parameters,
 define allocation logic, build performance curves, or run simulation engines.
 
+## Supervised Split Dataset Contract
+
+`src/abc_quant/models/dataset.py` defines
+`build_supervised_split_dataset(...)`. It combines a `FeatureMatrix` and a
+`StandardizedFeatureMatrix` into aligned train/validation/test supervised
+inputs for future estimators.
+
+The builder uses the split indices stored in `standardized_features.fitted` to
+align `FeatureMatrix.y` with already-standardized split feature frames. By
+default, missing labels are dropped independently per split and recorded in
+`dropped_label_counts`. When `drop_missing_labels=False`, any missing label is
+rejected with a `ValueError`.
+
+The returned `SupervisedSplitDataset` records:
+
+- `feature_columns`
+- `label_column`
+- `train_X` / `train_y`
+- `validation_X` / `validation_y`
+- `test_X` / `test_y`
+- `dropped_label_counts`
+
+Safety rules:
+
+- Input types must be `FeatureMatrix` and `StandardizedFeatureMatrix`.
+- Split feature indices must match the fitted scaler split indices.
+- Split feature columns must match fitted `feature_columns`.
+- Empty train data after label filtering is rejected.
+- Feature frames and label Series are copied before returning.
+- The helper does not train estimators, tune parameters, change smoke outputs,
+  alter CLI behavior, define allocation logic, build performance curves, or run
+  simulation engines.
+
 ## Constant Baseline Contract
 
 `src/abc_quant/models/baseline.py` defines `fit_constant_baseline(...)`.

@@ -1,5 +1,51 @@
 # OUTBOX
 
+## 2026-07-05 Closed-Loop Task 029 - Supervised Split Dataset Contract
+
+## 修改檔案
+- `src/abc_quant/models/dataset.py`: added `SupervisedSplitDataset` and `build_supervised_split_dataset(...)`.
+- `src/abc_quant/models/__init__.py`: exported the supervised dataset dataclass and builder.
+- `tests/test_models_dataset.py`: added construction, label alignment, missing-label filtering, no-drop error, empty train, copy isolation, type, index, and column-order tests.
+- `docs/modeling.md`: documented the supervised split dataset contract and safety rules.
+- `README.md`: documented the supervised split dataset contract in the modeling preparation section.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 029 progress and completion evidence.
+- `INBOX.md`: reset the active Task 029 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added a frozen `SupervisedSplitDataset` dataclass with `feature_columns`, `label_column`, train/validation/test feature and label splits, and `dropped_label_counts`.
+- Added `build_supervised_split_dataset(feature_matrix, standardized_features, drop_missing_labels=True)`.
+- The builder requires `FeatureMatrix` and `StandardizedFeatureMatrix` inputs and validates standardized split indices/columns against the fitted scaler metadata.
+- Labels are aligned from `FeatureMatrix.y` using the split indices stored in `standardized_features.fitted`.
+- Missing labels are dropped independently per split by default and counted under train/validation/test.
+- `drop_missing_labels=False` rejects missing labels with a `ValueError`.
+- Empty train data after label filtering is rejected.
+- Returned feature frames and label Series are copied to avoid later caller mutation changing the dataset.
+- No estimator implementation, smoke output change, CLI behavior change, parameter search, allocation logic, performance curve, simulation engine, outside data access, or live account connectivity was added.
+
+## 測試方式
+- `python -m pytest tests\test_models_dataset.py`
+- `python -m pytest tests\test_models_dataset.py tests\test_preprocessing_scaling.py tests\test_features_matrix.py tests\test_pipeline_preprocessing.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `ruff check .` and `python -m ruff check .` were attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused dataset tests: 8 passed in 1.19s.
+- Related feature/preprocessing tests: 29 passed in 1.85s.
+- `pytest`: 176 passed in 10.07s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`ruff` command not found; `No module named ruff`). GitHub Actions should still run ruff.
+
+## 已知限制
+- This task only prepares in-memory supervised split inputs. It does not train estimators or wire the dataset into smoke pipeline outputs.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 028 - Preprocessing Smoke Console Script Alias
 
 ## 修改檔案
