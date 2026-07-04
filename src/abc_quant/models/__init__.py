@@ -13,6 +13,7 @@ from abc_quant.models.evaluation import (
     evaluate_prediction_bundle,
     evaluate_predictions,
 )
+from abc_quant.models.linear import LinearRegressionResult, fit_linear_regression
 from abc_quant.models.predictions import (
     SplitPredictionBundle,
     build_constant_baseline_prediction_bundle,
@@ -22,6 +23,7 @@ from abc_quant.models.predictions import (
 __all__ = [
     "ConstantBaselineEvaluationResult",
     "ConstantBaselineResult",
+    "LinearRegressionResult",
     "PredictionEvaluationResult",
     "SplitPredictionBundle",
     "SplitPredictionBundleEvaluationResult",
@@ -33,4 +35,5 @@ __all__ = [
     "evaluate_prediction_bundle",
     "evaluate_predictions",
     "fit_constant_baseline",
+    "fit_linear_regression",
 ]

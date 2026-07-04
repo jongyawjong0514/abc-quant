@@ -1,5 +1,48 @@
 # OUTBOX
 
+## 2026-07-05 Closed-Loop Task 034 - Train-Only OLS Regression Contract
+
+## 修改檔案
+- `src/abc_quant/models/linear.py`: added `LinearRegressionResult` and `fit_linear_regression(...)`.
+- `src/abc_quant/models/__init__.py`: exported the OLS result dataclass and fit function.
+- `tests/test_models_linear.py`: added train-only fit, deterministic coefficient/prediction, holdout-label non-leakage, split-index, invalid-input, invalid-train-data, and copy-isolation tests.
+- `docs/modeling.md`: documented the ordinary least-squares regression contract and safety boundaries.
+- `README.md`: documented the train-only OLS model contract.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 034 progress and completion evidence.
+- `INBOX.md`: reset the active Task 034 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added a frozen `LinearRegressionResult` with `model_name`, `method`, `feature_columns`, `coefficients`, `intercept`, `training_row_count`, and `prediction_bundle`.
+- Added `fit_linear_regression(dataset, fit_intercept=True, model_name="ordinary_least_squares")`.
+- The fit path only uses `SupervisedSplitDataset.train_X` and `train_y`.
+- Validation/test feature frames are used only for prediction; validation/test labels are not read.
+- OLS coefficients are fit with `numpy.linalg.lstsq`; no sklearn or new dependency was added.
+- Returned train/validation/test predictions are produced through `build_split_prediction_bundle(...)`.
+- Invalid input type, empty train data, missing/non-finite training data, nonnumeric feature columns, index mismatch, and split column mismatch fail loudly.
+- No parameter search, model selection, allocation logic, strategy signal output, performance curve, simulation engine, outside data access, or live account connectivity was added.
+
+## 測試方式
+- `python -m pytest tests\test_models_linear.py`
+- `python -m pytest tests\test_models_linear.py tests\test_models_dataset.py tests\test_models_predictions.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `python -m ruff check .` was attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused OLS tests: 7 passed in 1.09s.
+- Related model contract tests: 28 passed in 1.27s.
+- `pytest`: 217 passed in 14.60s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- Local `ruff`: unavailable (`No module named ruff`); GitHub Actions should run `ruff check .`.
+
+## 已知限制
+- This task introduces only a minimal in-memory OLS estimator contract. It does not wire OLS into smoke CLIs, model selection, evaluation summaries, or training pipelines.
+
+## 建議下一步
+- Wait for GitHub Actions on the draft PR, then have ChatGPT Pro review train-only fitting, holdout-label non-leakage, prediction bundle metadata, and invalid-data behavior.
+
 ## 2026-07-05 Closed-Loop Task 033 - Supervised Smoke Console Script Alias
 
 ## 修改檔案

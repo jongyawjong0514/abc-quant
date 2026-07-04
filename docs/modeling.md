@@ -286,6 +286,39 @@ Safety rules:
 This is a minimal baseline contract for future model validation. It is not a
 production model, trading rule, or performance claim.
 
+## Ordinary Least-Squares Regression Contract
+
+`src/abc_quant/models/linear.py` defines `fit_linear_regression(...)`.
+It accepts a `SupervisedSplitDataset`, an optional `fit_intercept` flag, and a
+`model_name` for prediction-bundle metadata.
+
+The fit uses only `dataset.train_X` and `dataset.train_y`, solves ordinary
+least squares with `numpy.linalg.lstsq`, and stores coefficients in the same
+order as `dataset.feature_columns`. Validation and test feature frames are used
+only to generate predictions. Validation and test labels are not read by the
+fit path.
+
+The result is a frozen `LinearRegressionResult` with:
+
+- `model_name`
+- `method`
+- `feature_columns`
+- `coefficients`
+- `intercept`
+- `training_row_count`
+- `prediction_bundle`
+
+Safety rules:
+
+- The input must be a `SupervisedSplitDataset`.
+- Train data must be non-empty.
+- Training features and labels must be numeric, finite, and non-missing.
+- Split feature columns must match `dataset.feature_columns`.
+- Predictions are returned through the existing `SplitPredictionBundle`
+  contract, preserving split indices and copy isolation.
+- The helper does not add sklearn, tune parameters, create strategy signals,
+  define allocation logic, build performance curves, or run simulation engines.
+
 ## Prediction Evaluation Contract
 
 `src/abc_quant/models/evaluation.py` defines `evaluate_predictions(...)`,

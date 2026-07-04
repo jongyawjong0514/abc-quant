@@ -156,6 +156,16 @@ The first model-layer contract is:
 
 The baseline consumes a `FeatureMatrix` and `TemporalSplit`, returns train/validation/test prediction Series indexed by split positions, and records how many training labels were used. Validation and test labels cannot affect the fitted constant. This is a leakage-safe sanity baseline only; it does not fit scalers, tune hyperparameters, train complex models, create trading signals, define strategy logic, or run backtests.
 
+## Ordinary Least-Squares Regression
+
+The first train-only estimator contract is:
+
+- `src/abc_quant/models/linear.py`: `fit_linear_regression(...)` fits an ordinary least-squares regression with `numpy.linalg.lstsq`.
+
+The OLS contract consumes a `SupervisedSplitDataset`, fits coefficients using only `train_X` and `train_y`, and uses validation/test features only for prediction. It returns a frozen `LinearRegressionResult` with ordered coefficients, intercept, training row count, and a `SplitPredictionBundle` containing train/validation/test prediction Series aligned to split indices.
+
+The helper rejects invalid input type, empty train data, missing or non-finite training features/labels, nonnumeric feature columns, and split feature frames whose columns do not match the dataset feature order. It does not read validation/test labels, add sklearn, tune parameters, create trading signals, define allocation logic, build performance curves, or run simulation engines.
+
 ## Prediction Evaluation
 
 The first model-output diagnostics contract is:
