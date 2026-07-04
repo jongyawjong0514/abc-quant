@@ -44,11 +44,15 @@ volume
 必須檢查：
 
 - 必要欄位是否存在。
-- `date` 是否可解析。
+- `date` 是否可解析，並在驗證後轉為 datetime。
+- `ticker` 是否存在，並在驗證後轉為 string。
 - 同一 `date` + `ticker` 是否重複。
-- 價格是否為正。
+- OHLCV 欄位是否為 numeric。
+- OHLCV 欄位是否缺值。
 - high 是否大於等於 low。
 - volume 是否非負。
+- open 是否落在 high-low range 內。
+- close 是否落在 high-low range 內。
 
 ## 資料版本
 
