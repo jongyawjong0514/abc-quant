@@ -19,6 +19,22 @@
 - 進場價格不應假設為第 `t` 日收盤，除非策略明確可於收盤前決策。
 - 預設應使用第 `t+1` 日之後的價格作為交易價格基礎。
 
+## Feature Matrix Assembly
+
+`src/abc_quant/features/matrix.py` defines `build_feature_matrix(...)` for safe
+research dataset assembly after features and labels already exist.
+
+- Inputs are sorted deterministically by `ticker` then `date`.
+- `metadata` contains only `date` and `ticker`, preserving one row per input row.
+- `X` contains only feature columns.
+- `y` contains the explicit evaluator target column.
+- Inferred features exclude `date`, `ticker`, raw OHLCV columns, and every
+  column whose name starts with `label_`.
+- Explicit `feature_columns` preserve caller-provided order but reject metadata,
+  raw OHLCV, and label columns.
+- Missing labels are preserved; the builder does not drop, fill, scale, impute,
+  or split the data.
+
 ## 後續特徵池
 
 後續可加入：

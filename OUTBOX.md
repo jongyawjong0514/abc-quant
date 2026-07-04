@@ -1,5 +1,41 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 011 - Feature Matrix Assembly Contract
+
+## 修改檔案
+- `src/abc_quant/features/matrix.py`: added `FeatureMatrix` and `build_feature_matrix(...)` for deterministic feature/label/metadata separation.
+- `src/abc_quant/features/__init__.py`: exported the new matrix contract alongside existing feature builders.
+- `tests/test_features_matrix.py`: added tests for inferred safe features, explicit feature ordering, label leakage rejection, shuffled-input invariance, missing-label preservation, missing label errors, and no-feature errors.
+- `tests/test_helpers.py`: added a reusable feature-matrix equality helper for shuffled-output checks.
+- `README.md`, `docs/feature_engineering.md`: documented the feature-matrix contract and boundaries.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 011 progress.
+- `INBOX.md`: reset the active Task 011 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- `build_feature_matrix(frame, label_column, feature_columns=None)` returns `X`, `y`, `metadata`, `feature_columns`, and `label_column`.
+- Rows are sorted deterministically by `ticker` then `date`.
+- Inferred feature columns exclude `date`, `ticker`, raw OHLCV columns, the explicit label column, and every `label_` column.
+- Explicit feature columns preserve caller order but reject metadata, raw OHLCV, label columns, missing columns, and duplicates.
+- Missing labels are preserved as evaluator targets; no rows are dropped and no scaling, imputation, filling, train/test split, model training, strategy logic, or backtest logic was added.
+
+## 測試方式
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- `pytest`: 71 passed in 1.77s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- This task only assembles already-created features and labels. It does not add feature formulas, source adapters, data downloads, model training, train/test splitting, trading signals, portfolio logic, or a backtest engine.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 010 - Technical Indicators
 
 ## 修改檔案
