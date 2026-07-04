@@ -1,12 +1,27 @@
+from dataclasses import asdict
+
 import pytest
 
+from abc_quant.features.matrix import build_feature_matrix
+from abc_quant.models.baseline import fit_constant_baseline
+from abc_quant.models.evaluation import evaluate_prediction_bundle
+from abc_quant.models.predictions import build_constant_baseline_prediction_bundle
 from abc_quant.pipeline.contracts import (
     EVALUATION_METRIC_KEYS,
     MODELING_SMOKE_SUMMARY_KEYS,
     validate_modeling_smoke_summary,
 )
-from abc_quant.pipeline.modeling import run_baseline_modeling_smoke
-from abc_quant.pipeline.smoke import SMOKE_FEATURE_COLUMNS, SMOKE_LABEL_COLUMN
+from abc_quant.pipeline.modeling import (
+    DEFAULT_TRAIN_END,
+    DEFAULT_VALIDATION_END,
+    run_baseline_modeling_smoke,
+)
+from abc_quant.pipeline.smoke import (
+    SMOKE_FEATURE_COLUMNS,
+    SMOKE_LABEL_COLUMN,
+    build_smoke_frame,
+)
+from abc_quant.validation.temporal import build_temporal_split
 
 
 def test_baseline_modeling_smoke_summary_is_deterministic() -> None:
@@ -55,6 +70,29 @@ def test_baseline_modeling_smoke_supports_median_method() -> None:
     assert median_summary["fitted_value"] != mean_summary["fitted_value"]
     assert median_summary["split_counts"] == mean_summary["split_counts"]
     assert median_summary["training_label_count"] == mean_summary["training_label_count"]
+
+
+def test_baseline_modeling_smoke_uses_bundle_evaluation_metrics() -> None:
+    frame = build_smoke_frame()
+    feature_matrix = build_feature_matrix(frame, SMOKE_LABEL_COLUMN)
+    temporal_split = build_temporal_split(
+        feature_matrix.metadata,
+        train_end=DEFAULT_TRAIN_END,
+        validation_end=DEFAULT_VALIDATION_END,
+    )
+    baseline = fit_constant_baseline(feature_matrix, temporal_split)
+    direct_evaluation = evaluate_prediction_bundle(
+        feature_matrix,
+        build_constant_baseline_prediction_bundle(baseline),
+    )
+
+    summary = run_baseline_modeling_smoke()
+
+    assert summary["evaluation"] == {
+        "train": asdict(direct_evaluation.train),
+        "validation": asdict(direct_evaluation.validation),
+        "test": asdict(direct_evaluation.test),
+    }
 
 
 def test_baseline_modeling_smoke_keeps_label_out_of_features() -> None:

@@ -42,6 +42,7 @@
 - [x] Split prediction bundle diagnostics contract。
 - [x] Constant-baseline prediction bundle adapter。
 - [x] Split prediction bundle evaluator。
+- [x] Wire bundle evaluation into modeling smoke pipeline。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。
