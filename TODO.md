@@ -53,6 +53,7 @@
 - [x] Supervised dataset smoke summary contract validator。
 - [x] Supervised dataset smoke CLI diagnostics。
 - [x] Supervised dataset smoke packaged console-script alias。
+- [x] Train-only ordinary least-squares regression contract。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。

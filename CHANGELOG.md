@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 034 train-only ordinary least-squares regression model contract：`fit_linear_regression(...)` 只使用 `SupervisedSplitDataset.train_X/train_y` 以 `numpy.linalg.lstsq` 擬合，並回傳 `LinearRegressionResult` 與 `SplitPredictionBundle`，不讀 validation/test labels、不新增 sklearn。
 - 新增 Task 033 packaged supervised dataset smoke console-script alias：`pyproject.toml` 宣告 `abc-quant-supervised-smoke = abc_quant.cli.supervised_smoke:main`，並以 `tomllib` 測試 entry point target 可解析與呼叫。
 - 新增 Task 032 supervised dataset smoke diagnostics CLI：`python -m abc_quant.cli.supervised_smoke` 以 sorted JSON 輸出既有 supervised dataset smoke summary，支援 `--train-end`、`--validation-end` 與 `--indent`，錯誤邊界會以 non-zero exit code 與簡短 stderr 回報。
 - 新增 Task 031 supervised dataset smoke summary contract validator：集中定義 `SUPERVISED_DATASET_SMOKE_SUMMARY_KEYS`、`SUPERVISED_DATASET_SMOKE_SPLITS` 與 `validate_supervised_dataset_smoke_summary(...)`，`run_supervised_dataset_smoke(...)` 回傳前會驗證 summary shape，不改預設輸出值。
