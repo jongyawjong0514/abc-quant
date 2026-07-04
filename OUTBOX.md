@@ -1,5 +1,49 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 024 - Train-Only Feature Standardization
+
+## 修改檔案
+- `src/abc_quant/preprocessing/__init__.py`: added preprocessing package exports.
+- `src/abc_quant/preprocessing/scaling.py`: added `StandardScalerFit`, `StandardizedFeatureMatrix`, `fit_standard_scaler(...)`, and `transform_with_standard_scaler(...)`.
+- `tests/test_preprocessing_scaling.py`: added leakage-focused scaler tests for train-only fit, transform preservation, non-leakage, and invalid inputs.
+- `docs/modeling.md`: documented the train-only standardization contract and safety rules.
+- `README.md`: documented the preprocessing contract in the modeling preparation section.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 024 progress and completion evidence.
+- `INBOX.md`: reset the active Task 024 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added a frozen `StandardScalerFit` dataclass with feature columns, means, stds, and train/validation/test split indices.
+- Added a frozen `StandardizedFeatureMatrix` dataclass with train, validation, test, and fitted fields.
+- `fit_standard_scaler(...)` validates a `FeatureMatrix` and `TemporalSplit`, defaults to `feature_matrix.feature_columns`, and fits means/stds using only `temporal_split.train_index`.
+- `transform_with_standard_scaler(...)` applies the fitted scaler to train, validation, and test rows without changing row order, row counts, split indices, or feature column order.
+- Validation/test extreme values do not affect fitted means/stds.
+- The contract rejects empty train splits, unknown feature columns, duplicate feature columns, nonnumeric columns, missing training feature values, zero-variance training features, out-of-range split positions, and transform split mismatches.
+- No sklearn dependency, estimator implementation, parameter search, metadata/label mutation, allocation logic, performance curve, simulation engine, outside data access, or live account connectivity was added.
+
+## 測試方式
+- `python -m pytest tests\test_preprocessing_scaling.py`
+- `python -m pytest tests\test_preprocessing_scaling.py tests\test_features_matrix.py tests\test_validation_temporal.py tests\test_pipeline_modeling.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `ruff check .` and `python -m ruff check .` were attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused preprocessing tests: 9 passed in 1.09s.
+- Related feature/split/pipeline tests: 30 passed in 1.82s.
+- `pytest`: 142 passed in 5.88s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`ruff` command not found; `No module named ruff`). GitHub Actions should still run ruff.
+
+## 已知限制
+- This task adds only the preprocessing contract. It does not wire scaling into the modeling smoke pipeline or any estimator.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 023 - Modeling Smoke Bundle Evaluation Wiring
 
 ## 修改檔案

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 024 train-only numeric feature standardization contract：`fit_standard_scaler(...)` 只用 train split 擬合 means/stds，再由 `transform_with_standard_scaler(...)` 套用到 train/validation/test，拒絕 nonnumeric、missing train values 與 zero-variance training features，不新增 sklearn 或 estimator。
 - 新增 Task 023 modeling smoke pipeline bundle-evaluation wiring：`run_baseline_modeling_smoke(...)` 內部改用 `build_constant_baseline_prediction_bundle(...)` 與 `evaluate_prediction_bundle(...)`，保持 summary contract、CLI arguments、fitted values、split counts 與 metric formulas 不變。
 - 新增 Task 022 split prediction bundle evaluator：`SplitPredictionBundleEvaluationResult` 與 `evaluate_prediction_bundle(...)` 使用既有 `evaluate_predictions(...)` 評估 train/validation/test bundle outputs，保留 `model_name`/`method`，不改 pipeline、CLI 或 summary keys。
 - 新增 Task 021 constant-baseline prediction bundle adapter：`build_constant_baseline_prediction_bundle(...)` 將既有 `ConstantBaselineResult` 轉成 `SplitPredictionBundle`，沿用 generic bundle validation 與 copy isolation，不改 baseline、pipeline、CLI 或 summary keys。

@@ -43,6 +43,7 @@
 - [x] Constant-baseline prediction bundle adapter。
 - [x] Split prediction bundle evaluator。
 - [x] Wire bundle evaluation into modeling smoke pipeline。
+- [x] Train-only feature standardization contract。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。
