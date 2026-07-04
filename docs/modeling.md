@@ -98,6 +98,36 @@ Safety rules:
   trading signals, define strategies, create positions, build equity curves, or
   run backtests.
 
+## Split Prediction Bundle Contract
+
+`src/abc_quant/models/predictions.py` defines `SplitPredictionBundle` and
+`build_split_prediction_bundle(...)` for in-memory diagnostic prediction
+outputs. The bundle fixes the shape used by train, validation, and test
+prediction Series before those outputs are passed to later diagnostics.
+
+The frozen dataclass contains:
+
+- `model_name`
+- `method`
+- `train_predictions`
+- `validation_predictions`
+- `test_predictions`
+
+Safety rules:
+
+- `model_name` and optional `method` strings are normalized and must be
+  non-empty when present.
+- Each prediction input must be a pandas Series.
+- Train and test prediction Series must be non-empty.
+- Validation prediction Series may be empty for train/test-only diagnostics.
+- Series indices must be unique.
+- Missing prediction values are rejected.
+- Split indices must not overlap across train, validation, and test.
+- Returned Series are copied so later caller mutation cannot change the bundle.
+- The helper does not implement estimators, alter baseline fitting, change CLI
+  behavior, change summary keys, fit preprocessing, tune parameters, define
+  allocation logic, build performance curves, or run simulation engines.
+
 ## Baseline Modeling Smoke Pipeline
 
 `src/abc_quant/pipeline/modeling.py` defines

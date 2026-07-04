@@ -113,6 +113,14 @@ Evaluation aligns prediction Series against actual labels by index, counts missi
 
 This layer evaluates model outputs only. It does not create trading signals, positions, equity curves, strategy logic, portfolio logic, or backtest results.
 
+## Split Prediction Bundle
+
+The generic prediction-output bundle contract is:
+
+- `src/abc_quant/models/predictions.py`: `SplitPredictionBundle` and `build_split_prediction_bundle(...)` validate train/validation/test prediction Series for diagnostic workflows.
+
+The builder normalizes model metadata, requires pandas Series with unique indices, rejects missing prediction values and overlapping split indices, rejects empty train/test predictions, and copies Series to prevent later caller mutation from changing the bundle. This contract does not add an estimator, change the constant baseline, change CLI behavior, or change the modeling smoke summary keys.
+
 ## Baseline Modeling Smoke Pipeline
 
 The first model-diagnostics pipeline is:
