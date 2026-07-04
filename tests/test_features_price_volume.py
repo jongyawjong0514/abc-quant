@@ -2,6 +2,7 @@ import pandas as pd
 import pytest
 
 from abc_quant.features.price_volume import add_price_volume_features
+from test_helpers import _assert_same_by_date_ticker
 
 
 FEATURE_COLUMNS = [
@@ -93,6 +94,10 @@ def test_price_volume_features_are_isolated_by_ticker() -> None:
     ticker_2330 = featured[featured["ticker"] == "2330"].reset_index(drop=True)
     assert ticker_2317.loc[1, "price_momentum_1d"] == pytest.approx(55.0 / 50.0 - 1.0)
     assert ticker_2330.loc[1, "price_momentum_1d"] == pytest.approx(90.0 / 100.0 - 1.0)
+    assert ticker_2317.loc[2, "price_volatility_2d"] == pytest.approx(
+        pd.Series([55.0 / 50.0 - 1.0, 60.0 / 55.0 - 1.0]).std(ddof=0)
+    )
+    assert ticker_2330.loc[2, "price_volatility_2d"] == pytest.approx(0.0)
     assert ticker_2317.loc[1, "volume_average_2d"] == pytest.approx((1000 + 1100) / 2)
     assert ticker_2330.loc[1, "volume_average_2d"] == pytest.approx((2000 + 2100) / 2)
 
@@ -114,7 +119,4 @@ def test_shuffled_input_produces_same_sorted_price_volume_features() -> None:
         volume_windows=(2,),
     )
 
-    pd.testing.assert_frame_equal(
-        sorted_featured[["date", "ticker", *FEATURE_COLUMNS]],
-        shuffled_featured[["date", "ticker", *FEATURE_COLUMNS]],
-    )
+    _assert_same_by_date_ticker(sorted_featured, shuffled_featured, FEATURE_COLUMNS)

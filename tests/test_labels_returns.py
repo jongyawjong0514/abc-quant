@@ -2,6 +2,7 @@ import pandas as pd
 import pytest
 
 from abc_quant.labels.returns import add_forward_return_label
+from test_helpers import _assert_same_by_date_ticker
 
 
 def _multi_ticker_frame() -> pd.DataFrame:
@@ -88,7 +89,4 @@ def test_shuffled_input_produces_same_sorted_forward_return_labels() -> None:
     shuffled_labeled = add_forward_return_label(shuffled_input, horizon=3, entry_lag=1)
     label_col = "label_forward_return_3d_entry_lag_1d"
 
-    pd.testing.assert_frame_equal(
-        sorted_labeled[["date", "ticker", label_col]],
-        shuffled_labeled[["date", "ticker", label_col]],
-    )
+    _assert_same_by_date_ticker(sorted_labeled, shuffled_labeled, [label_col])
