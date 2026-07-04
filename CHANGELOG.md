@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 009 feature/label leakage regression tests，覆蓋 shuffled input invariance、multi-ticker isolation、rolling volatility 數值、forward-return label tail missing 與 label 不混入 feature columns。
 - 強化 market data validation，改用 schema constants 並拒絕 non-numeric/missing OHLCV、negative volume、high-low 反轉，以及 open/close 超出 high-low range。
 - 新增 deterministic market data contract、合成 sample fixture 與端到端 smoke pipeline，串接資料驗證、價量特徵、forward-return label 與 basic metrics summary。
 - 新增最小 GitHub Actions CI workflow，於 pull request 與 push to main 執行 ruff、pytest、compileall，並使用 Python 3.11/3.12 matrix。

@@ -1,5 +1,39 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 009 - Feature and Label Leakage Regression Tests
+
+## 修改檔案
+- `tests/test_features_price_volume.py`: added multi-ticker isolation and shuffled-input invariance tests for price momentum, rolling volatility, and rolling volume average.
+- `tests/test_labels_returns.py`: added multi-ticker forward-return label isolation, horizon/entry-lag contract, shuffled-input invariance, and missing-tail label tests.
+- `tests/test_pipeline_smoke.py`: asserted the smoke label column is not part of the feature column contract.
+- `OUTBOX.md`: recorded Task 009 GitHub handoff results.
+
+## 實作摘要
+- Locked price momentum to same-ticker current/past rows.
+- Locked rolling volatility and volume average against cross-ticker contamination.
+- Confirmed shuffled market data produces the same sorted feature and label outputs.
+- Confirmed forward-return labels follow `entry_price = close[t + entry_lag]` and `exit_price = close[t + horizon]`.
+- Confirmed evaluator labels remain outside feature columns and missing future rows produce missing labels.
+- No data downloads, source adapters, broker integration, strategy logic, model training, trading signals, or full backtest engine were added.
+
+## 測試方式
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- `pytest`: 58 passed in 1.46s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task`.
+
+## 已知限制
+- This is a regression-test-only task; it does not add new feature formulas, labels, strategy logic, or data ingestion.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 008 - Harden Market Data Validation
 
 ## 修改檔案
