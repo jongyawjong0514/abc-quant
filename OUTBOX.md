@@ -1,5 +1,45 @@
 # OUTBOX
 
+## 2026-07-04 Closed-Loop Task 021 - Constant Baseline Prediction Bundle Adapter
+
+## 修改檔案
+- `src/abc_quant/models/predictions.py`: added `build_constant_baseline_prediction_bundle(...)`, with explicit `ConstantBaselineResult` type validation and delegation to the generic split bundle builder.
+- `src/abc_quant/models/__init__.py`: exported the constant-baseline prediction bundle adapter.
+- `tests/test_models_predictions.py`: added adapter coverage for default model name, custom trimmed model name, method propagation, split indices/values, copy isolation, and invalid input type.
+- `docs/modeling.md`: documented the constant-baseline adapter and its delegation to the shared validation/copy contract.
+- `README.md`: documented the adapter alongside the generic prediction bundle contract.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 021 progress and completion evidence.
+- `INBOX.md`: reset the active Task 021 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added `build_constant_baseline_prediction_bundle(baseline_result, model_name="constant_baseline")`.
+- The helper accepts only `ConstantBaselineResult` and raises a clear `TypeError` for other inputs.
+- It propagates `baseline_result.method` and passes the existing train/validation/test prediction Series into `build_split_prediction_bundle(...)`.
+- Validation and copy isolation are therefore shared with the generic split prediction bundle contract.
+- No baseline calculation, pipeline behavior, CLI arguments, summary keys, estimator implementation, file output, outside data access, live account connectivity, preprocessing fitting, parameter search, allocation logic, performance curve, or simulation engine was changed.
+
+## 測試方式
+- `python -m pytest tests\test_models_predictions.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `ruff check .` and `python -m ruff check .` were attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused prediction tests: 13 passed in 0.89s.
+- `pytest`: 128 passed in 5.48s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`ruff` command not found; `No module named ruff`). GitHub Actions should still run ruff.
+
+## 已知限制
+- This task only adds an adapter from `ConstantBaselineResult` to `SplitPredictionBundle`. It does not wire the bundle into pipeline summaries or CLI output.
+
+## 下一步建議
+- Open a draft PR for ChatGPT Tech Lead review.
+
 ## 2026-07-04 Closed-Loop Task 020 - Split Prediction Bundle Contract
 
 ## 修改檔案

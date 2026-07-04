@@ -9,6 +9,7 @@ from abc_quant.models.evaluation import (
 )
 from abc_quant.models.predictions import (
     SplitPredictionBundle,
+    build_constant_baseline_prediction_bundle,
     build_split_prediction_bundle,
 )
 
@@ -17,6 +18,7 @@ __all__ = [
     "ConstantBaselineResult",
     "PredictionEvaluationResult",
     "SplitPredictionBundle",
+    "build_constant_baseline_prediction_bundle",
     "build_split_prediction_bundle",
     "evaluate_constant_baseline",
     "evaluate_predictions",

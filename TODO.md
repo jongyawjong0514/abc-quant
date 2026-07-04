@@ -40,6 +40,7 @@
 - [x] Modeling smoke constant-baseline method selector。
 - [x] Modeling smoke packaged console-script alias。
 - [x] Split prediction bundle diagnostics contract。
+- [x] Constant-baseline prediction bundle adapter。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。
