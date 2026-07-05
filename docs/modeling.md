@@ -483,6 +483,16 @@ The returned plain dictionary contains:
 - `candidate_evaluation`
 - `comparison`
 
+`src/abc_quant/pipeline/contracts.py` centralizes this summary shape with
+`MODEL_COMPARISON_SMOKE_SUMMARY_KEYS`, `MODEL_COMPARISON_SMOKE_SPLITS`,
+`MODEL_COMPARISON_SMOKE_MODEL_KEYS`,
+`MODEL_COMPARISON_SMOKE_COMPARISON_KEYS`,
+`MODEL_COMPARISON_SMOKE_SPLIT_COMPARISON_KEYS`, and
+`validate_model_comparison_smoke_summary(...)`. The smoke pipeline validates
+the summary before returning it. The validator checks top-level keys, reference
+and candidate model metadata, split count mappings, dropped label counts,
+reference/candidate evaluation split metrics, and comparison split delta keys.
+
 This smoke diagnostic records arithmetic metric deltas only. It does not
 choose a winner, rank models, perform model selection, change existing smoke
 outputs, alter CLI behavior, define allocation logic, create strategy signals,

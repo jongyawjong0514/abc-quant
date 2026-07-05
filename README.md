@@ -218,9 +218,11 @@ baseline fitting, OLS fitting, prediction-bundle evaluation, and
 `compare_prediction_evaluations(...)`. The summary reports model metadata,
 split counts after label-drop, dropped label counts, reference evaluation,
 candidate evaluation, and raw candidate-minus-reference comparison deltas. It
-does not choose a winner, rank models, perform model selection, change CLI
-behavior, define strategy logic, create allocation outputs, build performance
-curves, or run simulation engines.
+is validated by `validate_model_comparison_smoke_summary(...)` in
+`src/abc_quant/pipeline/contracts.py` before return. It does not choose a
+winner, rank models, perform model selection, change CLI behavior, define
+strategy logic, create allocation outputs, build performance curves, or run
+simulation engines.
 
 ## Split Prediction Bundle
 
