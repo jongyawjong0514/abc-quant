@@ -21,3 +21,22 @@ Rules:
 - `scripts/run_codex_closed_loop.ps1` must report `status=ready` before an automated loop executes this task.
 
 Current task:
+
+```yaml
+# role: technical_lead
+# task: "Replace this template."
+# target_files_or_folders:
+#   - "src/abc_quant/..."
+# current_spec_or_decision: "Why this task is valid now."
+# constraints:
+#   - "Keep the change bounded."
+# acceptance_criteria:
+#   - "Focused tests cover the behavior."
+# validation_expected:
+#   - "python -m pytest"
+# review_notes_or_defects:
+#   - "none"
+# anything_not_allowed:
+#   - "No outside data access."
+# risk_level: normal
+```
