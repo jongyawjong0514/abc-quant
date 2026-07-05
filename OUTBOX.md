@@ -1,5 +1,49 @@
 # OUTBOX
 
+## 2026-07-05 Closed-Loop Task 040 - Baseline Versus OLS Comparison Smoke
+
+## 修改檔案
+- `src/abc_quant/pipeline/model_comparison.py`: added `run_model_comparison_smoke(...)` and local helpers for aligned baseline-vs-OLS diagnostics.
+- `src/abc_quant/pipeline/__init__.py`: exported `run_model_comparison_smoke`.
+- `tests/test_pipeline_model_comparison.py`: added deterministic JSON, metadata, split-count alignment, direct comparison parity, and forbidden-key tests.
+- `docs/modeling.md`: documented the model comparison smoke diagnostic and safety boundary.
+- `README.md`: documented the model comparison smoke diagnostic.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 040 progress and completion evidence.
+- `INBOX.md`: reset the active Task 040 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Built deterministic comparison diagnostics from the existing smoke fixture.
+- Wired `FeatureMatrix`, `TemporalSplit`, train-only scaler fit/transform, and `SupervisedSplitDataset`.
+- Fit the constant baseline from training labels only.
+- Fit OLS from the supervised training split only.
+- Restricted baseline predictions to the same supervised split indices used by OLS after missing-label rows are dropped.
+- Evaluated reference and candidate predictions with `evaluate_prediction_bundle(...)`.
+- Compared the resulting evaluations with `compare_prediction_evaluations(...)`.
+- Returned JSON-friendly `row_count`, `feature_columns`, `label_column`, model metadata, split counts, dropped label counts, reference evaluation, candidate evaluation, and raw comparison deltas.
+- No winner, ranking, decision, selected model, model selection, strategy signal, allocation logic, performance curve, order, position, simulation engine, outside data access, or live account connectivity was added.
+
+## 測試方式
+- `python -m pytest tests\test_pipeline_model_comparison.py tests\test_models_comparison.py tests\test_pipeline_linear_modeling.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `python -m ruff check .` was attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused model-comparison/comparison/OLS-smoke tests: 22 passed in 2.02s.
+- `pytest`: 268 passed in 19.62s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`No module named ruff`); GitHub Actions should run `ruff check .`.
+
+## 已知限制
+- This task only adds in-memory smoke diagnostics for already-defined contracts. It does not choose a model, change existing smoke outputs, add CLI behavior, or add strategy/backtest behavior.
+
+## 建議下一步
+- Open a draft PR for ChatGPT Tech Lead review, then let GitHub Actions run CI including `ruff check .`.
+
 ## 2026-07-05 Closed-Loop Task 039 - Prediction Evaluation Comparison Contract
 
 ## 修改檔案
