@@ -362,6 +362,32 @@ parameters, select models, change existing pipeline or CLI outputs, create
 strategy signals, define allocation logic, build performance curves, or run
 simulation engines.
 
+`fit_lightgbm_regressor(...)` is the first optional train-only fitting contract
+behind that guard. It accepts a `SupervisedSplitDataset`, optional validated
+`LightGBMRegressorParams`, and a `model_name`. The function validates train
+features and labels, imports LightGBM only through `require_lightgbm()`, creates
+`lightgbm.LGBMRegressor(**params)`, and fits only `dataset.train_X` and
+`dataset.train_y`.
+
+Validation and test feature frames are used only for prediction. Validation and
+test labels are not read by the fitting path. The result is a frozen
+`LightGBMRegressorResult` with:
+
+- `model_name`
+- `method`
+- `feature_columns`
+- `params`
+- `training_row_count`
+- `prediction_bundle`
+
+The prediction bundle preserves train, validation, and test split indices and
+uses the same copy-isolation/shape validation as other model diagnostics.
+
+The LightGBM fitting contract remains optional and local. It does not make
+LightGBM mandatory, add a pipeline or CLI, perform parameter search, choose a
+model, create strategy signals, define allocation logic, build performance
+curves, or run simulation engines.
+
 ## Ordinary Least-Squares Smoke Diagnostics
 
 `src/abc_quant/pipeline/linear_modeling.py` defines

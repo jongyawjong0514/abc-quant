@@ -1,5 +1,51 @@
 # OUTBOX
 
+## 2026-07-05 Closed-Loop Task 045 - Train-Only LightGBM Regressor Contract
+
+## 修改檔案
+- `src/abc_quant/models/lightgbm.py`: added `LightGBMRegressorResult` and `fit_lightgbm_regressor(...)` behind the optional dependency guard.
+- `src/abc_quant/models/__init__.py`: exported the new LightGBM result dataclass and fit function.
+- `tests/test_models_lightgbm.py`: added fake-LightGBM tests for train-only fitting, params pass-through, missing dependency behavior, holdout label non-leakage, prediction index alignment, and invalid inputs.
+- `docs/modeling.md`: documented the optional train-only LightGBM fitting contract.
+- `README.md`: documented the wrapper and safety boundary.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 045 progress and completion evidence.
+- `INBOX.md`: reset the active Task 045 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added frozen `LightGBMRegressorResult`.
+- Added `fit_lightgbm_regressor(dataset, params=None, model_name="lightgbm_regressor")`.
+- Validates `SupervisedSplitDataset`, optional `LightGBMRegressorParams`, feature columns, train feature values, and train labels.
+- Imports the optional package only through `require_lightgbm()`.
+- Instantiates `lightgbm.LGBMRegressor(**params)` and fits only `dataset.train_X` / `dataset.train_y`.
+- Uses train / validation / test feature frames only for prediction.
+- Does not read `validation_y` or `test_y`.
+- Returns predictions through the existing `SplitPredictionBundle` contract with split indices preserved.
+- Keeps `lightgbm` out of mandatory dependencies.
+- Does not add pipeline/CLI smoke outputs, parameter search, model selection, strategy signals, allocation logic, performance curves, or simulation engines.
+
+## 測試方式
+- `python -m pytest tests\test_models_lightgbm.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `python -m ruff check .` was attempted for local parity with CI.
+
+## 測試結果
+- Focused LightGBM tests: 27 passed in 1.06s.
+- `pytest`: 339 passed in 25.26s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`No module named ruff`); GitHub Actions should run `ruff check .`.
+
+## 已知限制
+- This task adds only the optional train-only fitting contract. It does not add a LightGBM smoke pipeline, packaged CLI, parameter search, model selection, strategy logic, allocation outputs, performance curves, or simulation engines.
+- This branch is stacked on Task 044 because PR #43 is still draft/open. Retarget or rebase after PR #43 merges.
+
+## 建議下一步
+- Open a draft PR against `codex/task-044-lightgbm-dependency-guard` for stacked review, then retarget to `main` after PR #43 merges.
+
 ## 2026-07-05 Closed-Loop Task 044 - Optional LightGBM Dependency Guard
 
 ## 修改檔案

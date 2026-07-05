@@ -22,7 +22,9 @@ from abc_quant.models.linear import LinearRegressionResult, fit_linear_regressio
 from abc_quant.models.lightgbm import (
     LightGBMDependencyStatus,
     LightGBMRegressorParams,
+    LightGBMRegressorResult,
     check_lightgbm_dependency,
+    fit_lightgbm_regressor,
     make_default_lightgbm_regressor_params,
     require_lightgbm,
 )
@@ -37,6 +39,7 @@ __all__ = [
     "ConstantBaselineResult",
     "LightGBMDependencyStatus",
     "LightGBMRegressorParams",
+    "LightGBMRegressorResult",
     "LinearRegressionResult",
     "PredictionEvaluationComparison",
     "PredictionEvaluationResult",
@@ -54,6 +57,7 @@ __all__ = [
     "evaluate_predictions",
     "fit_constant_baseline",
     "fit_linear_regression",
+    "fit_lightgbm_regressor",
     "make_default_lightgbm_regressor_params",
     "require_lightgbm",
 ]
