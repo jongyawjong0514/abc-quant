@@ -2,14 +2,18 @@
 
 from abc_quant.pipeline.contracts import (
     EVALUATION_METRIC_KEYS,
+    LINEAR_REGRESSION_SMOKE_EVALUATION_KEYS,
+    LINEAR_REGRESSION_SMOKE_SPLITS,
+    LINEAR_REGRESSION_SMOKE_SUMMARY_KEYS,
     MODELING_SMOKE_SUMMARY_KEYS,
     PREPROCESSING_SMOKE_SPLITS,
     PREPROCESSING_SMOKE_SUMMARY_KEYS,
     SUPERVISED_DATASET_SMOKE_SPLITS,
     SUPERVISED_DATASET_SMOKE_SPLIT_SHAPE_KEYS,
     SUPERVISED_DATASET_SMOKE_SUMMARY_KEYS,
-    validate_preprocessing_smoke_summary,
+    validate_linear_regression_smoke_summary,
     validate_modeling_smoke_summary,
+    validate_preprocessing_smoke_summary,
     validate_supervised_dataset_smoke_summary,
 )
 from abc_quant.pipeline.linear_modeling import run_linear_regression_smoke
@@ -20,6 +24,9 @@ from abc_quant.pipeline.supervised import run_supervised_dataset_smoke
 
 __all__ = [
     "EVALUATION_METRIC_KEYS",
+    "LINEAR_REGRESSION_SMOKE_EVALUATION_KEYS",
+    "LINEAR_REGRESSION_SMOKE_SPLITS",
+    "LINEAR_REGRESSION_SMOKE_SUMMARY_KEYS",
     "MODELING_SMOKE_SUMMARY_KEYS",
     "PREPROCESSING_SMOKE_SPLITS",
     "PREPROCESSING_SMOKE_SUMMARY_KEYS",
@@ -32,6 +39,7 @@ __all__ = [
     "run_preprocessing_smoke",
     "run_supervised_dataset_smoke",
     "run_smoke_pipeline",
+    "validate_linear_regression_smoke_summary",
     "validate_modeling_smoke_summary",
     "validate_preprocessing_smoke_summary",
     "validate_supervised_dataset_smoke_summary",

@@ -339,6 +339,15 @@ the label column, model name, method, intercept, ordered coefficients, training
 row count, split counts after label drop, dropped label counts, prediction
 counts, and train/validation/test evaluation metrics.
 
+`src/abc_quant/pipeline/contracts.py` centralizes this summary shape with
+`LINEAR_REGRESSION_SMOKE_SUMMARY_KEYS`, `LINEAR_REGRESSION_SMOKE_SPLITS`,
+`LINEAR_REGRESSION_SMOKE_EVALUATION_KEYS`, and
+`validate_linear_regression_smoke_summary(...)`. The smoke pipeline validates
+the summary before returning it. The validator checks top-level keys, split
+mapping keys for post-label-drop counts, dropped label counts, prediction
+counts, train/validation/test evaluation splits, per-split metric keys,
+`feature_columns` list shape, and `coefficients` dict shape.
+
 This diagnostic fits OLS only through the existing train-only estimator
 contract, evaluates the existing prediction bundle, and does not create
 strategy signals, allocation outputs, performance curves, orders, positions, or

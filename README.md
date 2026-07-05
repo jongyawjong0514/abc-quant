@@ -172,6 +172,8 @@ The deterministic OLS smoke diagnostic is:
 
 It reports row count, feature columns, label column, model metadata, intercept, ordered coefficients, training row count, split counts after label drop, dropped label counts, prediction counts, and train/validation/test evaluation metrics. It does not change existing smoke outputs, CLI behavior, package scripts, preprocessing, dataset, or linear model contracts.
 
+The OLS smoke summary shape is centralized in `src/abc_quant/pipeline/contracts.py`. `validate_linear_regression_smoke_summary(...)` checks top-level keys, train/validation/test split mappings, evaluation metric keys, `feature_columns` list shape, and `coefficients` dict shape before the diagnostic is returned.
+
 ## Prediction Evaluation
 
 The first model-output diagnostics contract is:

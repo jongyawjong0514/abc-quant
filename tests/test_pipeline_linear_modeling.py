@@ -4,7 +4,13 @@ import json
 from abc_quant.features.matrix import build_feature_matrix
 from abc_quant.models import build_supervised_split_dataset, fit_linear_regression
 from abc_quant.models.evaluation import evaluate_prediction_bundle
-from abc_quant.pipeline import run_linear_regression_smoke
+from abc_quant.pipeline import (
+    LINEAR_REGRESSION_SMOKE_EVALUATION_KEYS,
+    LINEAR_REGRESSION_SMOKE_SPLITS,
+    LINEAR_REGRESSION_SMOKE_SUMMARY_KEYS,
+    run_linear_regression_smoke,
+    validate_linear_regression_smoke_summary,
+)
 from abc_quant.pipeline.linear_modeling import (
     DEFAULT_LINEAR_REGRESSION_TRAIN_END,
     DEFAULT_LINEAR_REGRESSION_VALIDATION_END,
@@ -26,6 +32,10 @@ def test_linear_regression_smoke_is_deterministic_and_json_serializable() -> Non
     second = run_linear_regression_smoke()
 
     assert first == second
+    assert validate_linear_regression_smoke_summary(first) is first
+    assert set(first) == LINEAR_REGRESSION_SMOKE_SUMMARY_KEYS
+    assert set(first["evaluation"]) == LINEAR_REGRESSION_SMOKE_SPLITS
+    assert set(first["evaluation"]["train"]) == LINEAR_REGRESSION_SMOKE_EVALUATION_KEYS
     assert json.loads(json.dumps(first, sort_keys=True)) == first
 
 

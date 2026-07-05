@@ -15,6 +15,7 @@ from abc_quant.models.evaluation import (
     evaluate_prediction_bundle,
 )
 from abc_quant.models.linear import LinearRegressionResult, fit_linear_regression
+from abc_quant.pipeline.contracts import validate_linear_regression_smoke_summary
 from abc_quant.pipeline.smoke import (
     SMOKE_FEATURE_COLUMNS,
     SMOKE_LABEL_COLUMN,
@@ -77,7 +78,7 @@ def run_linear_regression_smoke(
         "prediction_counts": _prediction_counts(linear_result),
         "evaluation": _evaluation_summary(evaluation),
     }
-    return summary
+    return validate_linear_regression_smoke_summary(summary)
 
 
 def _supervised_smoke_dataset(

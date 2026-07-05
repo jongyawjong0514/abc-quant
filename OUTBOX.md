@@ -1,5 +1,54 @@
 # OUTBOX
 
+## 2026-07-05 Closed-Loop Task 036 - OLS Smoke Summary Validator
+
+## 修改檔案
+- `src/abc_quant/pipeline/contracts.py`: added OLS smoke summary constants and `validate_linear_regression_smoke_summary(...)`.
+- `src/abc_quant/pipeline/linear_modeling.py`: validates the OLS smoke summary before returning it.
+- `src/abc_quant/pipeline/__init__.py`: exported the new OLS smoke constants and validator.
+- `tests/test_pipeline_contracts.py`: added valid and invalid OLS smoke summary shape tests.
+- `tests/test_pipeline_linear_modeling.py`: switched OLS smoke tests to shared constants and validator.
+- `docs/modeling.md`: documented the OLS smoke summary contract validator.
+- `README.md`: documented the centralized OLS smoke summary shape.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 036 progress and completion evidence.
+- `INBOX.md`: reset the active Task 036 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added `LINEAR_REGRESSION_SMOKE_SUMMARY_KEYS`.
+- Added `LINEAR_REGRESSION_SMOKE_SPLITS`.
+- Added `LINEAR_REGRESSION_SMOKE_EVALUATION_KEYS` using the shared evaluation metric keys.
+- Added `validate_linear_regression_smoke_summary(summary)`.
+- The validator returns the original summary object unchanged when valid.
+- The validator rejects non-dict summaries, missing/unknown top-level keys, non-dict split mappings, missing/unknown split mappings, non-dict evaluation blocks, missing/unknown evaluation splits, non-dict split metrics, and missing/unknown metric keys.
+- The validator checks `split_counts_after_label_drop`, `dropped_label_counts`, `prediction_counts`, and `evaluation` against the train/validation/test split names.
+- The validator checks `feature_columns` is a list and `coefficients` is a dict.
+- `run_linear_regression_smoke(...)` now validates the summary before returning.
+- Default OLS smoke output values remain unchanged.
+- Existing modeling, preprocessing, and supervised smoke summary contracts remain unchanged.
+- No new estimator implementation, parameter search, model selection, allocation logic, strategy signal output, performance curve, simulation engine, outside data access, or live account connectivity was added.
+
+## 測試方式
+- `python -m pytest tests\test_pipeline_contracts.py tests\test_pipeline_linear_modeling.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `python -m ruff check .` was attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused contract/OLS smoke tests: 69 passed in 5.15s.
+- `pytest`: 243 passed in 16.37s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`No module named ruff`); GitHub Actions should run `ruff check .`.
+
+## 已知限制
+- This task only hardens the OLS smoke diagnostics summary shape. It does not add an OLS smoke CLI, package script, model selection, or any strategy/backtest behavior.
+
+## 建議下一步
+- Wait for GitHub Actions on the draft PR, then have ChatGPT Pro review the shared constants, validator failure cases, OLS smoke return path, and unchanged output-value boundary.
+
 ## 2026-07-05 Closed-Loop Task 035 - Train-Only OLS Smoke Diagnostics
 
 ## 修改檔案
