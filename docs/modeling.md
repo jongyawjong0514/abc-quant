@@ -424,6 +424,27 @@ Safety rules:
   trading signals, define strategies, create positions, build equity curves, or
   run backtests.
 
+## Prediction Evaluation Comparison Contract
+
+`src/abc_quant/models/comparison.py` defines
+`compare_prediction_evaluations(...)` for comparing two already-computed
+`SplitPredictionBundleEvaluationResult` objects.
+
+The comparison is diagnostic-only. It requires both evaluations to have matching
+`row_count`, `non_missing_count`, and `missing_actual_count` for each split, then
+computes candidate-minus-reference deltas for:
+
+- `mae`
+- `rmse`
+- `mean_error`
+- `prediction_mean`
+
+The returned frozen dataclasses preserve the `train`, `validation`, and `test`
+split names plus the normalized reference and candidate labels. Negative deltas
+are preserved as raw arithmetic differences; the helper does not rank models,
+choose winners, perform model selection, emit strategy signals, define
+allocation logic, build performance curves, or run simulation engines.
+
 ## Split Prediction Bundle Contract
 
 `src/abc_quant/models/predictions.py` defines `SplitPredictionBundle`,

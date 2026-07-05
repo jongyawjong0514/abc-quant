@@ -200,6 +200,14 @@ Evaluation aligns prediction Series against actual labels by index, counts missi
 
 This layer evaluates model outputs only. It does not create trading signals, positions, equity curves, strategy logic, portfolio logic, or backtest results.
 
+Prediction evaluations can be compared with `src/abc_quant/models/comparison.py`.
+`compare_prediction_evaluations(...)` accepts two already-computed
+`SplitPredictionBundleEvaluationResult` objects, requires matching split row and
+missing-label counts, and returns candidate-minus-reference deltas for MAE,
+RMSE, mean error, and prediction mean. It is diagnostic-only and does not rank
+models, select winners, emit strategy signals, define allocation logic, build
+performance curves, or run simulation engines.
+
 ## Split Prediction Bundle
 
 The generic prediction-output bundle contract is:

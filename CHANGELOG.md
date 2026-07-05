@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 039 prediction evaluation comparison contract：`compare_prediction_evaluations(...)` 比較兩個既有 `SplitPredictionBundleEvaluationResult`，驗證 split row/missing counts 一致後回傳 candidate-minus-reference 的 MAE、RMSE、mean error 與 prediction mean deltas，不做 model selection、ranking、strategy 或 simulation。
 - 新增 Task 038 packaged OLS smoke console-script alias：`pyproject.toml` 宣告 `abc-quant-linear-regression-smoke = abc_quant.cli.linear_regression_smoke:main`，並以 `tomllib` 測試 entry point target 可解析與呼叫。
 - 新增 Task 037 deterministic OLS smoke diagnostics CLI：`python -m abc_quant.cli.linear_regression_smoke` 以 sorted JSON 輸出既有 `run_linear_regression_smoke(...)` summary，支援 `--train-end`、`--validation-end` 與 `--indent`，錯誤邊界會以 non-zero exit code 與簡短 stderr 回報。
 - 新增 Task 036 linear regression smoke summary contract validator：集中定義 `LINEAR_REGRESSION_SMOKE_SUMMARY_KEYS`、`LINEAR_REGRESSION_SMOKE_SPLITS`、`LINEAR_REGRESSION_SMOKE_EVALUATION_KEYS` 與 `validate_linear_regression_smoke_summary(...)`，`run_linear_regression_smoke(...)` 回傳前會驗證 OLS diagnostics summary shape，不改預設輸出值。
