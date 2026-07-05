@@ -1,5 +1,46 @@
 # OUTBOX
 
+## 2026-07-05 Closed-Loop Task 043 - Model Comparison Smoke Console Script
+
+## 修改檔案
+- `pyproject.toml`: added the `abc-quant-model-comparison-smoke` console script.
+- `tests/test_cli_entrypoints.py`: added pyproject parsing, target import, resolved-function JSON, and median baseline tests for the model-comparison script.
+- `docs/modeling.md`: documented the packaged model-comparison smoke console script.
+- `README.md`: documented the installed console-script command.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 043 progress and completion evidence.
+- `INBOX.md`: reset the active Task 043 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added `abc-quant-model-comparison-smoke = "abc_quant.cli.model_comparison_smoke:main"`.
+- Kept `python -m abc_quant.cli.model_comparison_smoke` unchanged.
+- Extended `tests/test_cli_entrypoints.py` to parse `pyproject.toml` with `tomllib` and verify all existing script entries plus the new model-comparison entry.
+- Verified the configured target imports and resolves to `abc_quant.cli.model_comparison_smoke.main`.
+- Verified the resolved function emits valid JSON with `--indent 2`.
+- Verified the resolved function supports `--baseline-method median`.
+- No model-comparison calculation, summary key, split default, baseline-method choice, CLI argument semantic, model selection, ranking, strategy signal, allocation logic, performance curve, or simulation engine was changed.
+
+## 測試方式
+- `python -m pytest tests\test_cli_entrypoints.py tests\test_cli_model_comparison_smoke.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `python -m ruff check .` should be attempted for local parity with CI.
+
+## 測試結果
+- Focused entrypoint/model-comparison CLI tests: 22 passed in 4.33s.
+- `pytest`: 312 passed in 25.67s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`No module named ruff`); GitHub Actions should run `ruff check .`.
+
+## 已知限制
+- This task only adds a packaged console-script alias for the existing CLI. It does not add new diagnostics, model selection, ranking, or strategy/backtest behavior.
+
+## 建議下一步
+- Open a draft PR for ChatGPT Tech Lead review, then let GitHub Actions run CI including `ruff check .`.
+
 ## 2026-07-05 Closed-Loop Task 042 - Model Comparison Smoke CLI
 
 ## 修改檔案

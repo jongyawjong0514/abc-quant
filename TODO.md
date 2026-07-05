@@ -62,6 +62,7 @@
 - [x] Deterministic baseline versus OLS comparison smoke diagnostics。
 - [x] Model comparison smoke summary contract validator。
 - [x] Model comparison smoke CLI diagnostics。
+- [x] Model comparison smoke packaged console-script alias。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。
