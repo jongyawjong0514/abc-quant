@@ -180,6 +180,12 @@ The deterministic OLS smoke diagnostic can also be printed as JSON:
 python -m abc_quant.cli.linear_regression_smoke --indent 2
 ```
 
+After package installation, the same CLI is available as:
+
+```powershell
+abc-quant-linear-regression-smoke --indent 2
+```
+
 The CLI is a thin wrapper around `run_linear_regression_smoke(...)`. It supports `--train-end`, `--validation-end`, and `--indent`, writes sorted deterministic JSON to stdout, and writes concise errors to stderr for invalid temporal boundaries. It does not change OLS calculations, summary keys, split defaults, existing smoke outputs, strategy logic, allocation logic, performance curves, or simulation engines.
 
 ## Prediction Evaluation

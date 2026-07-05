@@ -362,6 +362,13 @@ smoke diagnostic as module-executable JSON:
 python -m abc_quant.cli.linear_regression_smoke --indent 2
 ```
 
+When installed as a package, the same CLI is also exposed through the console
+script:
+
+```powershell
+abc-quant-linear-regression-smoke --indent 2
+```
+
 The CLI is a thin wrapper around `run_linear_regression_smoke(...)`. It accepts:
 
 - `--train-end`
