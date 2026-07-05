@@ -508,6 +508,13 @@ model-comparison smoke diagnostic as module-executable JSON:
 python -m abc_quant.cli.model_comparison_smoke --indent 2
 ```
 
+When installed as a package, the same CLI is also exposed through the console
+script:
+
+```powershell
+abc-quant-model-comparison-smoke --baseline-method median --indent 2
+```
+
 The CLI is a thin wrapper around `run_model_comparison_smoke(...)`. It accepts:
 
 - `--train-end`

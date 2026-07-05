@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Callable
 
 from abc_quant.cli.linear_regression_smoke import main as linear_regression_main
+from abc_quant.cli.model_comparison_smoke import main as model_comparison_main
 from abc_quant.cli.modeling_smoke import main as modeling_main
 from abc_quant.cli.preprocessing_smoke import main as preprocessing_main
 from abc_quant.cli.supervised_smoke import main as supervised_main
@@ -18,6 +19,8 @@ SUPERVISED_SCRIPT_NAME = "abc-quant-supervised-smoke"
 SUPERVISED_SCRIPT_TARGET = "abc_quant.cli.supervised_smoke:main"
 LINEAR_REGRESSION_SCRIPT_NAME = "abc-quant-linear-regression-smoke"
 LINEAR_REGRESSION_SCRIPT_TARGET = "abc_quant.cli.linear_regression_smoke:main"
+MODEL_COMPARISON_SCRIPT_NAME = "abc-quant-model-comparison-smoke"
+MODEL_COMPARISON_SCRIPT_TARGET = "abc_quant.cli.model_comparison_smoke:main"
 
 
 def test_pyproject_declares_modeling_smoke_console_script() -> None:
@@ -53,6 +56,15 @@ def test_pyproject_declares_linear_regression_smoke_console_script() -> None:
     )
 
 
+def test_pyproject_declares_model_comparison_smoke_console_script() -> None:
+    pyproject = _load_pyproject()
+
+    assert (
+        pyproject["project"]["scripts"][MODEL_COMPARISON_SCRIPT_NAME]
+        == MODEL_COMPARISON_SCRIPT_TARGET
+    )
+
+
 def test_modeling_smoke_console_script_target_resolves_to_main() -> None:
     resolved = _resolve_script_target(MODELING_SCRIPT_TARGET)
 
@@ -75,6 +87,12 @@ def test_linear_regression_smoke_console_script_target_resolves_to_main() -> Non
     resolved = _resolve_script_target(LINEAR_REGRESSION_SCRIPT_TARGET)
 
     assert resolved is linear_regression_main
+
+
+def test_model_comparison_smoke_console_script_target_resolves_to_main() -> None:
+    resolved = _resolve_script_target(MODEL_COMPARISON_SCRIPT_TARGET)
+
+    assert resolved is model_comparison_main
 
 
 def test_modeling_smoke_console_script_function_outputs_json(capsys) -> None:
@@ -150,6 +168,51 @@ def test_linear_regression_smoke_console_script_function_outputs_json(capsys) ->
         "test": 4,
     }
     assert payload["prediction_counts"] == {"train": 2, "validation": 6, "test": 4}
+
+
+def test_model_comparison_smoke_console_script_function_outputs_json(capsys) -> None:
+    pyproject = _load_pyproject()
+    resolved = _resolve_script_target(
+        pyproject["project"]["scripts"][MODEL_COMPARISON_SCRIPT_NAME]
+    )
+
+    exit_code = resolved(["--indent", "2"])
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert exit_code == 0
+    assert captured.err == ""
+    assert captured.out.startswith("{\n")
+    assert payload["reference_model"] == {
+        "model_name": "constant_baseline",
+        "method": "mean",
+    }
+    assert payload["candidate_model"] == {
+        "model_name": "ordinary_least_squares",
+        "method": "ols_with_intercept",
+    }
+    assert payload["split_counts"] == {"train": 2, "validation": 6, "test": 4}
+
+
+def test_model_comparison_smoke_console_script_function_supports_median(
+    capsys,
+) -> None:
+    pyproject = _load_pyproject()
+    resolved = _resolve_script_target(
+        pyproject["project"]["scripts"][MODEL_COMPARISON_SCRIPT_NAME]
+    )
+
+    exit_code = resolved(["--baseline-method", "median"])
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert exit_code == 0
+    assert captured.err == ""
+    assert payload["reference_model"] == {
+        "model_name": "constant_baseline",
+        "method": "median",
+    }
+    assert payload["split_counts"] == {"train": 2, "validation": 6, "test": 4}
 
 
 def _load_pyproject() -> dict[str, object]:

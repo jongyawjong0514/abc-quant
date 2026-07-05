@@ -231,6 +231,12 @@ JSON:
 python -m abc_quant.cli.model_comparison_smoke --baseline-method median --indent 2
 ```
 
+After package installation, the same CLI is available as:
+
+```powershell
+abc-quant-model-comparison-smoke --baseline-method median --indent 2
+```
+
 The CLI is a thin wrapper around `run_model_comparison_smoke(...)`. It supports
 `--train-end`, `--validation-end`, `--baseline-method mean|median`, and
 `--indent`, writes sorted deterministic JSON to stdout, and writes concise

@@ -25,6 +25,7 @@ abc-quant-modeling-smoke = "abc_quant.cli.modeling_smoke:main"
 abc-quant-preprocessing-smoke = "abc_quant.cli.preprocessing_smoke:main"
 abc-quant-supervised-smoke = "abc_quant.cli.supervised_smoke:main"
 abc-quant-linear-regression-smoke = "abc_quant.cli.linear_regression_smoke:main"
+abc-quant-model-comparison-smoke = "abc_quant.cli.model_comparison_smoke:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
