@@ -61,6 +61,7 @@
 - [x] Prediction evaluation comparison contract。
 - [x] Deterministic baseline versus OLS comparison smoke diagnostics。
 - [x] Model comparison smoke summary contract validator。
+- [x] Model comparison smoke CLI diagnostics。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。

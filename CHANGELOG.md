@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 042 deterministic model comparison smoke diagnostics CLI：`python -m abc_quant.cli.model_comparison_smoke` 以 sorted JSON 輸出既有 `run_model_comparison_smoke(...)` summary，支援 `--train-end`、`--validation-end`、`--baseline-method mean|median` 與 `--indent`，不改計算、summary keys、model selection/ranking/strategy/simulation 行為。
 - 新增 Task 041 model comparison smoke summary contract validator：集中定義 `MODEL_COMPARISON_SMOKE_*` summary/model/split/comparison keys 與 `validate_model_comparison_smoke_summary(...)`，`run_model_comparison_smoke(...)` 回傳前會驗證 summary shape，不改預設輸出值、不加入 model selection/ranking/strategy/simulation。
 - 新增 Task 040 deterministic baseline versus OLS evaluation comparison smoke diagnostics：`run_model_comparison_smoke(...)` 在相同 supervised prediction rows 上評估 constant-baseline reference 與 OLS candidate，並用 `compare_prediction_evaluations(...)` 回傳 raw metric deltas，不做 winner、ranking、decision 或 model selection。
 - 新增 Task 039 prediction evaluation comparison contract：`compare_prediction_evaluations(...)` 比較兩個既有 `SplitPredictionBundleEvaluationResult`，驗證 split row/missing counts 一致後回傳 candidate-minus-reference 的 MAE、RMSE、mean error 與 prediction mean deltas，不做 model selection、ranking、strategy 或 simulation。
