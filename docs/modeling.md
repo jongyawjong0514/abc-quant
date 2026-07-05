@@ -353,6 +353,27 @@ contract, evaluates the existing prediction bundle, and does not create
 strategy signals, allocation outputs, performance curves, orders, positions, or
 simulation results.
 
+## Ordinary Least-Squares Smoke CLI
+
+`src/abc_quant/cli/linear_regression_smoke.py` exposes the deterministic OLS
+smoke diagnostic as module-executable JSON:
+
+```powershell
+python -m abc_quant.cli.linear_regression_smoke --indent 2
+```
+
+The CLI is a thin wrapper around `run_linear_regression_smoke(...)`. It accepts:
+
+- `--train-end`
+- `--validation-end`
+- `--indent`
+
+Successful runs write sorted deterministic JSON to stdout and return exit code
+0. Invalid temporal boundaries return a non-zero exit code and write a concise
+error message to stderr. The CLI does not change OLS calculations, summary
+keys, split defaults, existing smoke outputs, strategy signals, allocation
+logic, performance curves, or simulation engines.
+
 ## Prediction Evaluation Contract
 
 `src/abc_quant/models/evaluation.py` defines `evaluate_predictions(...)`,

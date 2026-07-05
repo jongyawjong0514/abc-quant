@@ -174,6 +174,14 @@ It reports row count, feature columns, label column, model metadata, intercept, 
 
 The OLS smoke summary shape is centralized in `src/abc_quant/pipeline/contracts.py`. `validate_linear_regression_smoke_summary(...)` checks top-level keys, train/validation/test split mappings, evaluation metric keys, `feature_columns` list shape, and `coefficients` dict shape before the diagnostic is returned.
 
+The deterministic OLS smoke diagnostic can also be printed as JSON:
+
+```powershell
+python -m abc_quant.cli.linear_regression_smoke --indent 2
+```
+
+The CLI is a thin wrapper around `run_linear_regression_smoke(...)`. It supports `--train-end`, `--validation-end`, and `--indent`, writes sorted deterministic JSON to stdout, and writes concise errors to stderr for invalid temporal boundaries. It does not change OLS calculations, summary keys, split defaults, existing smoke outputs, strategy logic, allocation logic, performance curves, or simulation engines.
+
 ## Prediction Evaluation
 
 The first model-output diagnostics contract is:
