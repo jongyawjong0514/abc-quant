@@ -6,15 +6,20 @@ import pytest
 
 from abc_quant.pipeline.contracts import (
     EVALUATION_METRIC_KEYS,
+    LINEAR_REGRESSION_SMOKE_EVALUATION_KEYS,
+    LINEAR_REGRESSION_SMOKE_SPLITS,
+    LINEAR_REGRESSION_SMOKE_SUMMARY_KEYS,
     MODELING_SMOKE_SUMMARY_KEYS,
     PREPROCESSING_SMOKE_SPLITS,
     PREPROCESSING_SMOKE_SUMMARY_KEYS,
     SUPERVISED_DATASET_SMOKE_SPLITS,
     SUPERVISED_DATASET_SMOKE_SUMMARY_KEYS,
+    validate_linear_regression_smoke_summary,
     validate_modeling_smoke_summary,
     validate_preprocessing_smoke_summary,
     validate_supervised_dataset_smoke_summary,
 )
+from abc_quant.pipeline.linear_modeling import run_linear_regression_smoke
 from abc_quant.pipeline.modeling import run_baseline_modeling_smoke
 from abc_quant.pipeline.preprocessing import run_preprocessing_smoke
 from abc_quant.pipeline.supervised import run_supervised_dataset_smoke
@@ -139,6 +144,224 @@ def test_validate_modeling_smoke_summary_rejects_unknown_metric_key() -> None:
         ),
     ):
         validate_modeling_smoke_summary(summary)
+
+
+def test_validate_linear_regression_smoke_summary_accepts_valid_summary() -> None:
+    summary = run_linear_regression_smoke()
+
+    assert validate_linear_regression_smoke_summary(summary) is summary
+    assert set(summary) == LINEAR_REGRESSION_SMOKE_SUMMARY_KEYS
+    assert set(summary["split_counts_after_label_drop"]) == (
+        LINEAR_REGRESSION_SMOKE_SPLITS
+    )
+    assert set(summary["dropped_label_counts"]) == LINEAR_REGRESSION_SMOKE_SPLITS
+    assert set(summary["prediction_counts"]) == LINEAR_REGRESSION_SMOKE_SPLITS
+    assert set(summary["evaluation"]) == LINEAR_REGRESSION_SMOKE_SPLITS
+    assert set(summary["evaluation"]["train"]) == (
+        LINEAR_REGRESSION_SMOKE_EVALUATION_KEYS
+    )
+
+
+def test_validate_linear_regression_smoke_summary_rejects_non_dict() -> None:
+    with pytest.raises(
+        ValueError,
+        match="linear regression smoke summary must be a dict",
+    ):
+        validate_linear_regression_smoke_summary(["not", "a", "dict"])
+
+
+def test_validate_linear_regression_smoke_summary_rejects_missing_top_level_key() -> None:
+    summary = run_linear_regression_smoke()
+    del summary["row_count"]
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"linear regression smoke summary keys mismatch: "
+            r".*missing=\['row_count'\]"
+        ),
+    ):
+        validate_linear_regression_smoke_summary(summary)
+
+
+def test_validate_linear_regression_smoke_summary_rejects_unknown_top_level_key() -> None:
+    summary = run_linear_regression_smoke()
+    summary["unexpected"] = True
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"linear regression smoke summary keys mismatch: "
+            r".*unknown=\['unexpected'\]"
+        ),
+    ):
+        validate_linear_regression_smoke_summary(summary)
+
+
+def test_validate_linear_regression_smoke_summary_rejects_non_list_features() -> None:
+    summary = run_linear_regression_smoke()
+    summary["feature_columns"] = tuple(summary["feature_columns"])
+
+    with pytest.raises(
+        ValueError,
+        match="linear regression smoke summary feature_columns must be a list",
+    ):
+        validate_linear_regression_smoke_summary(summary)
+
+
+def test_validate_linear_regression_smoke_summary_rejects_non_dict_coefficients() -> None:
+    summary = run_linear_regression_smoke()
+    summary["coefficients"] = []
+
+    with pytest.raises(
+        ValueError,
+        match="linear regression smoke summary coefficients must be a dict",
+    ):
+        validate_linear_regression_smoke_summary(summary)
+
+
+@pytest.mark.parametrize(
+    "summary_key",
+    [
+        "split_counts_after_label_drop",
+        "dropped_label_counts",
+        "prediction_counts",
+    ],
+)
+def test_validate_linear_regression_smoke_summary_rejects_non_dict_split_mapping(
+    summary_key: str,
+) -> None:
+    summary = run_linear_regression_smoke()
+    summary[summary_key] = []
+
+    with pytest.raises(
+        ValueError,
+        match=f"linear regression smoke summary {summary_key} must be a dict",
+    ):
+        validate_linear_regression_smoke_summary(summary)
+
+
+@pytest.mark.parametrize(
+    "summary_key",
+    [
+        "split_counts_after_label_drop",
+        "dropped_label_counts",
+        "prediction_counts",
+    ],
+)
+def test_validate_linear_regression_smoke_summary_rejects_missing_split_mapping(
+    summary_key: str,
+) -> None:
+    summary = run_linear_regression_smoke()
+    del summary[summary_key]["test"]
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            rf"linear regression smoke summary {summary_key} keys mismatch: "
+            r".*missing=\['test'\]"
+        ),
+    ):
+        validate_linear_regression_smoke_summary(summary)
+
+
+@pytest.mark.parametrize(
+    "summary_key",
+    [
+        "split_counts_after_label_drop",
+        "dropped_label_counts",
+        "prediction_counts",
+    ],
+)
+def test_validate_linear_regression_smoke_summary_rejects_unknown_split_mapping(
+    summary_key: str,
+) -> None:
+    summary = run_linear_regression_smoke()
+    summary[summary_key]["holdout"] = 0
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            rf"linear regression smoke summary {summary_key} keys mismatch: "
+            r".*unknown=\['holdout'\]"
+        ),
+    ):
+        validate_linear_regression_smoke_summary(summary)
+
+
+def test_validate_linear_regression_smoke_summary_rejects_non_dict_evaluation() -> None:
+    summary = run_linear_regression_smoke()
+    summary["evaluation"] = []
+
+    with pytest.raises(
+        ValueError,
+        match="linear regression smoke summary evaluation must be a dict",
+    ):
+        validate_linear_regression_smoke_summary(summary)
+
+
+def test_validate_linear_regression_smoke_summary_rejects_missing_evaluation_split() -> None:
+    summary = run_linear_regression_smoke()
+    del summary["evaluation"]["validation"]
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"linear regression smoke summary evaluation keys mismatch: "
+            r".*missing=\['validation'\]"
+        ),
+    ):
+        validate_linear_regression_smoke_summary(summary)
+
+
+def test_validate_linear_regression_smoke_summary_rejects_unknown_evaluation_split() -> None:
+    summary = run_linear_regression_smoke()
+    summary["evaluation"]["holdout"] = deepcopy(summary["evaluation"]["test"])
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"linear regression smoke summary evaluation keys mismatch: "
+            r".*unknown=\['holdout'\]"
+        ),
+    ):
+        validate_linear_regression_smoke_summary(summary)
+
+
+def test_validate_linear_regression_smoke_summary_rejects_non_dict_metrics() -> None:
+    summary = run_linear_regression_smoke()
+    summary["evaluation"]["train"] = []
+
+    with pytest.raises(
+        ValueError,
+        match="linear regression metrics for train must be a dict",
+    ):
+        validate_linear_regression_smoke_summary(summary)
+
+
+def test_validate_linear_regression_smoke_summary_rejects_missing_metric_key() -> None:
+    summary = run_linear_regression_smoke()
+    del summary["evaluation"]["test"]["rmse"]
+
+    with pytest.raises(
+        ValueError,
+        match=r"linear regression metrics for test keys mismatch: .*missing=\['rmse'\]",
+    ):
+        validate_linear_regression_smoke_summary(summary)
+
+
+def test_validate_linear_regression_smoke_summary_rejects_unknown_metric_key() -> None:
+    summary = run_linear_regression_smoke()
+    summary["evaluation"]["validation"]["extra_metric"] = 0.0
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"linear regression metrics for validation keys mismatch: "
+            r".*unknown=\['extra_metric'\]"
+        ),
+    ):
+        validate_linear_regression_smoke_summary(summary)
 
 
 def test_validate_preprocessing_smoke_summary_accepts_valid_summary() -> None:

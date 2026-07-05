@@ -83,6 +83,31 @@ SUPERVISED_DATASET_SMOKE_SPLIT_SHAPE_KEYS: Final[frozenset[str]] = frozenset(
     {"rows", "columns"}
 )
 
+LINEAR_REGRESSION_SMOKE_SUMMARY_KEYS: Final[frozenset[str]] = frozenset(
+    {
+        "row_count",
+        "feature_columns",
+        "label_column",
+        "model_name",
+        "method",
+        "intercept",
+        "coefficients",
+        "training_row_count",
+        "split_counts_after_label_drop",
+        "dropped_label_counts",
+        "prediction_counts",
+        "evaluation",
+    }
+)
+
+LINEAR_REGRESSION_SMOKE_SPLITS: Final[frozenset[str]] = frozenset(
+    {"train", "validation", "test"}
+)
+
+LINEAR_REGRESSION_SMOKE_EVALUATION_KEYS: Final[frozenset[str]] = (
+    EVALUATION_METRIC_KEYS
+)
+
 
 def validate_modeling_smoke_summary(summary: object) -> dict[str, Any]:
     """Validate the deterministic modeling smoke summary shape.
@@ -171,6 +196,54 @@ def validate_preprocessing_smoke_summary(summary: object) -> dict[str, Any]:
     return summary
 
 
+def validate_linear_regression_smoke_summary(summary: object) -> dict[str, Any]:
+    """Validate the deterministic OLS smoke summary shape.
+
+    The function returns the original summary object unchanged when valid.
+    """
+    if not isinstance(summary, dict):
+        raise ValueError("linear regression smoke summary must be a dict")
+
+    _validate_key_set(
+        "linear regression smoke summary",
+        actual_keys=summary.keys(),
+        expected_keys=LINEAR_REGRESSION_SMOKE_SUMMARY_KEYS,
+    )
+
+    if not isinstance(summary["feature_columns"], list):
+        raise ValueError("linear regression smoke summary feature_columns must be a list")
+    if not isinstance(summary["coefficients"], dict):
+        raise ValueError("linear regression smoke summary coefficients must be a dict")
+
+    _validate_linear_regression_split_mapping(
+        summary,
+        "split_counts_after_label_drop",
+    )
+    _validate_linear_regression_split_mapping(summary, "dropped_label_counts")
+    _validate_linear_regression_split_mapping(summary, "prediction_counts")
+
+    evaluation = summary["evaluation"]
+    if not isinstance(evaluation, dict):
+        raise ValueError("linear regression smoke summary evaluation must be a dict")
+    _validate_key_set(
+        "linear regression smoke summary evaluation",
+        actual_keys=evaluation.keys(),
+        expected_keys=LINEAR_REGRESSION_SMOKE_SPLITS,
+    )
+
+    for split_name in sorted(LINEAR_REGRESSION_SMOKE_SPLITS):
+        metrics = evaluation[split_name]
+        if not isinstance(metrics, dict):
+            raise ValueError(f"linear regression metrics for {split_name} must be a dict")
+        _validate_key_set(
+            f"linear regression metrics for {split_name}",
+            actual_keys=metrics.keys(),
+            expected_keys=LINEAR_REGRESSION_SMOKE_EVALUATION_KEYS,
+        )
+
+    return summary
+
+
 def validate_supervised_dataset_smoke_summary(summary: object) -> dict[str, Any]:
     """Validate the deterministic supervised dataset smoke summary shape.
 
@@ -228,6 +301,20 @@ def _validate_supervised_split_count_mapping(
         f"supervised dataset smoke summary {key}",
         actual_keys=split_counts.keys(),
         expected_keys=SUPERVISED_DATASET_SMOKE_SPLITS,
+    )
+
+
+def _validate_linear_regression_split_mapping(
+    summary: dict[str, Any],
+    key: str,
+) -> None:
+    split_counts = summary[key]
+    if not isinstance(split_counts, dict):
+        raise ValueError(f"linear regression smoke summary {key} must be a dict")
+    _validate_key_set(
+        f"linear regression smoke summary {key}",
+        actual_keys=split_counts.keys(),
+        expected_keys=LINEAR_REGRESSION_SMOKE_SPLITS,
     )
 
 
