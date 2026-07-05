@@ -1,5 +1,52 @@
 # OUTBOX
 
+## 2026-07-05 Closed-Loop Task 038 - OLS Smoke Console Script Alias
+
+## 修改檔案
+- `pyproject.toml`: added the `abc-quant-linear-regression-smoke` project script pointing to `abc_quant.cli.linear_regression_smoke:main`.
+- `tests/test_cli_entrypoints.py`: added linear-regression console-script metadata, import resolution, and callable JSON-output tests while preserving modeling/preprocessing/supervised script coverage.
+- `docs/modeling.md`: documented the installed OLS smoke console-script command alongside `python -m`.
+- `README.md`: documented the packaged OLS smoke console command.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 038 progress and completion evidence.
+- `INBOX.md`: reset the active Task 038 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added a package metadata console-script alias: `abc-quant-linear-regression-smoke`.
+- Kept the script target exactly `abc_quant.cli.linear_regression_smoke:main`.
+- Added `tomllib`-based tests for the linear-regression script entry in `pyproject.toml`.
+- Verified the configured target imports and resolves to the existing linear-regression smoke `main` function.
+- Verified the resolved function accepts `--indent 2`, returns `0`, and emits valid JSON.
+- Existing linear-regression CLI tests and modeling/preprocessing/supervised console-script tests remain covered.
+- No OLS calculation, summary key, split default, CLI argument semantic, estimator implementation, parameter search, model selection, allocation logic, performance curve, simulation engine, outside data access, or live account connectivity was changed.
+
+## 測試方式
+- `python -m pytest tests\test_cli_entrypoints.py tests\test_cli_linear_regression_smoke.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `python -m ruff check .` was attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused entrypoint/OLS CLI tests: 17 passed in 3.99s.
+- `pytest`: 251 passed in 18.58s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`No module named ruff`); GitHub Actions should run `ruff check .`.
+
+## 已知限制
+- This task only exposes the existing OLS smoke CLI as an installed console script. It does not alter OLS diagnostics behavior or add strategy/backtest behavior.
+
+## PR 狀態
+- Branch pushed: `codex/task-038-ols-smoke-console-script`.
+- Draft PR creation is blocked in this environment because the GitHub connector returned `token_revoked` and local `gh auth status` reports no logged-in GitHub hosts.
+- PR creation URL from git push: `https://github.com/jongyawjong0514/abc-quant/pull/new/codex/task-038-ols-smoke-console-script`.
+
+## 建議下一步
+- Restore GitHub connector or run `gh auth login`, then open a draft PR from `codex/task-038-ols-smoke-console-script` to `main`.
+- After the draft PR exists, have ChatGPT Pro review the pyproject script entry, entrypoint tests, and documentation wording.
+
 ## 2026-07-05 Closed-Loop Task 037 - OLS Smoke CLI
 
 ## 修改檔案

@@ -4,6 +4,7 @@ import tomllib
 from pathlib import Path
 from typing import Callable
 
+from abc_quant.cli.linear_regression_smoke import main as linear_regression_main
 from abc_quant.cli.modeling_smoke import main as modeling_main
 from abc_quant.cli.preprocessing_smoke import main as preprocessing_main
 from abc_quant.cli.supervised_smoke import main as supervised_main
@@ -15,6 +16,8 @@ PREPROCESSING_SCRIPT_NAME = "abc-quant-preprocessing-smoke"
 PREPROCESSING_SCRIPT_TARGET = "abc_quant.cli.preprocessing_smoke:main"
 SUPERVISED_SCRIPT_NAME = "abc-quant-supervised-smoke"
 SUPERVISED_SCRIPT_TARGET = "abc_quant.cli.supervised_smoke:main"
+LINEAR_REGRESSION_SCRIPT_NAME = "abc-quant-linear-regression-smoke"
+LINEAR_REGRESSION_SCRIPT_TARGET = "abc_quant.cli.linear_regression_smoke:main"
 
 
 def test_pyproject_declares_modeling_smoke_console_script() -> None:
@@ -41,6 +44,15 @@ def test_pyproject_declares_supervised_smoke_console_script() -> None:
     )
 
 
+def test_pyproject_declares_linear_regression_smoke_console_script() -> None:
+    pyproject = _load_pyproject()
+
+    assert (
+        pyproject["project"]["scripts"][LINEAR_REGRESSION_SCRIPT_NAME]
+        == LINEAR_REGRESSION_SCRIPT_TARGET
+    )
+
+
 def test_modeling_smoke_console_script_target_resolves_to_main() -> None:
     resolved = _resolve_script_target(MODELING_SCRIPT_TARGET)
 
@@ -57,6 +69,12 @@ def test_supervised_smoke_console_script_target_resolves_to_main() -> None:
     resolved = _resolve_script_target(SUPERVISED_SCRIPT_TARGET)
 
     assert resolved is supervised_main
+
+
+def test_linear_regression_smoke_console_script_target_resolves_to_main() -> None:
+    resolved = _resolve_script_target(LINEAR_REGRESSION_SCRIPT_TARGET)
+
+    assert resolved is linear_regression_main
 
 
 def test_modeling_smoke_console_script_function_outputs_json(capsys) -> None:
@@ -111,6 +129,27 @@ def test_supervised_smoke_console_script_function_outputs_json(capsys) -> None:
         "test": 10,
     }
     assert payload["split_shape"]["train"] == {"columns": 4, "rows": 2}
+
+
+def test_linear_regression_smoke_console_script_function_outputs_json(capsys) -> None:
+    pyproject = _load_pyproject()
+    resolved = _resolve_script_target(
+        pyproject["project"]["scripts"][LINEAR_REGRESSION_SCRIPT_NAME]
+    )
+
+    exit_code = resolved(["--indent", "2"])
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert exit_code == 0
+    assert captured.err == ""
+    assert captured.out.startswith("{\n")
+    assert payload["split_counts_after_label_drop"] == {
+        "train": 2,
+        "validation": 6,
+        "test": 4,
+    }
+    assert payload["prediction_counts"] == {"train": 2, "validation": 6, "test": 4}
 
 
 def _load_pyproject() -> dict[str, object]:
