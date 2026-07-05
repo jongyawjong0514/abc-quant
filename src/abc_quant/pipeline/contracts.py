@@ -108,6 +108,48 @@ LINEAR_REGRESSION_SMOKE_EVALUATION_KEYS: Final[frozenset[str]] = (
     EVALUATION_METRIC_KEYS
 )
 
+MODEL_COMPARISON_SMOKE_SUMMARY_KEYS: Final[frozenset[str]] = frozenset(
+    {
+        "row_count",
+        "feature_columns",
+        "label_column",
+        "reference_model",
+        "candidate_model",
+        "split_counts",
+        "dropped_label_counts",
+        "reference_evaluation",
+        "candidate_evaluation",
+        "comparison",
+    }
+)
+
+MODEL_COMPARISON_SMOKE_SPLITS: Final[frozenset[str]] = frozenset(
+    {"train", "validation", "test"}
+)
+
+MODEL_COMPARISON_SMOKE_MODEL_KEYS: Final[frozenset[str]] = frozenset(
+    {"model_name", "method"}
+)
+
+MODEL_COMPARISON_SMOKE_COMPARISON_KEYS: Final[frozenset[str]] = frozenset(
+    {"reference_name", "candidate_name", "train", "validation", "test"}
+)
+
+MODEL_COMPARISON_SMOKE_SPLIT_COMPARISON_KEYS: Final[frozenset[str]] = frozenset(
+    {
+        "split_name",
+        "reference_name",
+        "candidate_name",
+        "row_count",
+        "non_missing_count",
+        "missing_actual_count",
+        "mae_delta",
+        "rmse_delta",
+        "mean_error_delta",
+        "prediction_mean_delta",
+    }
+)
+
 
 def validate_modeling_smoke_summary(summary: object) -> dict[str, Any]:
     """Validate the deterministic modeling smoke summary shape.
@@ -288,6 +330,104 @@ def validate_supervised_dataset_smoke_summary(summary: object) -> dict[str, Any]
         )
 
     return summary
+
+
+def validate_model_comparison_smoke_summary(summary: object) -> dict[str, Any]:
+    """Validate the deterministic model-comparison smoke summary shape.
+
+    The function returns the original summary object unchanged when valid.
+    """
+    if not isinstance(summary, dict):
+        raise ValueError("model comparison smoke summary must be a dict")
+
+    _validate_key_set(
+        "model comparison smoke summary",
+        actual_keys=summary.keys(),
+        expected_keys=MODEL_COMPARISON_SMOKE_SUMMARY_KEYS,
+    )
+
+    _validate_model_comparison_model_metadata(summary, "reference_model")
+    _validate_model_comparison_model_metadata(summary, "candidate_model")
+    _validate_model_comparison_split_mapping(summary, "split_counts")
+    _validate_model_comparison_split_mapping(summary, "dropped_label_counts")
+    _validate_model_comparison_evaluation(summary, "reference_evaluation")
+    _validate_model_comparison_evaluation(summary, "candidate_evaluation")
+    _validate_model_comparison_comparison(summary)
+
+    return summary
+
+
+def _validate_model_comparison_model_metadata(
+    summary: dict[str, Any],
+    key: str,
+) -> None:
+    metadata = summary[key]
+    if not isinstance(metadata, dict):
+        raise ValueError(f"model comparison smoke summary {key} must be a dict")
+    _validate_key_set(
+        f"model comparison smoke summary {key}",
+        actual_keys=metadata.keys(),
+        expected_keys=MODEL_COMPARISON_SMOKE_MODEL_KEYS,
+    )
+
+
+def _validate_model_comparison_split_mapping(
+    summary: dict[str, Any],
+    key: str,
+) -> None:
+    split_mapping = summary[key]
+    if not isinstance(split_mapping, dict):
+        raise ValueError(f"model comparison smoke summary {key} must be a dict")
+    _validate_key_set(
+        f"model comparison smoke summary {key}",
+        actual_keys=split_mapping.keys(),
+        expected_keys=MODEL_COMPARISON_SMOKE_SPLITS,
+    )
+
+
+def _validate_model_comparison_evaluation(
+    summary: dict[str, Any],
+    key: str,
+) -> None:
+    evaluation = summary[key]
+    if not isinstance(evaluation, dict):
+        raise ValueError(f"model comparison smoke summary {key} must be a dict")
+    _validate_key_set(
+        f"model comparison smoke summary {key}",
+        actual_keys=evaluation.keys(),
+        expected_keys=MODEL_COMPARISON_SMOKE_MODEL_KEYS | MODEL_COMPARISON_SMOKE_SPLITS,
+    )
+
+    for split_name in sorted(MODEL_COMPARISON_SMOKE_SPLITS):
+        metrics = evaluation[split_name]
+        if not isinstance(metrics, dict):
+            raise ValueError(f"{key} metrics for {split_name} must be a dict")
+        _validate_key_set(
+            f"{key} metrics for {split_name}",
+            actual_keys=metrics.keys(),
+            expected_keys=EVALUATION_METRIC_KEYS,
+        )
+
+
+def _validate_model_comparison_comparison(summary: dict[str, Any]) -> None:
+    comparison = summary["comparison"]
+    if not isinstance(comparison, dict):
+        raise ValueError("model comparison smoke summary comparison must be a dict")
+    _validate_key_set(
+        "model comparison smoke summary comparison",
+        actual_keys=comparison.keys(),
+        expected_keys=MODEL_COMPARISON_SMOKE_COMPARISON_KEYS,
+    )
+
+    for split_name in sorted(MODEL_COMPARISON_SMOKE_SPLITS):
+        split_comparison = comparison[split_name]
+        if not isinstance(split_comparison, dict):
+            raise ValueError(f"comparison for {split_name} must be a dict")
+        _validate_key_set(
+            f"comparison for {split_name}",
+            actual_keys=split_comparison.keys(),
+            expected_keys=MODEL_COMPARISON_SMOKE_SPLIT_COMPARISON_KEYS,
+        )
 
 
 def _validate_supervised_split_count_mapping(

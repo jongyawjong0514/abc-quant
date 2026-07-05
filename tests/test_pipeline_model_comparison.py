@@ -10,7 +10,15 @@ from abc_quant.models import (
     fit_linear_regression,
 )
 from abc_quant.models.evaluation import evaluate_prediction_bundle
-from abc_quant.pipeline import run_model_comparison_smoke
+from abc_quant.pipeline import (
+    MODEL_COMPARISON_SMOKE_COMPARISON_KEYS,
+    MODEL_COMPARISON_SMOKE_MODEL_KEYS,
+    MODEL_COMPARISON_SMOKE_SPLIT_COMPARISON_KEYS,
+    MODEL_COMPARISON_SMOKE_SPLITS,
+    MODEL_COMPARISON_SMOKE_SUMMARY_KEYS,
+    run_model_comparison_smoke,
+    validate_model_comparison_smoke_summary,
+)
 from abc_quant.pipeline.model_comparison import (
     DEFAULT_MODEL_COMPARISON_TRAIN_END,
     DEFAULT_MODEL_COMPARISON_VALIDATION_END,
@@ -27,27 +35,13 @@ from abc_quant.preprocessing.scaling import (
 from abc_quant.validation.temporal import build_temporal_split
 
 
-SUMMARY_KEYS = {
-    "row_count",
-    "feature_columns",
-    "label_column",
-    "reference_model",
-    "candidate_model",
-    "split_counts",
-    "dropped_label_counts",
-    "reference_evaluation",
-    "candidate_evaluation",
-    "comparison",
-}
-SPLITS = {"train", "validation", "test"}
-
-
 def test_model_comparison_smoke_is_deterministic_and_json_serializable() -> None:
     first = run_model_comparison_smoke()
     second = run_model_comparison_smoke()
 
     assert first == second
-    assert set(first) == SUMMARY_KEYS
+    assert validate_model_comparison_smoke_summary(first) is first
+    assert set(first) == MODEL_COMPARISON_SMOKE_SUMMARY_KEYS
     assert json.loads(json.dumps(first, sort_keys=True)) == first
 
 
@@ -76,34 +70,18 @@ def test_model_comparison_smoke_records_model_metadata_and_split_counts() -> Non
 def test_model_comparison_smoke_evaluates_same_supervised_prediction_rows() -> None:
     summary = run_model_comparison_smoke()
 
-    assert set(summary["reference_evaluation"]) == {
-        "model_name",
-        "method",
-        "train",
-        "validation",
-        "test",
-    }
-    assert set(summary["candidate_evaluation"]) == {
-        "model_name",
-        "method",
-        "train",
-        "validation",
-        "test",
-    }
-    assert set(summary["comparison"]) == {
-        "reference_name",
-        "candidate_name",
-        "train",
-        "validation",
-        "test",
-    }
+    evaluation_keys = MODEL_COMPARISON_SMOKE_MODEL_KEYS | MODEL_COMPARISON_SMOKE_SPLITS
+    assert set(summary["reference_evaluation"]) == evaluation_keys
+    assert set(summary["candidate_evaluation"]) == evaluation_keys
+    assert set(summary["comparison"]) == MODEL_COMPARISON_SMOKE_COMPARISON_KEYS
 
-    for split_name in sorted(SPLITS):
+    for split_name in sorted(MODEL_COMPARISON_SMOKE_SPLITS):
         split_count = summary["split_counts"][split_name]
         reference_metrics = summary["reference_evaluation"][split_name]
         candidate_metrics = summary["candidate_evaluation"][split_name]
         comparison_metrics = summary["comparison"][split_name]
 
+        assert set(comparison_metrics) == MODEL_COMPARISON_SMOKE_SPLIT_COMPARISON_KEYS
         assert reference_metrics["row_count"] == split_count
         assert candidate_metrics["row_count"] == split_count
         assert comparison_metrics["row_count"] == split_count

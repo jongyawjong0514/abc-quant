@@ -14,6 +14,7 @@ from abc_quant.models.dataset import SupervisedSplitDataset, build_supervised_sp
 from abc_quant.models.evaluation import evaluate_prediction_bundle
 from abc_quant.models.linear import fit_linear_regression
 from abc_quant.models.predictions import build_split_prediction_bundle
+from abc_quant.pipeline.contracts import validate_model_comparison_smoke_summary
 from abc_quant.pipeline.smoke import (
     SMOKE_FEATURE_COLUMNS,
     SMOKE_LABEL_COLUMN,
@@ -89,7 +90,7 @@ def run_model_comparison_smoke(
         candidate_name=candidate_evaluation.model_name,
     )
 
-    return {
+    summary = {
         "row_count": int(len(feature_matrix.X)),
         "feature_columns": list(supervised_dataset.feature_columns),
         "label_column": supervised_dataset.label_column,
@@ -110,6 +111,7 @@ def run_model_comparison_smoke(
         "candidate_evaluation": asdict(candidate_evaluation),
         "comparison": asdict(comparison),
     }
+    return validate_model_comparison_smoke_summary(summary)
 
 
 def _comparison_inputs(

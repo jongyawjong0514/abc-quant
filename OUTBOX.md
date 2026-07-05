@@ -1,5 +1,54 @@
 # OUTBOX
 
+## 2026-07-05 Closed-Loop Task 041 - Model Comparison Smoke Summary Validator
+
+## 修改檔案
+- `src/abc_quant/pipeline/contracts.py`: added model comparison smoke summary constants and `validate_model_comparison_smoke_summary(...)`.
+- `src/abc_quant/pipeline/model_comparison.py`: validates the model-comparison summary before returning it.
+- `src/abc_quant/pipeline/__init__.py`: exported the new constants and validator.
+- `tests/test_pipeline_contracts.py`: added valid and invalid model-comparison summary shape tests.
+- `tests/test_pipeline_model_comparison.py`: switched model-comparison smoke tests to shared constants and validator.
+- `docs/modeling.md`: documented the model-comparison smoke summary contract validator.
+- `README.md`: documented the return-time validation boundary.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 041 progress and completion evidence.
+- `INBOX.md`: reset the active Task 041 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added `MODEL_COMPARISON_SMOKE_SUMMARY_KEYS`.
+- Added `MODEL_COMPARISON_SMOKE_SPLITS`.
+- Added `MODEL_COMPARISON_SMOKE_MODEL_KEYS`.
+- Added `MODEL_COMPARISON_SMOKE_COMPARISON_KEYS`.
+- Added `MODEL_COMPARISON_SMOKE_SPLIT_COMPARISON_KEYS`.
+- Added `validate_model_comparison_smoke_summary(summary)`.
+- The validator returns the original summary object unchanged when valid.
+- The validator rejects non-dict summaries, missing/unknown top-level keys, malformed reference/candidate model metadata, malformed split count mappings, malformed dropped label counts, malformed reference/candidate evaluations, malformed comparison blocks, and missing/unknown per-split comparison keys.
+- The validator checks reference/candidate evaluation split metrics against existing `EVALUATION_METRIC_KEYS`.
+- `run_model_comparison_smoke(...)` now validates the summary before returning.
+- Default model-comparison smoke output values remain unchanged.
+- No winner, ranking, decision, model selection, strategy signal, allocation logic, performance curve, order, position, simulation engine, outside data access, or live account connectivity was added.
+
+## 測試方式
+- `python -m pytest tests\test_pipeline_contracts.py tests\test_pipeline_model_comparison.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `python -m ruff check .` was attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused contract/model-comparison tests: 103 passed in 7.69s.
+- `pytest`: 302 passed in 21.57s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`No module named ruff`); GitHub Actions should run `ruff check .`.
+
+## 已知限制
+- This task only hardens the model-comparison smoke summary shape. It does not add a CLI, choose a model, or add strategy/backtest behavior.
+
+## 建議下一步
+- Open a draft PR for ChatGPT Tech Lead review, then let GitHub Actions run CI including `ruff check .`.
+
 ## 2026-07-05 Closed-Loop Task 040 - Baseline Versus OLS Comparison Smoke
 
 ## 修改檔案
