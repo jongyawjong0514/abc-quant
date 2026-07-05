@@ -58,6 +58,7 @@
 - [x] Linear regression smoke summary contract validator。
 - [x] OLS smoke CLI diagnostics。
 - [x] OLS smoke packaged console-script alias。
+- [x] Prediction evaluation comparison contract。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。

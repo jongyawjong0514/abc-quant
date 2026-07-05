@@ -1,6 +1,11 @@
 """Model contracts."""
 
 from abc_quant.models.baseline import ConstantBaselineResult, fit_constant_baseline
+from abc_quant.models.comparison import (
+    PredictionEvaluationComparison,
+    SplitEvaluationComparison,
+    compare_prediction_evaluations,
+)
 from abc_quant.models.dataset import (
     SupervisedSplitDataset,
     build_supervised_split_dataset,
@@ -24,13 +29,16 @@ __all__ = [
     "ConstantBaselineEvaluationResult",
     "ConstantBaselineResult",
     "LinearRegressionResult",
+    "PredictionEvaluationComparison",
     "PredictionEvaluationResult",
     "SplitPredictionBundle",
+    "SplitEvaluationComparison",
     "SplitPredictionBundleEvaluationResult",
     "SupervisedSplitDataset",
     "build_constant_baseline_prediction_bundle",
     "build_split_prediction_bundle",
     "build_supervised_split_dataset",
+    "compare_prediction_evaluations",
     "evaluate_constant_baseline",
     "evaluate_prediction_bundle",
     "evaluate_predictions",

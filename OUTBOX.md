@@ -1,5 +1,48 @@
 # OUTBOX
 
+## 2026-07-05 Closed-Loop Task 039 - Prediction Evaluation Comparison Contract
+
+## 修改檔案
+- `src/abc_quant/models/comparison.py`: added frozen comparison dataclasses and `compare_prediction_evaluations(...)`.
+- `src/abc_quant/models/__init__.py`: exported the comparison contract.
+- `tests/test_models_comparison.py`: added deterministic delta, error-contract, no-decision, and frozen-dataclass tests.
+- `docs/modeling.md`: documented the prediction evaluation comparison contract and safety boundary.
+- `README.md`: documented the comparison helper in the model-output diagnostics section.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 039 progress and completion evidence.
+- `INBOX.md`: reset the active Task 039 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added `SplitEvaluationComparison` and `PredictionEvaluationComparison` as frozen dataclasses.
+- Added `compare_prediction_evaluations(reference, candidate, reference_name="reference", candidate_name="candidate")`.
+- The helper accepts only `SplitPredictionBundleEvaluationResult` inputs.
+- Reference and candidate names are normalized as non-empty strings.
+- Train, validation, and test splits must match on `row_count`, `non_missing_count`, and `missing_actual_count`.
+- Each split records candidate-minus-reference deltas for `mae`, `rmse`, `mean_error`, and `prediction_mean`.
+- Negative deltas remain raw numeric differences and are not converted into rankings, winners, or decisions.
+- No model refit, prediction recomputation, model selection, parameter search, allocation logic, strategy signal output, performance curve, simulation engine, outside data access, or live account connectivity was added.
+
+## 測試方式
+- `python -m pytest tests\test_models_comparison.py tests\test_models_evaluation.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `python -m ruff check .` was attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused comparison/evaluation tests: 21 passed in 1.06s.
+- `pytest`: 263 passed in 18.74s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`No module named ruff`); GitHub Actions should run `ruff check .`.
+
+## 已知限制
+- This task compares already-computed diagnostic evaluation objects only. It does not choose a model or modify any smoke summary output.
+
+## 建議下一步
+- Open a draft PR for ChatGPT Tech Lead review, then let GitHub Actions run CI including `ruff check .`.
+
 ## 2026-07-05 Closed-Loop Task 038 - OLS Smoke Console Script Alias
 
 ## 修改檔案
