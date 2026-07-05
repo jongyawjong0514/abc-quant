@@ -166,6 +166,16 @@ The OLS contract consumes a `SupervisedSplitDataset`, fits coefficients using on
 
 The helper rejects invalid input type, empty train data, missing or non-finite training features/labels, nonnumeric feature columns, and split feature frames whose columns do not match the dataset feature order. It does not read validation/test labels, add sklearn, tune parameters, create trading signals, define allocation logic, build performance curves, or run simulation engines.
 
+## Optional LightGBM Dependency Guard
+
+Future LightGBM challenger work is prepared by a dependency and parameter contract:
+
+- `src/abc_quant/models/lightgbm.py`: `check_lightgbm_dependency()`, `require_lightgbm()`, `LightGBMDependencyStatus`, `LightGBMRegressorParams`, and `make_default_lightgbm_regressor_params()`.
+
+The module uses standard-library `importlib` to detect the optional `lightgbm` package without importing it during status checks. It remains importable when LightGBM is not installed, and `require_lightgbm()` raises a clear `ImportError` when the optional dependency is unavailable.
+
+`LightGBMRegressorParams` stores deterministic conservative defaults and validates the parameter shape for later model work. This task does not add LightGBM as a mandatory dependency, fit a LightGBM model, run parameter search, perform model selection, change smoke outputs, or add strategy/backtest behavior.
+
 The deterministic OLS smoke diagnostic is:
 
 - `src/abc_quant/pipeline/linear_modeling.py`: `run_linear_regression_smoke(...)` wires the deterministic smoke frame, feature matrix, temporal split, train-only scaler, supervised split dataset, train-only OLS fit, and prediction-bundle evaluation into a JSON-friendly diagnostic dictionary.

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 044 optional LightGBM dependency guard and parameter contract：`models/lightgbm.py` 可在未安裝 `lightgbm` 時 import，並以標準函式庫 `importlib` 提供 dependency status、required import helper 與 frozen deterministic regressor parameter validation；不新增 mandatory dependency、不 fit model、不改 pipeline/CLI/smoke outputs。
 - 新增 Task 043 packaged model comparison smoke console-script alias：`pyproject.toml` 宣告 `abc-quant-model-comparison-smoke = abc_quant.cli.model_comparison_smoke:main`，並以 `tomllib` 測試 entry point target 可解析、可呼叫與支援 `--baseline-method median`。
 - 新增 Task 042 deterministic model comparison smoke diagnostics CLI：`python -m abc_quant.cli.model_comparison_smoke` 以 sorted JSON 輸出既有 `run_model_comparison_smoke(...)` summary，支援 `--train-end`、`--validation-end`、`--baseline-method mean|median` 與 `--indent`，不改計算、summary keys、model selection/ranking/strategy/simulation 行為。
 - 新增 Task 041 model comparison smoke summary contract validator：集中定義 `MODEL_COMPARISON_SMOKE_*` summary/model/split/comparison keys 與 `validate_model_comparison_smoke_summary(...)`，`run_model_comparison_smoke(...)` 回傳前會驗證 summary shape，不改預設輸出值、不加入 model selection/ranking/strategy/simulation。

@@ -1,5 +1,50 @@
 # OUTBOX
 
+## 2026-07-05 Closed-Loop Task 044 - Optional LightGBM Dependency Guard
+
+## 修改檔案
+- `src/abc_quant/models/lightgbm.py`: added optional LightGBM dependency status, required import helper, and deterministic regressor parameter contract.
+- `src/abc_quant/models/__init__.py`: exported the new LightGBM dataclasses and helper functions.
+- `tests/test_models_lightgbm.py`: added dependency-detection, optional import, defaults, invalid-parameter, and frozen-dataclass tests without requiring the real package.
+- `docs/modeling.md`: documented the optional LightGBM guard and parameter boundary.
+- `README.md`: documented the LightGBM optional dependency contract.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 044 progress and completion evidence.
+- `INBOX.md`: reset the active Task 044 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added frozen `LightGBMDependencyStatus`.
+- Added frozen `LightGBMRegressorParams` with deterministic conservative defaults.
+- Added `check_lightgbm_dependency()` using standard-library `importlib.util.find_spec(...)` without importing `lightgbm`.
+- Added `require_lightgbm()` to return the imported optional module when available or raise a clear `ImportError`.
+- Added `make_default_lightgbm_regressor_params()`.
+- Validated objective text, estimator count, learning rate, leaf count, min data in leaf, feature/bagging fractions, bagging frequency, random state, and verbosity.
+- Kept `lightgbm` out of mandatory project dependencies.
+- Did not fit a model, search parameters, select models, change pipeline/CLI outputs, create strategy signals, define allocation logic, build performance curves, or run simulation engines.
+
+## 測試方式
+- `python -m pytest tests\test_models_lightgbm.py`
+- `python -m pytest tests\test_models_lightgbm.py tests\test_models_linear.py tests\test_models_baseline.py tests\test_models_predictions.py tests\test_models_comparison.py tests\test_models_evaluation.py tests\test_models_dataset.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `python -m ruff check .` was attempted for local parity with CI.
+
+## 測試結果
+- Focused LightGBM tests: 23 passed in 1.06s.
+- Related model tests: 77 passed in 1.63s.
+- `pytest`: 335 passed in 25.97s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`No module named ruff`); GitHub Actions should run `ruff check .`.
+
+## 已知限制
+- This task only prepares optional dependency detection and parameter validation. It does not add a LightGBM estimator, fit any model, add mandatory dependencies, run parameter search, or change diagnostics outputs.
+
+## 建議下一步
+- Open a draft PR for ChatGPT Tech Lead review, then let GitHub Actions run CI including `ruff check .`.
+
 ## 2026-07-05 Closed-Loop Task 043 - Model Comparison Smoke Console Script
 
 ## 修改檔案
