@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 040 deterministic baseline versus OLS evaluation comparison smoke diagnostics：`run_model_comparison_smoke(...)` 在相同 supervised prediction rows 上評估 constant-baseline reference 與 OLS candidate，並用 `compare_prediction_evaluations(...)` 回傳 raw metric deltas，不做 winner、ranking、decision 或 model selection。
 - 新增 Task 039 prediction evaluation comparison contract：`compare_prediction_evaluations(...)` 比較兩個既有 `SplitPredictionBundleEvaluationResult`，驗證 split row/missing counts 一致後回傳 candidate-minus-reference 的 MAE、RMSE、mean error 與 prediction mean deltas，不做 model selection、ranking、strategy 或 simulation。
 - 新增 Task 038 packaged OLS smoke console-script alias：`pyproject.toml` 宣告 `abc-quant-linear-regression-smoke = abc_quant.cli.linear_regression_smoke:main`，並以 `tomllib` 測試 entry point target 可解析與呼叫。
 - 新增 Task 037 deterministic OLS smoke diagnostics CLI：`python -m abc_quant.cli.linear_regression_smoke` 以 sorted JSON 輸出既有 `run_linear_regression_smoke(...)` summary，支援 `--train-end`、`--validation-end` 與 `--indent`，錯誤邊界會以 non-zero exit code 與簡短 stderr 回報。

@@ -445,6 +445,50 @@ are preserved as raw arithmetic differences; the helper does not rank models,
 choose winners, perform model selection, emit strategy signals, define
 allocation logic, build performance curves, or run simulation engines.
 
+## Model Comparison Smoke Diagnostics
+
+`src/abc_quant/pipeline/model_comparison.py` defines
+`run_model_comparison_smoke(...)`. It is a deterministic in-memory diagnostic
+that compares the existing constant-baseline and ordinary least-squares
+contracts on the same supervised prediction rows.
+
+The pipeline wires together:
+
+1. `build_smoke_frame(...)`
+2. `build_feature_matrix(...)`
+3. `build_temporal_split(...)`
+4. `fit_standard_scaler(...)`
+5. `transform_with_standard_scaler(...)`
+6. `build_supervised_split_dataset(...)`
+7. `fit_constant_baseline(...)`
+8. `fit_linear_regression(...)`
+9. `evaluate_prediction_bundle(...)`
+10. `compare_prediction_evaluations(...)`
+
+The constant baseline still fits only from training labels. Its prediction
+Series are then restricted to the supervised split indices after missing-label
+rows are dropped, so the reference and OLS candidate are evaluated on identical
+train, validation, and test rows before deltas are computed.
+
+The returned plain dictionary contains:
+
+- `row_count`
+- `feature_columns`
+- `label_column`
+- `reference_model`
+- `candidate_model`
+- `split_counts`
+- `dropped_label_counts`
+- `reference_evaluation`
+- `candidate_evaluation`
+- `comparison`
+
+This smoke diagnostic records arithmetic metric deltas only. It does not
+choose a winner, rank models, perform model selection, change existing smoke
+outputs, alter CLI behavior, define allocation logic, create strategy signals,
+build performance curves, create orders or positions, or run simulation
+engines.
+
 ## Split Prediction Bundle Contract
 
 `src/abc_quant/models/predictions.py` defines `SplitPredictionBundle`,

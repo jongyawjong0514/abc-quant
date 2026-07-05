@@ -59,6 +59,7 @@
 - [x] OLS smoke CLI diagnostics。
 - [x] OLS smoke packaged console-script alias。
 - [x] Prediction evaluation comparison contract。
+- [x] Deterministic baseline versus OLS comparison smoke diagnostics。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。

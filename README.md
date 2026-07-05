@@ -208,6 +208,20 @@ RMSE, mean error, and prediction mean. It is diagnostic-only and does not rank
 models, select winners, emit strategy signals, define allocation logic, build
 performance curves, or run simulation engines.
 
+The deterministic model-comparison smoke diagnostic is:
+
+- `src/abc_quant/pipeline/model_comparison.py`: `run_model_comparison_smoke(...)` compares the existing constant-baseline reference and OLS candidate on the same supervised train/validation/test prediction rows.
+
+It wires the deterministic smoke fixture through feature matrix assembly,
+temporal split, train-only scaling, supervised dataset construction, constant
+baseline fitting, OLS fitting, prediction-bundle evaluation, and
+`compare_prediction_evaluations(...)`. The summary reports model metadata,
+split counts after label-drop, dropped label counts, reference evaluation,
+candidate evaluation, and raw candidate-minus-reference comparison deltas. It
+does not choose a winner, rank models, perform model selection, change CLI
+behavior, define strategy logic, create allocation outputs, build performance
+curves, or run simulation engines.
+
 ## Split Prediction Bundle
 
 The generic prediction-output bundle contract is:
