@@ -1,5 +1,48 @@
 # OUTBOX
 
+## 2026-07-05 Closed-Loop Task 042 - Model Comparison Smoke CLI
+
+## 修改檔案
+- `src/abc_quant/cli/model_comparison_smoke.py`: added a module-executable CLI wrapper around `run_model_comparison_smoke(...)`.
+- `tests/test_cli_model_comparison_smoke.py`: added module invocation, deterministic output, custom split, median baseline method, invalid-boundary, and key-contract tests.
+- `docs/modeling.md`: documented the model-comparison smoke CLI.
+- `README.md`: documented the module command and supported arguments.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 042 progress and completion evidence.
+- `INBOX.md`: reset the active Task 042 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added `python -m abc_quant.cli.model_comparison_smoke`.
+- Added `main(argv=None) -> int` with the same stdout/stderr wrapper pattern as existing smoke CLIs.
+- Supported `--train-end`, `--validation-end`, `--baseline-method mean|median`, and `--indent`.
+- Successful runs write sorted deterministic JSON to stdout and return exit code 0.
+- Invalid temporal boundaries return exit code 1 and write a concise `error:` message to stderr.
+- `--baseline-method median` passes through to the existing constant-baseline reference method.
+- The CLI remains a thin wrapper and does not change model-comparison calculations, summary keys, split defaults, existing smoke outputs, model selection, ranking, strategy signals, allocation logic, performance curves, or simulation engines.
+
+## 測試方式
+- `python -m abc_quant.cli.model_comparison_smoke --baseline-method median --indent 2`
+- `python -m pytest tests\test_cli_model_comparison_smoke.py tests\test_pipeline_model_comparison.py tests\test_pipeline_contracts.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `python -m ruff check .` was attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Module smoke execution: passed and printed sorted deterministic JSON.
+- Focused CLI/model-comparison/contract tests: 109 passed in 10.59s.
+- `pytest`: 308 passed in 25.05s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`No module named ruff`); GitHub Actions should run `ruff check .`.
+
+## 已知限制
+- This task only adds the module CLI. It does not add a packaged console-script alias, choose a model, rank models, or add strategy/backtest behavior.
+
+## 建議下一步
+- Open a draft PR for ChatGPT Tech Lead review, then let GitHub Actions run CI including `ruff check .`.
+
 ## 2026-07-05 Closed-Loop Task 041 - Model Comparison Smoke Summary Validator
 
 ## 修改檔案

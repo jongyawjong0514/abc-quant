@@ -220,9 +220,24 @@ split counts after label-drop, dropped label counts, reference evaluation,
 candidate evaluation, and raw candidate-minus-reference comparison deltas. It
 is validated by `validate_model_comparison_smoke_summary(...)` in
 `src/abc_quant/pipeline/contracts.py` before return. It does not choose a
-winner, rank models, perform model selection, change CLI behavior, define
-strategy logic, create allocation outputs, build performance curves, or run
-simulation engines.
+winner, rank models, perform model selection, change existing CLI behavior,
+define strategy logic, create allocation outputs, build performance curves, or
+run simulation engines.
+
+The deterministic model-comparison smoke diagnostic can also be printed as
+JSON:
+
+```powershell
+python -m abc_quant.cli.model_comparison_smoke --baseline-method median --indent 2
+```
+
+The CLI is a thin wrapper around `run_model_comparison_smoke(...)`. It supports
+`--train-end`, `--validation-end`, `--baseline-method mean|median`, and
+`--indent`, writes sorted deterministic JSON to stdout, and writes concise
+errors to stderr for invalid temporal boundaries. It does not change
+model-comparison calculations, summary keys, split defaults, existing smoke
+outputs, model selection, ranking, strategy logic, allocation logic,
+performance curves, or simulation engines.
 
 ## Split Prediction Bundle
 

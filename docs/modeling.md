@@ -495,9 +495,32 @@ reference/candidate evaluation split metrics, and comparison split delta keys.
 
 This smoke diagnostic records arithmetic metric deltas only. It does not
 choose a winner, rank models, perform model selection, change existing smoke
-outputs, alter CLI behavior, define allocation logic, create strategy signals,
-build performance curves, create orders or positions, or run simulation
-engines.
+outputs, alter existing CLI behavior, define allocation logic, create strategy
+signals, build performance curves, create orders or positions, or run
+simulation engines.
+
+## Model Comparison Smoke CLI
+
+`src/abc_quant/cli/model_comparison_smoke.py` exposes the deterministic
+model-comparison smoke diagnostic as module-executable JSON:
+
+```powershell
+python -m abc_quant.cli.model_comparison_smoke --indent 2
+```
+
+The CLI is a thin wrapper around `run_model_comparison_smoke(...)`. It accepts:
+
+- `--train-end`
+- `--validation-end`
+- `--baseline-method mean|median`
+- `--indent`
+
+Successful runs write sorted deterministic JSON to stdout and return exit code
+0. Invalid temporal boundaries return a non-zero exit code and write a concise
+error message to stderr. The CLI does not change model-comparison
+calculations, summary keys, split defaults, existing smoke outputs, model
+selection, ranking, strategy signals, allocation logic, performance curves, or
+simulation engines.
 
 ## Split Prediction Bundle Contract
 
