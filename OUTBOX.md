@@ -1,5 +1,50 @@
 # OUTBOX
 
+## 2026-07-05 Closed-Loop Task 037 - OLS Smoke CLI
+
+## 修改檔案
+- `src/abc_quant/cli/linear_regression_smoke.py`: added the module-executable OLS smoke diagnostics CLI.
+- `tests/test_cli_linear_regression_smoke.py`: added module execution, deterministic stdout JSON, indent, custom split, invalid boundary, summary-key, and forbidden-key tests.
+- `docs/modeling.md`: documented `python -m abc_quant.cli.linear_regression_smoke`.
+- `README.md`: documented the OLS smoke CLI.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 037 progress and completion evidence.
+- `INBOX.md`: reset the active Task 037 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added `main(argv=None) -> int` in `src/abc_quant/cli/linear_regression_smoke.py`.
+- The CLI is a thin wrapper around `run_linear_regression_smoke(...)`.
+- Supports `--train-end`, `--validation-end`, and `--indent`.
+- Valid invocations write sorted deterministic JSON to stdout and return `0`.
+- Invalid temporal boundaries return non-zero and write a concise `error:` message to stderr.
+- Tests verify stdout JSON equals `run_linear_regression_smoke(...)`.
+- Tests verify repeated module calls are deterministic.
+- Tests verify custom split arguments alter `split_counts_after_label_drop` deterministically.
+- Tests verify output contains only `LINEAR_REGRESSION_SMOKE_SUMMARY_KEYS`.
+- Existing modeling, preprocessing, and supervised CLI behavior remains unchanged.
+- No OLS calculation change, summary key change, split default change, package script change, new estimator implementation, parameter search, model selection, allocation logic, performance curve, simulation engine, outside data access, or live account connectivity was added.
+
+## 測試方式
+- `python -m pytest tests\test_cli_linear_regression_smoke.py tests\test_cli_modeling_smoke.py tests\test_cli_preprocessing_smoke.py tests\test_cli_supervised_smoke.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `python -m ruff check .` was attempted for local parity with CI, but `ruff` is not installed in this shell.
+
+## 測試結果
+- Focused OLS/modeling/preprocessing/supervised CLI tests: 22 passed in 11.55s.
+- `pytest`: 248 passed in 21.97s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`No module named ruff`); GitHub Actions should run `ruff check .`.
+
+## 已知限制
+- This task only adds a module-executable OLS smoke CLI. It does not add a packaged console-script alias, change OLS diagnostics, or add strategy/backtest behavior.
+
+## 建議下一步
+- Wait for GitHub Actions on the draft PR, then have ChatGPT Pro review the CLI wrapper, stdout/stderr behavior, custom split pass-through, and unchanged summary contract boundary.
+
 ## 2026-07-05 Closed-Loop Task 036 - OLS Smoke Summary Validator
 
 ## 修改檔案

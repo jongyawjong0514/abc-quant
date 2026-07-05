@@ -56,6 +56,7 @@
 - [x] Train-only ordinary least-squares regression contract。
 - [x] Deterministic train-only OLS smoke diagnostics。
 - [x] Linear regression smoke summary contract validator。
+- [x] OLS smoke CLI diagnostics。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。
