@@ -1,5 +1,47 @@
 # OUTBOX
 
+## 2026-07-06 Closed-Loop Task 047 - LightGBM Dependency Smoke Module CLI
+
+## 修改檔案
+- `src/abc_quant/cli/lightgbm_dependency_smoke.py`: added the module CLI with `main(argv: list[str] | None = None) -> int`, `--indent`, and sorted JSON stdout.
+- `tests/test_cli_lightgbm_dependency_smoke.py`: added module execution, indentation, one-helper-call, no-real-LightGBM, and forbidden-key tests.
+- `docs/modeling.md`: documented the module invocation and safety boundary.
+- `README.md`: documented the CLI command and no packaged alias boundary.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 047 progress and completion evidence.
+- `INBOX.md`: reset the active Task 047 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added `python -m abc_quant.cli.lightgbm_dependency_smoke`.
+- The CLI calls `run_lightgbm_dependency_smoke()` once per invocation.
+- Output is deterministic sorted JSON and supports optional `--indent`.
+- Default execution does not require the real `lightgbm` package.
+- Default execution does not call `require_lightgbm()`.
+- No packaged console-script alias was added.
+- No LightGBM fitting, parameter search, model selection, winner/ranking/decision output, strategy signal, allocation logic, performance curve, order, position, or simulation engine was added.
+
+## 測試方式
+- `python -m pytest tests\test_cli_lightgbm_dependency_smoke.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `python -m abc_quant.cli.lightgbm_dependency_smoke --indent 2`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- Focused LightGBM dependency smoke CLI tests: 5 passed in 1.71s.
+- `pytest`: 349 passed in 21.86s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- Module smoke execution printed sorted JSON and returned exit code 0 with `installed=false` on this local environment.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- This task intentionally adds only a module CLI. It does not add a packaged console-script alias; that remains a separate bounded follow-up if desired.
+- GitHub Actions CI still needs to run on the draft PR.
+
+## 建議下一步
+- Open a draft PR for ChatGPT Tech Lead review and let GitHub Actions run CI.
+
 ## 2026-07-06 Closed-Loop Task 046 - LightGBM Dependency Smoke Diagnostics
 
 ## 修改檔案

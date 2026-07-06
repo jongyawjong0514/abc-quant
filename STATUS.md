@@ -1,5 +1,6 @@
 # STATUS
 
+- 2026-07-06: Task 047 added `python -m abc_quant.cli.lightgbm_dependency_smoke` as a thin sorted-JSON module CLI around `run_lightgbm_dependency_smoke()`; validation passed with focused CLI tests 5 passed, `pytest` 349 passed, `compileall src tests`, `git diff --check`, module smoke execution, and closed-loop guard `status=no_task` after `INBOX.md` reset. No packaged console-script alias, mandatory LightGBM dependency, default `require_lightgbm()`, fitting, search, selection, strategy, allocation, performance curve, order, position, or simulation behavior was added.
 - 2026-07-03: Handoff folder initialized by Codex. Waiting for a concrete task in `INBOX.md` or a direct user instruction.
 - 2026-07-03: Technical-lead operating model recorded. ChatGPT Pro may own specs, next tasks, and review notes for `E:\abc`; Codex remains implementation engineer. Override of system/safety/direct-user rules was not accepted.
 - 2026-07-03: Completed `RUN_CODEX_NEXT.md` first implementation round. Editable install succeeded as `abc-quant==0.0.2` and `pytest` passed: 13 passed, 1 pytest cache warning from `E:\abc\.pytest_cache` access denied.

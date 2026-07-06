@@ -419,6 +419,21 @@ Safety rules:
   existing smoke outputs, create strategy signals, define allocation logic,
   build performance curves, or run simulation engines.
 
+The same dependency diagnostics can be emitted as sorted JSON through the
+module CLI:
+
+```powershell
+python -m abc_quant.cli.lightgbm_dependency_smoke --indent 2
+```
+
+`src/abc_quant/cli/lightgbm_dependency_smoke.py` is intentionally a thin
+wrapper around `run_lightgbm_dependency_smoke()`. It supports only `--indent`,
+calls the helper once per invocation, and does not add a packaged console-script
+alias in this round. The CLI does not require the real optional package during
+default execution, does not call `require_lightgbm()` by default, does not fit a
+model, and does not emit winner, ranking, decision, strategy, allocation,
+performance-curve, order, position, or simulation outputs.
+
 ## Ordinary Least-Squares Smoke Diagnostics
 
 `src/abc_quant/pipeline/linear_modeling.py` defines

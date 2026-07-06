@@ -187,6 +187,20 @@ The diagnostic uses `check_lightgbm_dependency()` only, does not call
 execution, and does not fit a model, search parameters, select models, change
 existing smoke outputs, or add strategy/backtest behavior.
 
+The dependency diagnostic can also be printed as sorted JSON through a module
+CLI:
+
+```powershell
+python -m abc_quant.cli.lightgbm_dependency_smoke --indent 2
+```
+
+The CLI is a thin wrapper around `run_lightgbm_dependency_smoke(...)`. It only
+supports optional `--indent`, calls the diagnostics helper once per invocation,
+does not add a packaged console-script alias yet, and keeps the same safety
+boundary: no mandatory LightGBM dependency, no default `require_lightgbm()`, no
+model fitting, no parameter search, no model selection, and no strategy,
+allocation, performance-curve, order, position, or simulation output.
+
 The deterministic OLS smoke diagnostic is:
 
 - `src/abc_quant/pipeline/linear_modeling.py`: `run_linear_regression_smoke(...)` wires the deterministic smoke frame, feature matrix, temporal split, train-only scaler, supervised split dataset, train-only OLS fit, and prediction-bundle evaluation into a JSON-friendly diagnostic dictionary.
