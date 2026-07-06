@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 047 deterministic LightGBM dependency smoke module CLI：`python -m abc_quant.cli.lightgbm_dependency_smoke` 以 sorted JSON 輸出既有 `run_lightgbm_dependency_smoke(...)` summary，支援 `--indent`，不新增 packaged console-script alias、不 require 真套件、不 call `require_lightgbm()` default path、不 fit/search/select/strategy/backtest。
 - 新增 Task 046 deterministic LightGBM dependency smoke diagnostics：`run_lightgbm_dependency_smoke(...)` 只使用 `check_lightgbm_dependency()` 回報 optional package status 與 default params metadata，預設 `fitting_enabled=False`，不 require 真套件、不 fit model、不做 parameter search/model selection/strategy/backtest。
 - 新增 Task 045 train-only LightGBM regressor fitting contract：`fit_lightgbm_regressor(...)` 透過 optional `require_lightgbm()` 匯入 `lightgbm`，只用 `SupervisedSplitDataset.train_X/train_y` fit，並將 train/validation/test features 轉成 `SplitPredictionBundle`；測試以 fake LightGBM monkeypatch 覆蓋，不新增 mandatory dependency、不做 parameter search/model selection/strategy/backtest。
 - 新增 Task 044 optional LightGBM dependency guard and parameter contract：`models/lightgbm.py` 可在未安裝 `lightgbm` 時 import，並以標準函式庫 `importlib` 提供 dependency status、required import helper 與 frozen deterministic regressor parameter validation；不新增 mandatory dependency、不 fit model、不改 pipeline/CLI/smoke outputs。
