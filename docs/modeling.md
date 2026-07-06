@@ -388,6 +388,37 @@ LightGBM mandatory, add a pipeline or CLI, perform parameter search, choose a
 model, create strategy signals, define allocation logic, build performance
 curves, or run simulation engines.
 
+## LightGBM Dependency Smoke Diagnostics
+
+`src/abc_quant/pipeline/lightgbm_diagnostics.py` defines
+`run_lightgbm_dependency_smoke(...)`. It is a deterministic in-memory
+diagnostic that reports the optional LightGBM dependency status and the
+validated default parameter metadata without fitting a model by default.
+
+The returned JSON-friendly dictionary contains:
+
+- `package_name`
+- `installed`
+- `message`
+- `default_params`
+- `default_model_name`
+- `default_method`
+- `fitting_enabled`
+
+`default_params` is derived from
+`make_default_lightgbm_regressor_params()`, so the diagnostics stay aligned
+with the LightGBM parameter contract. The smoke path uses
+`check_lightgbm_dependency()` only; it does not call `require_lightgbm()` during
+default execution and therefore does not import or require the real optional
+package.
+
+Safety rules:
+
+- `fitting_enabled` is always `False` in the default diagnostics summary.
+- The helper does not fit LightGBM, tune parameters, select models, change
+  existing smoke outputs, create strategy signals, define allocation logic,
+  build performance curves, or run simulation engines.
+
 ## Ordinary Least-Squares Smoke Diagnostics
 
 `src/abc_quant/pipeline/linear_modeling.py` defines

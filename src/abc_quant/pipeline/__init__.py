@@ -23,6 +23,7 @@ from abc_quant.pipeline.contracts import (
     validate_supervised_dataset_smoke_summary,
 )
 from abc_quant.pipeline.linear_modeling import run_linear_regression_smoke
+from abc_quant.pipeline.lightgbm_diagnostics import run_lightgbm_dependency_smoke
 from abc_quant.pipeline.model_comparison import run_model_comparison_smoke
 from abc_quant.pipeline.modeling import run_baseline_modeling_smoke
 from abc_quant.pipeline.preprocessing import run_preprocessing_smoke
@@ -48,6 +49,7 @@ __all__ = [
     "build_smoke_frame",
     "run_baseline_modeling_smoke",
     "run_linear_regression_smoke",
+    "run_lightgbm_dependency_smoke",
     "run_model_comparison_smoke",
     "run_preprocessing_smoke",
     "run_supervised_dataset_smoke",

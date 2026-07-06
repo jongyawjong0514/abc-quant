@@ -1,5 +1,48 @@
 # OUTBOX
 
+## 2026-07-06 Closed-Loop Task 046 - LightGBM Dependency Smoke Diagnostics
+
+## 修改檔案
+- `src/abc_quant/pipeline/lightgbm_diagnostics.py`: added `run_lightgbm_dependency_smoke(...)`.
+- `src/abc_quant/pipeline/__init__.py`: exported the new LightGBM dependency smoke helper.
+- `tests/test_pipeline_lightgbm_diagnostics.py`: added dependency-status, JSON serialization, default params, top-level key, and forbidden-key tests.
+- `docs/modeling.md`: documented the LightGBM dependency smoke diagnostics contract.
+- `README.md`: documented the new diagnostics helper and default non-fitting boundary.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 046 progress and completion evidence.
+- `INBOX.md`: reset the active Task 046 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added deterministic `run_lightgbm_dependency_smoke()`.
+- Uses `check_lightgbm_dependency()` only.
+- Does not call `require_lightgbm()` during default execution.
+- Reports `package_name`, `installed`, `message`, `default_params`, `default_model_name`, `default_method`, and `fitting_enabled`.
+- Derives `default_params` from `make_default_lightgbm_regressor_params()`.
+- Keeps `fitting_enabled=False` by default.
+- Does not require the real `lightgbm` package for tests or default execution.
+- Does not fit a model, search parameters, select models, change existing smoke outputs, create strategy signals, define allocation logic, build performance curves, or run simulation engines.
+
+## 測試方式
+- `python -m pytest tests\test_pipeline_lightgbm_diagnostics.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `python -m ruff check .` was attempted for local parity with CI.
+
+## 測試結果
+- Focused LightGBM dependency diagnostics tests: 5 passed in 1.18s.
+- `pytest`: 344 passed in 25.37s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`No module named ruff`); GitHub Actions should run `ruff check .`.
+
+## 已知限制
+- This task adds only dependency diagnostics. It does not add a LightGBM diagnostics CLI, packaged script, model fitting by default, parameter search, model selection, strategy logic, allocation outputs, performance curves, or simulation engines.
+
+## 建議下一步
+- Open a draft PR for ChatGPT Tech Lead fast review, then let GitHub Actions run CI including `ruff check .`.
+
 ## 2026-07-05 Closed-Loop Task 045 - Train-Only LightGBM Regressor Contract
 
 ## 修改檔案
