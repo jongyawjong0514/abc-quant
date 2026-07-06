@@ -65,6 +65,7 @@
 - [x] Model comparison smoke packaged console-script alias。
 - [x] LightGBM optional dependency guard and parameter contract。
 - [x] LightGBM train-only fitting contract。
+- [x] LightGBM dependency smoke diagnostics。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。

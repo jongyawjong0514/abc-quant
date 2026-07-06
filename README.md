@@ -178,6 +178,15 @@ The module uses standard-library `importlib` to detect the optional `lightgbm` p
 
 The optional train-only fitting wrapper is also defined in `src/abc_quant/models/lightgbm.py`. `fit_lightgbm_regressor(...)` accepts a `SupervisedSplitDataset`, optional `LightGBMRegressorParams`, and `model_name`; imports LightGBM only through `require_lightgbm()`; fits `lightgbm.LGBMRegressor` on `train_X` / `train_y` only; and predicts train/validation/test feature frames into a `SplitPredictionBundle`. It does not read validation/test labels, add mandatory dependencies, add smoke outputs, search parameters, select models, or add strategy/backtest behavior.
 
+The deterministic LightGBM dependency smoke diagnostic is:
+
+- `src/abc_quant/pipeline/lightgbm_diagnostics.py`: `run_lightgbm_dependency_smoke(...)` reports optional dependency status, default parameter metadata, default model metadata, and `fitting_enabled=False`.
+
+The diagnostic uses `check_lightgbm_dependency()` only, does not call
+`require_lightgbm()` by default, does not require the real package for default
+execution, and does not fit a model, search parameters, select models, change
+existing smoke outputs, or add strategy/backtest behavior.
+
 The deterministic OLS smoke diagnostic is:
 
 - `src/abc_quant/pipeline/linear_modeling.py`: `run_linear_regression_smoke(...)` wires the deterministic smoke frame, feature matrix, temporal split, train-only scaler, supervised split dataset, train-only OLS fit, and prediction-bundle evaluation into a JSON-friendly diagnostic dictionary.
