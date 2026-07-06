@@ -319,6 +319,49 @@ Safety rules:
 - The helper does not add sklearn, tune parameters, create strategy signals,
   define allocation logic, build performance curves, or run simulation engines.
 
+## Optional LightGBM Dependency Guard
+
+`src/abc_quant/models/lightgbm.py` defines the optional LightGBM dependency and
+parameter contracts for future challenger-model work. This module is importable
+without the `lightgbm` package installed.
+
+The module exposes:
+
+- `LightGBMDependencyStatus`
+- `LightGBMRegressorParams`
+- `check_lightgbm_dependency()`
+- `require_lightgbm()`
+- `make_default_lightgbm_regressor_params()`
+
+`check_lightgbm_dependency()` uses `importlib.util.find_spec(...)` to detect
+the optional package without importing it. `require_lightgbm()` imports and
+returns the package only when available; otherwise it raises a clear
+`ImportError`.
+
+`LightGBMRegressorParams` is a frozen dataclass with deterministic conservative
+defaults for a future regressor contract:
+
+- `objective`
+- `n_estimators`
+- `learning_rate`
+- `num_leaves`
+- `min_data_in_leaf`
+- `feature_fraction`
+- `bagging_fraction`
+- `bagging_freq`
+- `random_state`
+- `verbosity`
+
+The parameter contract validates non-empty objective text, positive estimator
+and learning-rate settings, `num_leaves >= 2`, positive `min_data_in_leaf`,
+fraction parameters in `(0, 1]`, nonnegative `bagging_freq`, and integer
+`random_state` / `verbosity`.
+
+This task does not add LightGBM as a mandatory dependency, fit a model, search
+parameters, select models, change existing pipeline or CLI outputs, create
+strategy signals, define allocation logic, build performance curves, or run
+simulation engines.
+
 ## Ordinary Least-Squares Smoke Diagnostics
 
 `src/abc_quant/pipeline/linear_modeling.py` defines

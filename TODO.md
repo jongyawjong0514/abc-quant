@@ -63,6 +63,7 @@
 - [x] Model comparison smoke summary contract validator。
 - [x] Model comparison smoke CLI diagnostics。
 - [x] Model comparison smoke packaged console-script alias。
+- [x] LightGBM optional dependency guard and parameter contract。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。
