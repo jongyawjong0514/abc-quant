@@ -193,10 +193,16 @@ The LightGBM dependency smoke diagnostic can also be printed as sorted JSON:
 python -m abc_quant.cli.lightgbm_dependency_smoke --indent 2
 ```
 
+After package installation, the same CLI is available as:
+
+```powershell
+abc-quant-lightgbm-dependency-smoke --indent 2
+```
+
 The module CLI is a thin wrapper around the existing diagnostics helper. It
-does not add a packaged console-script alias, require LightGBM, call
-`require_lightgbm()` by default, fit models, search parameters, select models,
-or add strategy/backtest behavior.
+shares the same target as the packaged command alias. Neither invocation form
+requires LightGBM, calls `require_lightgbm()` by default, fits models, searches
+parameters, selects models, or adds strategy/backtest behavior.
 
 The deterministic OLS smoke diagnostic is:
 
