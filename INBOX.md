@@ -53,7 +53,7 @@ acceptance_criteria:
   - "Support an optional --indent integer argument with deterministic JSON output."
   - "The CLI calls run_lightgbm_dependency_smoke() exactly once per invocation."
   - "Tests verify default CLI stdout is JSON-decodable and contains package_name, installed, message, default_params, default_model_name, default_method, and fitting_enabled."
-  - "Tests verify --indent changes formatting without changing decoded content."
+  - "Tests verify --indent 2 output decodes to the same summary content."
   - "Tests verify monkeypatched CLI execution does not require real LightGBM and does not expose winner, ranking, decision, selected-model, strategy, allocation, performance-curve, order, position, or simulation keys anywhere in the decoded summary."
   - "Docs describe the module invocation and safety boundary."
   - "Tracking files are updated."
