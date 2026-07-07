@@ -1,5 +1,54 @@
 # OUTBOX
 
+## 2026-07-07 Closed-Loop Task 050 - LightGBM Dependency Smoke Summary Contract Package Exports
+
+## 修改檔案
+- `src/abc_quant/pipeline/__init__.py`: exported the LightGBM dependency smoke summary/default-parameter/forbidden-key constants and validator from `abc_quant.pipeline`, and added the symbols to `__all__`.
+- `tests/test_pipeline_lightgbm_diagnostics_exports.py`: added export identity, `__all__`, key-order, exported validator, extra-key rejection, and no-real-LightGBM import tests.
+- `docs/modeling.md`: documented the public `abc_quant.pipeline` imports for the LightGBM dependency smoke summary contract.
+- `README.md`: documented that callers can import the contract constants and validator from `abc_quant.pipeline`.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 050 progress and completion evidence.
+- `INBOX.md`: reset the active Task 050 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Re-exported `LIGHTGBM_DEPENDENCY_SMOKE_SUMMARY_KEYS`.
+- Re-exported `LIGHTGBM_DEPENDENCY_SMOKE_DEFAULT_PARAM_KEYS`.
+- Re-exported `LIGHTGBM_DEPENDENCY_SMOKE_FORBIDDEN_KEYS`.
+- Re-exported `validate_lightgbm_dependency_smoke_summary(...)`.
+- Added the exported names to `abc_quant.pipeline.__all__`.
+- Verified exported objects are identical to the source objects in `abc_quant.pipeline.lightgbm_diagnostics`.
+- Did not change `run_lightgbm_dependency_smoke(...)`, diagnostics output schema, validator semantics, CLI behavior, packaged command behavior, mandatory dependencies, fitting, parameter search, model selection, strategy/allocation/performance/order/position outputs, or simulation behavior.
+
+## 測試方式
+- `python -m pytest tests\test_pipeline_lightgbm_diagnostics_exports.py`
+- `python -m pytest tests\test_pipeline_lightgbm_diagnostics.py tests\test_pipeline_lightgbm_diagnostics_exports.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `.\.venv\Scripts\python.exe -m ruff check .`
+- `.\.venv\Scripts\python.exe -m abc_quant.cli.lightgbm_dependency_smoke --indent 2`
+- `.\.venv\Scripts\abc-quant-lightgbm-dependency-smoke.exe --indent 2`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- Focused LightGBM dependency export tests: 6 passed in 0.93s.
+- Related diagnostics/export tests: 21 passed in 1.04s.
+- `pytest`: 371 passed in 27.30s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- Local `.venv` ruff: passed.
+- Module smoke execution: passed with project `.venv` Python and printed sorted indented JSON.
+- Packaged command smoke execution: passed with project `.venv` console script.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- Local system `python -m abc_quant.cli.lightgbm_dependency_smoke --indent 2` remains unavailable because the system Python is not editable-installed for this repo.
+- Local system `abc-quant-lightgbm-dependency-smoke --indent 2` remains unavailable unless the package console scripts are installed on PATH; the project `.venv` console script passed.
+- This task only exposes existing contract symbols through `abc_quant.pipeline`. It does not change diagnostics behavior, require LightGBM, call `require_lightgbm()` by default, fit models, search/select models, emit strategy/allocation/performance/order/position outputs, or run simulations.
+
+## 建議下一步
+- Open a draft PR for ChatGPT Pro Tech Lead fast review, then let GitHub Actions verify Python 3.11 / 3.12 CI.
+
 ## 2026-07-07 Closed-Loop Task 049 - LightGBM Dependency Smoke Summary Contract Validator
 
 ## 修改檔案

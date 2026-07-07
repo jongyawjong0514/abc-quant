@@ -422,6 +422,16 @@ forbidden diagnostic-output keys. It does not change the returned content,
 require the real package, call `require_lightgbm()`, fit models, search
 parameters, select models, or create strategy/backtest outputs.
 
+These contract symbols are also exported from `abc_quant.pipeline`:
+
+- `LIGHTGBM_DEPENDENCY_SMOKE_SUMMARY_KEYS`
+- `LIGHTGBM_DEPENDENCY_SMOKE_DEFAULT_PARAM_KEYS`
+- `LIGHTGBM_DEPENDENCY_SMOKE_FORBIDDEN_KEYS`
+- `validate_lightgbm_dependency_smoke_summary(...)`
+
+Callers should prefer those public pipeline imports when validating a
+LightGBM dependency smoke summary outside the diagnostics module.
+
 Safety rules:
 
 - `fitting_enabled` is always `False` in the default diagnostics summary.
