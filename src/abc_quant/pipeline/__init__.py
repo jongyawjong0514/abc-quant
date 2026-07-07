@@ -30,6 +30,15 @@ from abc_quant.pipeline.lightgbm_diagnostics import (
     run_lightgbm_dependency_smoke,
     validate_lightgbm_dependency_smoke_summary,
 )
+from abc_quant.pipeline.lightgbm_evaluation import (
+    LIGHTGBM_EVALUATION_SMOKE_DEFAULT_PARAM_KEYS,
+    LIGHTGBM_EVALUATION_SMOKE_EVALUATION_KEYS,
+    LIGHTGBM_EVALUATION_SMOKE_FORBIDDEN_KEYS,
+    LIGHTGBM_EVALUATION_SMOKE_SPLITS,
+    LIGHTGBM_EVALUATION_SMOKE_SUMMARY_KEYS,
+    run_lightgbm_evaluation_smoke,
+    validate_lightgbm_evaluation_smoke_summary,
+)
 from abc_quant.pipeline.model_comparison import run_model_comparison_smoke
 from abc_quant.pipeline.modeling import run_baseline_modeling_smoke
 from abc_quant.pipeline.preprocessing import run_preprocessing_smoke
@@ -41,6 +50,11 @@ __all__ = [
     "LIGHTGBM_DEPENDENCY_SMOKE_DEFAULT_PARAM_KEYS",
     "LIGHTGBM_DEPENDENCY_SMOKE_FORBIDDEN_KEYS",
     "LIGHTGBM_DEPENDENCY_SMOKE_SUMMARY_KEYS",
+    "LIGHTGBM_EVALUATION_SMOKE_DEFAULT_PARAM_KEYS",
+    "LIGHTGBM_EVALUATION_SMOKE_EVALUATION_KEYS",
+    "LIGHTGBM_EVALUATION_SMOKE_FORBIDDEN_KEYS",
+    "LIGHTGBM_EVALUATION_SMOKE_SPLITS",
+    "LIGHTGBM_EVALUATION_SMOKE_SUMMARY_KEYS",
     "LINEAR_REGRESSION_SMOKE_EVALUATION_KEYS",
     "LINEAR_REGRESSION_SMOKE_SPLITS",
     "LINEAR_REGRESSION_SMOKE_SUMMARY_KEYS",
@@ -59,12 +73,14 @@ __all__ = [
     "run_baseline_modeling_smoke",
     "run_linear_regression_smoke",
     "run_lightgbm_dependency_smoke",
+    "run_lightgbm_evaluation_smoke",
     "run_model_comparison_smoke",
     "run_preprocessing_smoke",
     "run_supervised_dataset_smoke",
     "run_smoke_pipeline",
     "validate_linear_regression_smoke_summary",
     "validate_lightgbm_dependency_smoke_summary",
+    "validate_lightgbm_evaluation_smoke_summary",
     "validate_model_comparison_smoke_summary",
     "validate_modeling_smoke_summary",
     "validate_preprocessing_smoke_summary",

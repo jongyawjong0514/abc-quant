@@ -1,5 +1,57 @@
 # OUTBOX
 
+## 2026-07-07 Closed-Loop Task 051 - Optional LightGBM Evaluation Smoke Diagnostics
+
+## 修改檔案
+- `src/abc_quant/pipeline/lightgbm_evaluation.py`: added optional LightGBM evaluation smoke diagnostics, fixed summary constants, summary validator, deterministic supervised smoke dataset wiring, and opt-in train-only LightGBM evaluation.
+- `src/abc_quant/pipeline/__init__.py`: exported the LightGBM evaluation smoke helper, constants, and validator from `abc_quant.pipeline`.
+- `tests/test_pipeline_lightgbm_evaluation.py`: added default no-fit, unavailable explicit-fit, fake-LightGBM opt-in fit, holdout-label non-leakage, validator failure, JSON-friendly, and forbidden-key coverage.
+- `docs/modeling.md`: documented the LightGBM evaluation smoke diagnostics contract and opt-in fitting boundary.
+- `README.md`: documented the optional LightGBM evaluation smoke helper and no-default-fit behavior.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 051 progress and completion evidence.
+- `INBOX.md`: reset the active Task 051 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added `run_lightgbm_evaluation_smoke(fitting_enabled: bool = False)`.
+- Default execution returns dependency/default-parameter diagnostics only and leaves `evaluation` as `None`.
+- Default execution does not call `require_lightgbm()` or `fit_lightgbm_regressor(...)`.
+- `fitting_enabled=True` with unavailable LightGBM returns a JSON-friendly unavailable summary instead of crashing.
+- `fitting_enabled=True` with a fake LightGBM-compatible module builds the deterministic smoke supervised dataset, fits through existing train-only `fit_lightgbm_regressor(...)`, and evaluates the resulting prediction bundle.
+- Added `validate_lightgbm_evaluation_smoke_summary(...)` plus summary/default-parameter/split/evaluation/forbidden-key constants.
+- The validator rejects non-dict summaries, missing/extra keys, malformed `default_params`, malformed evaluation metrics, non-JSON-friendly values, and forbidden nested keys.
+- The fitted summary includes model metadata, feature columns, training row count, default params, and train/validation/test evaluation metrics.
+- The summary does not include raw predictions, raw labels, model-selection/ranking/winner/decision fields, strategy/allocation/performance/order/position fields, or simulation outputs.
+
+## 測試方式
+- `python -m pytest tests\test_pipeline_lightgbm_evaluation.py`
+- `python -m pytest tests\test_models_lightgbm.py tests\test_pipeline_lightgbm_diagnostics.py tests\test_pipeline_lightgbm_evaluation.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `.\.venv\Scripts\python.exe -m ruff check .`
+- `.\.venv\Scripts\python.exe -m abc_quant.cli.lightgbm_dependency_smoke --indent 2`
+- `.\.venv\Scripts\abc-quant-lightgbm-dependency-smoke.exe --indent 2`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- Focused LightGBM evaluation smoke tests: 7 passed in 4.25s.
+- Related LightGBM model/diagnostics/evaluation tests: 49 passed in 1.49s.
+- `pytest`: 378 passed in 27.46s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- Local `.venv` ruff: passed.
+- Module dependency-smoke execution: passed with project `.venv` Python and printed sorted indented JSON.
+- Packaged dependency-smoke execution: passed with project `.venv` console script and printed sorted indented JSON.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- This task adds a pipeline helper, not a new CLI or packaged command for LightGBM evaluation smoke.
+- Real LightGBM package execution is not required for default diagnostics and was not used in local validation; opt-in fitting behavior is covered with a fake LightGBM-compatible module.
+- The helper uses deterministic fixture data only. It does not add real data adapters, walk-forward validation, model explanation, ablation, strategy logic, allocation logic, performance curves, orders, positions, or simulation engines.
+
+## 建議下一步
+- Open a draft PR for ChatGPT Pro Tech Lead fast review, then let GitHub Actions verify Python 3.11 / 3.12 CI.
+
 ## 2026-07-07 Closed-Loop Task 050 - LightGBM Dependency Smoke Summary Contract Package Exports
 
 ## 修改檔案

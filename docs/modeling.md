@@ -468,6 +468,53 @@ diagnostics behavior. They do not require the real optional package, call
 create strategy signals, define allocation logic, build performance curves, or
 run simulation engines.
 
+## LightGBM Evaluation Smoke Diagnostics
+
+`src/abc_quant/pipeline/lightgbm_evaluation.py` defines
+`run_lightgbm_evaluation_smoke(...)`. The helper advances LightGBM diagnostics
+from dependency-only reporting to an optional in-memory evaluation smoke path
+while keeping the default execution dependency-only and no-fit.
+
+The returned JSON-friendly dictionary has a fixed top-level contract:
+
+- `package_name`
+- `installed`
+- `message`
+- `default_params`
+- `fitting_enabled`
+- `fitted`
+- `unavailable_reason`
+- `model_name`
+- `method`
+- `feature_columns`
+- `training_row_count`
+- `evaluation`
+
+Default execution uses `fitting_enabled=False`. It reports dependency status
+and deterministic default parameters, leaves fitting-specific fields empty,
+does not call `require_lightgbm()`, and does not require the real optional
+package. When `fitting_enabled=True` and LightGBM is unavailable, it returns a
+JSON-friendly unavailable summary instead of raising an optional-dependency
+error.
+
+When `fitting_enabled=True` and a LightGBM-compatible module is available, the
+helper builds the deterministic smoke supervised dataset, calls the existing
+`fit_lightgbm_regressor(...)` train-only contract, and evaluates the resulting
+`SplitPredictionBundle` with `evaluate_prediction_bundle(...)`. The fitting
+path uses `train_X` and `train_y` only; validation and test labels are not used
+for fitting.
+
+The summary shape is validated by
+`validate_lightgbm_evaluation_smoke_summary(...)`, with public constants for
+top-level keys, default parameter keys, split names, evaluation metric keys,
+and forbidden diagnostic-output keys. The validator checks missing/extra keys,
+JSON-friendliness, evaluation metric shape, and forbidden nested keys.
+
+This remains a diagnostics layer. It does not expose raw predictions or labels,
+change dependency-smoke CLI or packaged command outputs, compare models, rank
+results, choose a model, create strategy signals, define allocation logic,
+build performance curves, create orders or positions, or run simulations.
+
 ## Ordinary Least-Squares Smoke Diagnostics
 
 `src/abc_quant/pipeline/linear_modeling.py` defines
