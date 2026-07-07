@@ -187,6 +187,9 @@ The summary contract is validated before return by
 for the top-level keys and default parameter keys. The validator only checks
 shape, JSON-friendliness, and forbidden diagnostic-output keys; it does not
 change diagnostics behavior or call the optional LightGBM package.
+The same contract constants and validator are public imports from
+`abc_quant.pipeline`, so callers can validate summaries without importing the
+diagnostics module path directly.
 
 The diagnostic uses `check_lightgbm_dependency()` only, does not call
 `require_lightgbm()` by default, does not require the real package for default
