@@ -68,6 +68,7 @@
 - [x] LightGBM dependency smoke diagnostics。
 - [x] LightGBM dependency smoke CLI diagnostics。
 - [x] LightGBM dependency smoke packaged command alias。
+- [x] LightGBM dependency smoke summary contract validator。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。
