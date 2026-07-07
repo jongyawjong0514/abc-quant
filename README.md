@@ -213,6 +213,24 @@ shares the same target as the packaged command alias. Neither invocation form
 requires LightGBM, calls `require_lightgbm()` by default, fits models, searches
 parameters, selects models, or adds strategy/backtest behavior.
 
+The optional LightGBM evaluation smoke diagnostic is:
+
+- `src/abc_quant/pipeline/lightgbm_evaluation.py`: `run_lightgbm_evaluation_smoke(...)` reports dependency/default-parameter diagnostics by default and can optionally exercise the existing train-only LightGBM fitting contract when `fitting_enabled=True`.
+
+Default execution keeps `fitting_enabled=False`, returns no prediction or
+evaluation metrics, does not call `require_lightgbm()`, and does not require
+the real optional package. If fitting is explicitly enabled but LightGBM is
+unavailable, the helper returns a JSON-friendly unavailable summary rather
+than crashing. In tests, a fake LightGBM-compatible module can exercise the
+train-only fit path, then `evaluate_prediction_bundle(...)` produces
+train/validation/test diagnostic metrics. The summary is validated by
+`validate_lightgbm_evaluation_smoke_summary(...)` before return.
+
+This diagnostic remains a research-platform smoke layer. It does not emit raw
+predictions or labels, change dependency-smoke/CLI outputs, choose models,
+rank results, create strategy signals, define allocation logic, build
+performance curves, create orders or positions, or run simulations.
+
 The deterministic OLS smoke diagnostic is:
 
 - `src/abc_quant/pipeline/linear_modeling.py`: `run_linear_regression_smoke(...)` wires the deterministic smoke frame, feature matrix, temporal split, train-only scaler, supervised split dataset, train-only OLS fit, and prediction-bundle evaluation into a JSON-friendly diagnostic dictionary.
