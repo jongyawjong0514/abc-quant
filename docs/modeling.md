@@ -412,6 +412,16 @@ with the LightGBM parameter contract. The smoke path uses
 default execution and therefore does not import or require the real optional
 package.
 
+The summary shape is centralized in the same module through
+`LIGHTGBM_DEPENDENCY_SMOKE_SUMMARY_KEYS`,
+`LIGHTGBM_DEPENDENCY_SMOKE_DEFAULT_PARAM_KEYS`, and
+`validate_lightgbm_dependency_smoke_summary(...)`. The validator runs before
+`run_lightgbm_dependency_smoke(...)` returns and checks only the diagnostic
+contract: top-level keys, default parameter keys, JSON-friendly values, and
+forbidden diagnostic-output keys. It does not change the returned content,
+require the real package, call `require_lightgbm()`, fit models, search
+parameters, select models, or create strategy/backtest outputs.
+
 Safety rules:
 
 - `fitting_enabled` is always `False` in the default diagnostics summary.

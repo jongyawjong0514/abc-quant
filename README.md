@@ -182,6 +182,12 @@ The deterministic LightGBM dependency smoke diagnostic is:
 
 - `src/abc_quant/pipeline/lightgbm_diagnostics.py`: `run_lightgbm_dependency_smoke(...)` reports optional dependency status, default parameter metadata, default model metadata, and `fitting_enabled=False`.
 
+The summary contract is validated before return by
+`validate_lightgbm_dependency_smoke_summary(...)`, with module-level constants
+for the top-level keys and default parameter keys. The validator only checks
+shape, JSON-friendliness, and forbidden diagnostic-output keys; it does not
+change diagnostics behavior or call the optional LightGBM package.
+
 The diagnostic uses `check_lightgbm_dependency()` only, does not call
 `require_lightgbm()` by default, does not require the real package for default
 execution, and does not fit a model, search parameters, select models, change
