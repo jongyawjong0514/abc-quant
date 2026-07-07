@@ -39,6 +39,38 @@ This contract is a pre-modeling guard only. Model baselines, walk-forward
 validation, scalers, feature importance, ablation studies, strategies, and
 backtests remain future tasks.
 
+## Walk-Forward Split Contract
+
+`src/abc_quant/validation/walk_forward.py` defines
+`build_walk_forward_split_plan(...)`. It accepts an in-memory
+`observation_count` plus split sizes and returns a `WalkForwardSplitPlan` made
+of deterministic `WalkForwardWindow` objects.
+
+Each window stores:
+
+- `window_id`
+- inclusive train, validation, and test start/end positions
+- `train_index`
+- `validation_index`
+- `test_index`
+
+The builder uses integer positions only. It creates contiguous train,
+validation, and test ranges with train before validation before test. The train
+range expands from position 0 while validation and test ranges roll forward by
+`step_size`; when omitted, `step_size` defaults to `test_size`. Generation
+stops before any validation or test position would exceed `observation_count`.
+
+`validate_walk_forward_split_plan(...)` checks the reusable split contract:
+positive sizes, at least one complete window, unique ordered window ids,
+contiguous indices, non-overlap inside each window, bounds within
+`observation_count`, deterministic step progression, and JSON-friendly
+serialization through `dataclasses.asdict(...)`.
+
+This is not walk-forward model evaluation. It does not read external data, fit
+models, call LightGBM, compare or choose models, create strategy signals,
+define allocation logic, build performance curves, create orders or positions,
+or run simulations.
+
 ## Train-Only Standardization Contract
 
 `src/abc_quant/preprocessing/scaling.py` defines `fit_standard_scaler(...)`

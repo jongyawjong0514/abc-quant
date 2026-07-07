@@ -71,6 +71,7 @@
 - [x] LightGBM dependency smoke summary contract validator。
 - [x] LightGBM dependency smoke summary contract package exports。
 - [x] LightGBM optional evaluation smoke diagnostics。
+- [x] Walk-forward split contract。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。
