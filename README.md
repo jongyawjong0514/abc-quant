@@ -212,6 +212,9 @@ The module CLI is a thin wrapper around the existing diagnostics helper. It
 shares the same target as the packaged command alias. Neither invocation form
 requires LightGBM, calls `require_lightgbm()` by default, fits models, searches
 parameters, selects models, or adds strategy/backtest behavior.
+Both invocation forms are covered by a no-fit output contract test that decodes
+stdout and validates it through the public `abc_quant.pipeline` summary
+constants and validator without monkeypatching the diagnostics path.
 
 The deterministic OLS smoke diagnostic is:
 

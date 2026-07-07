@@ -468,6 +468,13 @@ diagnostics behavior. They do not require the real optional package, call
 create strategy signals, define allocation logic, build performance curves, or
 run simulation engines.
 
+The CLI stdout contract is also covered end to end by a no-fit test that runs
+the module path and, when available on `PATH`, the packaged command alias. The
+test decodes stdout, validates it with
+`abc_quant.pipeline.validate_lightgbm_dependency_smoke_summary(...)`, compares
+the wire-format keys against the public constants, and checks that no forbidden
+diagnostic-output keys are present.
+
 ## Ordinary Least-Squares Smoke Diagnostics
 
 `src/abc_quant/pipeline/linear_modeling.py` defines

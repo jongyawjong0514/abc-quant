@@ -1,5 +1,58 @@
 # OUTBOX
 
+## 2026-07-07 Closed-Loop Task 051 - LightGBM Dependency Smoke CLI Output Contract Test
+
+## 修改檔案
+- `tests/test_cli_lightgbm_dependency_smoke_contract.py`: added a no-fit subprocess output contract test for the module CLI and packaged command path using public `abc_quant.pipeline` constants and validator.
+- `docs/modeling.md`: documented that CLI stdout is covered by the public summary validator contract test.
+- `README.md`: documented the no-fit output contract test coverage for both invocation forms.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 051 progress and completion evidence.
+- `INBOX.md`: reset the active Task 051 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added `tests/test_cli_lightgbm_dependency_smoke_contract.py`.
+- The test invokes `python -m abc_quant.cli.lightgbm_dependency_smoke --indent 2` through the current project Python executable.
+- The decoded module CLI output is validated with `abc_quant.pipeline.validate_lightgbm_dependency_smoke_summary(...)`.
+- The test checks CLI sorted wire-format key order against sorted public constants and checks key membership against the public constants.
+- The test checks `default_params` sorted wire-format key order against sorted public default parameter constants.
+- The test asserts `fitting_enabled` is `False`.
+- The test asserts no forbidden keys from `abc_quant.pipeline.LIGHTGBM_DEPENDENCY_SMOKE_FORBIDDEN_KEYS` appear anywhere in decoded output.
+- The packaged command path is exercised when `abc-quant-lightgbm-dependency-smoke` is available on `PATH`; otherwise only that alias assertion is skipped with a clear reason.
+- The test does not monkeypatch `run_lightgbm_dependency_smoke(...)`.
+- Did not change diagnostics behavior, summary content, validator semantics, CLI implementation, packaged command alias, `pyproject.toml`, mandatory dependencies, fitting, parameter search, model selection, strategy/allocation/performance/order/position outputs, or simulation behavior.
+
+## 測試方式
+- `python -m pytest tests\test_cli_lightgbm_dependency_smoke_contract.py -rs`
+- `python -m pytest tests\test_cli_lightgbm_dependency_smoke.py tests\test_cli_lightgbm_dependency_smoke_entrypoint.py tests\test_cli_lightgbm_dependency_smoke_contract.py -rs`
+- `$env:PATH = (Resolve-Path .\.venv\Scripts).Path + ';' + $env:PATH; .\.venv\Scripts\python.exe -m pytest tests\test_cli_lightgbm_dependency_smoke_contract.py -rs`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `.\.venv\Scripts\python.exe -m ruff check .`
+- `.\.venv\Scripts\python.exe -m abc_quant.cli.lightgbm_dependency_smoke --indent 2`
+- `.\.venv\Scripts\abc-quant-lightgbm-dependency-smoke.exe --indent 2`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- Focused output contract test with system PATH: 1 passed, 1 skipped in 3.54s; skip reason was `abc-quant-lightgbm-dependency-smoke is not installed on PATH in this environment`.
+- Related LightGBM CLI tests with system PATH: 12 passed, 1 skipped in 4.80s.
+- Focused output contract test with `.venv\Scripts` prepended to PATH: 2 passed in 3.86s.
+- `pytest`: 372 passed, 1 skipped in 30.60s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- Local `.venv` ruff: passed.
+- Module smoke execution: passed with project `.venv` Python and printed sorted indented JSON.
+- Packaged command smoke execution: passed with project `.venv` console script.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- Local system PATH does not expose `abc-quant-lightgbm-dependency-smoke`, so the alias-path assertion skips under system PATH.
+- The alias-path assertion passes when `.venv\Scripts` is on PATH.
+- This task only adds an output contract test and documentation/tracking updates. It does not change runtime behavior, output schema, validator semantics, packaging, dependencies, fitting, search/select behavior, strategy/allocation/performance/order/position outputs, or simulation behavior.
+
+## 建議下一步
+- Open a draft PR for ChatGPT Pro Tech Lead fast review, then let GitHub Actions verify Python 3.11 / 3.12 CI.
+
 ## 2026-07-07 Closed-Loop Task 050 - LightGBM Dependency Smoke Summary Contract Package Exports
 
 ## 修改檔案

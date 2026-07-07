@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 051 no-fit LightGBM dependency smoke CLI output contract test：以 subprocess 執行 module CLI，使用 `abc_quant.pipeline` public validator/constants 驗證 decoded JSON，並在 PATH 有 console script 時比對 packaged command 輸出；不 monkeypatch diagnostics、不改 CLI/package behavior。
 - 新增 Task 050 LightGBM dependency smoke summary contract package exports：`abc_quant.pipeline` 直接匯出 `LIGHTGBM_DEPENDENCY_SMOKE_*` constants 與 `validate_lightgbm_dependency_smoke_summary(...)`，讓 callers 可用 public pipeline import 驗證 diagnostics summary，不改輸出 schema、不改 validator semantics。
 - 新增 Task 049 LightGBM dependency smoke summary contract validator：集中定義 diagnostics summary/default params key constants 與 `validate_lightgbm_dependency_smoke_summary(...)`，`run_lightgbm_dependency_smoke(...)` 回傳前會驗證 shape、JSON-friendly values 與 forbidden keys，不改輸出 schema、不 require/fitting/search/select/strategy/backtest。
 - 新增 Task 048 packaged LightGBM dependency smoke command alias：`pyproject.toml` 宣告 `abc-quant-lightgbm-dependency-smoke = abc_quant.cli.lightgbm_dependency_smoke:main`，並以 `tomllib` 測試 entry point target 可解析、可呼叫與支援 `--indent 2`，不改 diagnostics behavior、不新增 mandatory LightGBM dependency。
