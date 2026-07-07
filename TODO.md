@@ -67,6 +67,7 @@
 - [x] LightGBM train-only fitting contract。
 - [x] LightGBM dependency smoke diagnostics。
 - [x] LightGBM dependency smoke CLI diagnostics。
+- [x] LightGBM dependency smoke packaged command alias。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。

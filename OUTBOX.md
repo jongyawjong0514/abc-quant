@@ -1,5 +1,51 @@
 # OUTBOX
 
+## 2026-07-07 Closed-Loop Task 048 - LightGBM Dependency Smoke Packaged Command Alias
+
+## 修改檔案
+- `pyproject.toml`: added `abc-quant-lightgbm-dependency-smoke = "abc_quant.cli.lightgbm_dependency_smoke:main"`.
+- `tests/test_cli_lightgbm_dependency_smoke_entrypoint.py`: added pyproject parsing, target resolution, resolved-function JSON, `--indent`, monkeypatch, and forbidden-key tests.
+- `docs/modeling.md`: documented the packaged command alias and shared CLI target boundary.
+- `README.md`: documented both module and packaged command invocation forms.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 048 progress and completion evidence.
+- `INBOX.md`: reset the active Task 048 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added the packaged command alias `abc-quant-lightgbm-dependency-smoke`.
+- Reused the existing `abc_quant.cli.lightgbm_dependency_smoke:main` target.
+- Added tests that parse `pyproject.toml` with `tomllib`.
+- Verified the configured target imports, resolves to the same `main`, and is callable.
+- Verified resolved function calls return JSON-decodable output for both `[]` and `["--indent", "2"]`.
+- Used monkeypatching in entrypoint tests so no real LightGBM package is required.
+- Did not change `run_lightgbm_dependency_smoke(...)` behavior or the module CLI computation.
+- Did not add mandatory LightGBM dependency, default `require_lightgbm()` calls, model fitting, parameter search, model selection, strategy signals, allocation logic, performance curves, orders, positions, or simulation engines.
+
+## 測試方式
+- `python -m pytest tests\test_cli_lightgbm_dependency_smoke_entrypoint.py`
+- `python -m pytest tests\test_cli_lightgbm_dependency_smoke.py tests\test_cli_lightgbm_dependency_smoke_entrypoint.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `.\.venv\Scripts\python.exe -m abc_quant.cli.lightgbm_dependency_smoke --indent 2`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+- `python -m ruff check .` should be attempted for local parity with CI.
+
+## 測試結果
+- Focused LightGBM dependency entrypoint tests: 5 passed in 1.00s.
+- Related LightGBM dependency CLI tests: 11 passed in 2.14s.
+- `pytest`: 355 passed in 25.98s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- Module smoke execution: passed with project `.venv` Python and printed sorted indented JSON.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+- Local `ruff`: unavailable (`No module named ruff`); GitHub Actions should run `ruff check .`.
+
+## 已知限制
+- This task only adds the packaged command alias. It does not add or change diagnostics behavior, mandatory dependencies, model fitting, parameter search, model selection, strategy logic, allocation outputs, performance curves, orders, positions, or simulation engines.
+
+## 建議下一步
+- Open a draft PR for ChatGPT Pro Tech Lead fast review, then let GitHub Actions run CI including `ruff check .`.
+
 ## 2026-07-07 Closed-Loop Task 047 - LightGBM Dependency Smoke Module CLI
 
 ## 修改檔案

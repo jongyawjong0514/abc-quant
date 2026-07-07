@@ -433,11 +433,20 @@ accepts only:
 
 - `--indent`
 
+When installed as a package, the same CLI is also exposed through the console
+script:
+
+```powershell
+abc-quant-lightgbm-dependency-smoke --indent 2
+```
+
 Successful runs write sorted deterministic JSON to stdout and return exit code
-0. The CLI does not add a packaged console-script alias in this task. It does
-not require the real optional package, call `require_lightgbm()` by default,
-fit models, tune parameters, select models, create strategy signals, define
-allocation logic, build performance curves, or run simulation engines.
+0. The module entry point and packaged command alias share the same
+`abc_quant.cli.lightgbm_dependency_smoke:main` target and do not change
+diagnostics behavior. They do not require the real optional package, call
+`require_lightgbm()` by default, fit models, tune parameters, select models,
+create strategy signals, define allocation logic, build performance curves, or
+run simulation engines.
 
 ## Ordinary Least-Squares Smoke Diagnostics
 
