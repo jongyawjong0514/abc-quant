@@ -111,6 +111,26 @@ plans. This is a split contract only; it does not read data, fit models,
 compare or choose models, create strategy signals, define allocation logic,
 build performance curves, create orders or positions, or run simulations.
 
+The walk-forward supervised dataset smoke diagnostic is:
+
+- `src/abc_quant/pipeline/walk_forward_diagnostics.py`: `run_walk_forward_supervised_smoke(...)` wires deterministic smoke rows through the existing feature matrix, walk-forward split plan, train-only scaler, and supervised dataset contracts.
+
+For each walk-forward window, the diagnostic fits scaler statistics only on
+that window's train rows, transforms train/validation/test features with those
+fixed parameters, applies the existing supervised label-drop behavior, and
+returns JSON-friendly metadata. The summary includes observation count,
+feature columns, label column, plan metadata, and per-window index ranges,
+split row counts before/after label drop, dropped label counts, and scaler
+feature count.
+
+`validate_walk_forward_supervised_smoke_summary(...)` checks the summary shape,
+per-window split mappings, JSON friendliness, and forbidden downstream-output
+keys before the helper returns. This is supervised data diagnostics only, not
+walk-forward model evaluation or backtesting; it does not expose raw feature
+values, raw labels, predictions, model names, evaluation metrics, strategy
+signals, allocation outputs, performance curves, orders, positions, rankings,
+winners, decisions, or simulation outputs.
+
 The standardization contract rejects unknown, duplicate, nonnumeric, missing-training, and zero-variance training feature inputs. Its fitted means and standard deviations come only from `train_index`, so validation/test feature values cannot leak into preprocessing parameters.
 
 The deterministic preprocessing smoke diagnostic is:

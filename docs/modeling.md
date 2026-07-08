@@ -71,6 +71,40 @@ models, call LightGBM, compare or choose models, create strategy signals,
 define allocation logic, build performance curves, create orders or positions,
 or run simulations.
 
+## Walk-Forward Supervised Dataset Diagnostics
+
+`src/abc_quant/pipeline/walk_forward_diagnostics.py` defines
+`run_walk_forward_supervised_smoke(...)`, a deterministic in-memory diagnostic
+that connects the walk-forward split contract to the existing supervised data
+preparation contracts.
+
+The helper uses the feature-complete deterministic smoke frame, builds a
+`FeatureMatrix`, creates a `WalkForwardSplitPlan`, and then processes each
+window independently:
+
+1. Convert the window's integer train/validation/test ranges into split
+   indices compatible with the scaler contract.
+2. Fit standardization parameters only from that window's train rows.
+3. Transform train, validation, and test features with those fixed parameters.
+4. Build the supervised split dataset with existing label-drop behavior.
+5. Return only JSON-friendly metadata and row-count diagnostics.
+
+The summary contract is fixed by:
+
+- `WALK_FORWARD_SUPERVISED_SMOKE_SUMMARY_KEYS`
+- `WALK_FORWARD_SUPERVISED_SMOKE_PLAN_KEYS`
+- `WALK_FORWARD_SUPERVISED_SMOKE_WINDOW_KEYS`
+- `WALK_FORWARD_SUPERVISED_SMOKE_SPLITS`
+- `WALK_FORWARD_SUPERVISED_SMOKE_FORBIDDEN_KEYS`
+- `validate_walk_forward_supervised_smoke_summary(...)`
+
+Each per-window summary records `window_id`, train/validation/test index
+ranges, split row counts before and after label drop, dropped label counts, and
+scaler feature count. It intentionally omits raw feature values, raw labels,
+predictions, model metadata, evaluation metrics, model-choice artifacts,
+strategy outputs, allocation outputs, performance curves, orders, positions,
+and simulation outputs.
+
 ## Train-Only Standardization Contract
 
 `src/abc_quant/preprocessing/scaling.py` defines `fit_standard_scaler(...)`

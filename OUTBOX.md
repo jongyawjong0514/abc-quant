@@ -1,5 +1,58 @@
 # OUTBOX
 
+## 2026-07-08 Closed-Loop Task 053 - Walk-Forward Supervised Dataset Smoke Diagnostics
+
+## 修改檔案
+- `src/abc_quant/pipeline/walk_forward_diagnostics.py`: added deterministic walk-forward supervised dataset diagnostics, constants, and summary validator.
+- `src/abc_quant/pipeline/__init__.py`: exported the walk-forward supervised diagnostics helper, validator, and key constants from `abc_quant.pipeline`.
+- `tests/test_pipeline_walk_forward_diagnostics.py`: added deterministic summary, key-order, row-count, train-only scaler, missing-label drop, validator failure, JSON-friendly, forbidden-key, and no-LightGBM-runtime coverage.
+- `README.md`: documented the walk-forward supervised dataset smoke diagnostic and its diagnostics-only boundary.
+- `docs/modeling.md`: documented the helper flow, summary constants, validator, and safety boundary.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 053 progress and completion evidence.
+- `INBOX.md`: reset the active Task 053 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added `run_walk_forward_supervised_smoke(...)`.
+- Added `validate_walk_forward_supervised_smoke_summary(...)`.
+- Added summary key, plan key, window key, split key, index-range key, and forbidden-key constants.
+- Default plan uses 18 feature-complete smoke observations, `min_train_size=4`, `validation_size=2`, `test_size=2`, and default `step_size=test_size`, producing 6 deterministic windows.
+- Each window converts walk-forward positional indices into the existing scaler-compatible split object, fits scaler statistics only from that window's train rows, transforms train/validation/test, then builds the supervised split dataset with existing missing-label drop behavior.
+- Summary output is JSON-friendly metadata only: observation count, feature columns, label column, plan metadata, per-window index ranges, split counts before/after label drop, dropped label counts, and scaler feature count.
+- The helper does not emit raw feature values, raw labels, predictions, model metadata, evaluation metrics, downstream choice artifacts, strategy outputs, allocation outputs, performance curves, orders, positions, or simulation outputs.
+- Existing temporal split, supervised dataset, LightGBM diagnostics/evaluation, CLI, and packaged command outputs were not changed.
+
+## 測試方式
+- `python -m pytest tests\test_pipeline_walk_forward_diagnostics.py`
+- `python -m pytest tests\test_validation_walk_forward.py tests\test_pipeline_walk_forward_diagnostics.py`
+- `.\.venv\Scripts\python.exe -m ruff check .`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `.\.venv\Scripts\python.exe -m abc_quant.cli.lightgbm_dependency_smoke --indent 2`
+- `.\.venv\Scripts\abc-quant-lightgbm-dependency-smoke.exe --indent 2`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- Focused walk-forward supervised diagnostics tests: 8 passed in 1.94s.
+- Related walk-forward tests: 26 passed in 1.80s.
+- `ruff check .`: passed.
+- `pytest`: 404 passed in 32.80s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- Module dependency-smoke execution: passed with project `.venv` Python and printed sorted indented JSON.
+- Packaged dependency-smoke execution: passed with project `.venv` console script and printed sorted indented JSON.
+- Bare `abc-quant-lightgbm-dependency-smoke --indent 2`: not recognized in this shell because the project `.venv\Scripts` directory is not on PATH.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- This task adds supervised data diagnostics only. It does not perform walk-forward model evaluation, LightGBM invocation, model comparison, model ranking, strategy logic, allocation logic, performance curves, orders, positions, or simulations.
+- The helper uses deterministic in-memory smoke data only and does not add real data adapters.
+- The summary intentionally excludes scaler means/stds; train-only behavior is covered by tests that spy on fitted scaler metadata.
+
+## 建議下一步
+- Open a draft PR for ChatGPT Pro Tech Lead fast review, then let GitHub Actions verify Python 3.11 / 3.12 CI.
+- A later bounded task can add a walk-forward model-evaluation diagnostic that consumes the per-window supervised data contract without adding strategy or backtest behavior.
+
 ## 2026-07-08 Closed-Loop Task 052 - Deterministic Walk-Forward Split Contract
 
 ## 修改檔案
