@@ -131,6 +131,27 @@ values, raw labels, predictions, model names, evaluation metrics, strategy
 signals, allocation outputs, performance curves, orders, positions, rankings,
 winners, decisions, or simulation outputs.
 
+The walk-forward constant-baseline smoke diagnostic is:
+
+- `src/abc_quant/pipeline/walk_forward_baseline.py`: `run_walk_forward_baseline_smoke(...)` extends the same deterministic walk-forward supervised data path with the existing train-only constant-baseline contract and prediction evaluation helpers.
+
+The default diagnostic uses the first three complete walk-forward windows from
+the synthetic smoke fixture. For each window it fits scaler parameters on that
+window's train rows, builds the supervised splits with label-drop counts, fits
+the constant baseline from train labels only, evaluates train/validation/test
+predictions, and returns JSON-friendly metrics. The summary records
+observation count, feature columns, label column, baseline method, plan
+metadata, per-window index ranges, split counts, dropped label counts, scaler
+feature count, baseline value, training label count, and split evaluation
+metrics.
+
+`validate_walk_forward_baseline_smoke_summary(...)` checks the top-level,
+plan, per-window, split-count, and metric key contracts before returning. This
+is baseline evaluation diagnostics only; it does not call optional LightGBM
+paths, compare models, choose models, create strategy signals, define
+allocation logic, build performance curves, create orders or positions, or run
+simulations.
+
 The standardization contract rejects unknown, duplicate, nonnumeric, missing-training, and zero-variance training feature inputs. Its fitted means and standard deviations come only from `train_index`, so validation/test feature values cannot leak into preprocessing parameters.
 
 The deterministic preprocessing smoke diagnostic is:

@@ -105,6 +105,44 @@ predictions, model metadata, evaluation metrics, model-choice artifacts,
 strategy outputs, allocation outputs, performance curves, orders, positions,
 and simulation outputs.
 
+## Walk-Forward Constant-Baseline Evaluation Diagnostics
+
+`src/abc_quant/pipeline/walk_forward_baseline.py` defines
+`run_walk_forward_baseline_smoke(...)`, a deterministic in-memory diagnostic
+that evaluates the existing constant baseline inside walk-forward supervised
+windows.
+
+The helper uses the same deterministic smoke frame and walk-forward split
+defaults as the supervised diagnostics layer, but limits the default output to
+the first three complete windows so train, validation, and test all have
+non-missing labels for metric calculation. Each window is processed
+independently:
+
+1. Convert the window positions into scaler-compatible split indices.
+2. Fit standardization parameters from that window's train rows only.
+3. Build supervised train/validation/test datasets with existing label-drop
+   behavior.
+4. Fit the constant baseline from that window's train labels only.
+5. Evaluate train/validation/test predictions with existing prediction
+   evaluation helpers.
+
+The summary contract is fixed by:
+
+- `WALK_FORWARD_BASELINE_SMOKE_SUMMARY_KEYS`
+- `WALK_FORWARD_BASELINE_SMOKE_PLAN_KEYS`
+- `WALK_FORWARD_BASELINE_SMOKE_WINDOW_KEYS`
+- `WALK_FORWARD_BASELINE_SMOKE_SPLITS`
+- `WALK_FORWARD_BASELINE_SMOKE_METRIC_KEYS`
+- `WALK_FORWARD_BASELINE_SMOKE_FORBIDDEN_KEYS`
+- `validate_walk_forward_baseline_smoke_summary(...)`
+
+Each per-window summary records index ranges, split row counts before and after
+label drop, dropped label counts, scaler feature count, baseline value,
+training label count, and train/validation/test evaluation metrics. It does
+not expose raw feature values, raw labels, raw predictions, model-choice
+artifacts, strategy outputs, allocation outputs, performance curves, orders,
+positions, or simulation outputs.
+
 ## Train-Only Standardization Contract
 
 `src/abc_quant/preprocessing/scaling.py` defines `fit_standard_scaler(...)`

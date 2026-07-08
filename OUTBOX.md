@@ -1,5 +1,57 @@
 # OUTBOX
 
+## 2026-07-09 Closed-Loop Task 055 - Walk-Forward Constant-Baseline Evaluation Smoke Diagnostics
+
+## 修改檔案
+- `src/abc_quant/pipeline/walk_forward_baseline.py`: added deterministic walk-forward constant-baseline evaluation diagnostics, constants, and summary validator.
+- `src/abc_quant/pipeline/__init__.py`: exported the walk-forward baseline diagnostics helper, validator, and key constants from `abc_quant.pipeline`.
+- `tests/test_pipeline_walk_forward_baseline.py`: added deterministic output, key-order, row-count, method, train-only baseline, train-only scaler, missing-label drop, validator failure, JSON-friendly, forbidden-key, and no-LightGBM-runtime coverage.
+- `README.md`: documented the walk-forward constant-baseline smoke diagnostic and its diagnostics-only boundary.
+- `docs/modeling.md`: documented the helper flow, summary constants, validator, and safety boundary.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 055 progress and completion evidence.
+- `INBOX.md`: reset the active Task 055 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added `run_walk_forward_baseline_smoke(...)`.
+- Added `validate_walk_forward_baseline_smoke_summary(...)`.
+- Added summary key, plan key, window key, split key, metric key, index-range key, and forbidden-key constants.
+- Default plan uses 18 feature-complete smoke observations, `min_train_size=4`, `validation_size=2`, `test_size=2`, default `step_size=test_size`, and `max_windows=3` so default train/validation/test metrics remain computable before the smoke label tail.
+- Each window converts walk-forward positional indices into the existing scaler-compatible split object, fits scaler statistics only from that window's train rows, transforms train/validation/test features, builds the supervised dataset with existing label-drop behavior, fits the existing constant baseline from train labels only, builds a split prediction bundle, and evaluates train/validation/test predictions.
+- Summary output is JSON-friendly diagnostics only: observation count, feature columns, label column, baseline method, plan metadata, per-window index ranges, split counts before/after label drop, dropped label counts, scaler feature count, baseline value, training label count, and split evaluation metrics.
+- Existing walk-forward split, supervised diagnostics, LightGBM diagnostics/evaluation, CLI, and packaged command outputs were not changed.
+
+## 測試方式
+- `python -m pytest tests\test_pipeline_walk_forward_baseline.py`
+- `python -m pytest tests\test_pipeline_walk_forward_diagnostics.py tests\test_pipeline_walk_forward_baseline.py`
+- `.\.venv\Scripts\python.exe -m ruff check .`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `.\.venv\Scripts\python.exe -m abc_quant.cli.lightgbm_dependency_smoke --indent 2`
+- `.\.venv\Scripts\abc-quant-lightgbm-dependency-smoke.exe --indent 2`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- Focused walk-forward baseline diagnostics tests: 9 passed in 1.82s.
+- Related walk-forward diagnostics tests: 17 passed in 2.53s.
+- `ruff check .`: passed.
+- `pytest`: 413 passed in 28.10s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- Module dependency-smoke execution: passed with project `.venv` Python and printed sorted indented JSON.
+- Packaged dependency-smoke execution: passed with project `.venv` console script and printed sorted indented JSON.
+- Bare `abc-quant-lightgbm-dependency-smoke --indent 2`: not recognized in this shell because the project `.venv\Scripts` directory is not on PATH.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- This task adds constant-baseline evaluation diagnostics only. It does not perform walk-forward model comparison, model selection, LightGBM invocation, strategy logic, allocation logic, performance curves, orders, positions, or simulations.
+- The helper uses deterministic in-memory smoke data only and does not add real data adapters.
+- The default `max_windows=3` intentionally avoids the synthetic forward-label tail so every default split can produce train/validation/test metrics.
+
+## 建議下一步
+- Open a draft PR for ChatGPT Pro Tech Lead fast review, then let GitHub Actions verify Python 3.11 / 3.12 CI.
+- A later bounded task can add a walk-forward LightGBM evaluation diagnostic behind the optional dependency guard without adding model selection or strategy behavior.
+
 ## 2026-07-08 Closed-Loop Task 053 - Walk-Forward Supervised Dataset Smoke Diagnostics
 
 ## 修改檔案

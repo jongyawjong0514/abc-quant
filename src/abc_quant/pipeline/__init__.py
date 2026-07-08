@@ -44,6 +44,17 @@ from abc_quant.pipeline.modeling import run_baseline_modeling_smoke
 from abc_quant.pipeline.preprocessing import run_preprocessing_smoke
 from abc_quant.pipeline.smoke import build_smoke_frame, run_smoke_pipeline
 from abc_quant.pipeline.supervised import run_supervised_dataset_smoke
+from abc_quant.pipeline.walk_forward_baseline import (
+    WALK_FORWARD_BASELINE_SMOKE_FORBIDDEN_KEYS,
+    WALK_FORWARD_BASELINE_SMOKE_INDEX_RANGE_KEYS,
+    WALK_FORWARD_BASELINE_SMOKE_METRIC_KEYS,
+    WALK_FORWARD_BASELINE_SMOKE_PLAN_KEYS,
+    WALK_FORWARD_BASELINE_SMOKE_SPLITS,
+    WALK_FORWARD_BASELINE_SMOKE_SUMMARY_KEYS,
+    WALK_FORWARD_BASELINE_SMOKE_WINDOW_KEYS,
+    run_walk_forward_baseline_smoke,
+    validate_walk_forward_baseline_smoke_summary,
+)
 from abc_quant.pipeline.walk_forward_diagnostics import (
     WALK_FORWARD_SUPERVISED_SMOKE_FORBIDDEN_KEYS,
     WALK_FORWARD_SUPERVISED_SMOKE_INDEX_RANGE_KEYS,
@@ -79,6 +90,13 @@ __all__ = [
     "SUPERVISED_DATASET_SMOKE_SPLITS",
     "SUPERVISED_DATASET_SMOKE_SPLIT_SHAPE_KEYS",
     "SUPERVISED_DATASET_SMOKE_SUMMARY_KEYS",
+    "WALK_FORWARD_BASELINE_SMOKE_FORBIDDEN_KEYS",
+    "WALK_FORWARD_BASELINE_SMOKE_INDEX_RANGE_KEYS",
+    "WALK_FORWARD_BASELINE_SMOKE_METRIC_KEYS",
+    "WALK_FORWARD_BASELINE_SMOKE_PLAN_KEYS",
+    "WALK_FORWARD_BASELINE_SMOKE_SPLITS",
+    "WALK_FORWARD_BASELINE_SMOKE_SUMMARY_KEYS",
+    "WALK_FORWARD_BASELINE_SMOKE_WINDOW_KEYS",
     "WALK_FORWARD_SUPERVISED_SMOKE_FORBIDDEN_KEYS",
     "WALK_FORWARD_SUPERVISED_SMOKE_INDEX_RANGE_KEYS",
     "WALK_FORWARD_SUPERVISED_SMOKE_PLAN_KEYS",
@@ -93,6 +111,7 @@ __all__ = [
     "run_model_comparison_smoke",
     "run_preprocessing_smoke",
     "run_supervised_dataset_smoke",
+    "run_walk_forward_baseline_smoke",
     "run_walk_forward_supervised_smoke",
     "run_smoke_pipeline",
     "validate_linear_regression_smoke_summary",
@@ -102,5 +121,6 @@ __all__ = [
     "validate_modeling_smoke_summary",
     "validate_preprocessing_smoke_summary",
     "validate_supervised_dataset_smoke_summary",
+    "validate_walk_forward_baseline_smoke_summary",
     "validate_walk_forward_supervised_smoke_summary",
 ]
