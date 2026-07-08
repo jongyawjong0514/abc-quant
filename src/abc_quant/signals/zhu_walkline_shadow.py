@@ -32,6 +32,7 @@ class ZhuWalklineResult:
     web_research_used: bool
     web_research_is_supplementary: bool
     feature_matrix: pd.DataFrame
+    top_bullish_watchlist: pd.DataFrame
     top_rise_candidates: pd.DataFrame
     top_fall_risks: pd.DataFrame
     market: dict[str, Any]
@@ -87,7 +88,7 @@ def build_zhu_walkline_shadow_result(
     if forbidden:
         raise ValueError("signal feature matrix contains forbidden future/label columns: " + ", ".join(forbidden))
     _score_features(features, market=market, config=config)
-    top_rise = features[features["grade"] != ""].sort_values(
+    top_bullish = features[features["grade"] != ""].sort_values(
         ["rise_score", "fall_risk_score"], ascending=[False, True]
     ).head(top_n)
     top_fall = features[features["risk_grade"] != ""].sort_values(
@@ -98,13 +99,14 @@ def build_zhu_walkline_shadow_result(
         run_notes.append("未啟用或無法使用網路搜尋，本次分析僅使用本地資料庫。")
     return ZhuWalklineResult(
         asof_date=bundle.asof_date,
-        mode="shadow_advisory_only",
+        mode=str(config.get("project", {}).get("mode", "shadow_observation_only")),
         formal_champion_changed=False,
         formal_trade_effect=False,
         web_research_used=web_research_used,
         web_research_is_supplementary=True,
         feature_matrix=features,
-        top_rise_candidates=top_rise,
+        top_bullish_watchlist=top_bullish,
+        top_rise_candidates=top_bullish,
         top_fall_risks=top_fall,
         market=market,
         sector_rotation=sector_rotation,
@@ -231,6 +233,9 @@ def _fill_defaults(features: pd.DataFrame) -> pd.DataFrame:
         "event_score_for_rise": 0.0,
         "event_score_for_fall": 0.0,
         "supply_pressure_score": 0.0,
+        "institutional_total_buy_sell": 0.0,
+        "margin_change_1d": 0.0,
+        "margin_consecutive_increase_days": 0.0,
     }
     for column, default in numeric_defaults.items():
         if column not in features.columns:
@@ -246,6 +251,7 @@ def _fill_defaults(features: pd.DataFrame) -> pd.DataFrame:
 def _score_features(features: pd.DataFrame, *, market: dict[str, Any], config: dict[str, Any]) -> None:
     scoring = config.get("scoring", {})
     market_state = str(market["market_state"])
+    features["market_state"] = market_state
     features["market_score_component"] = float(market.get("market_score", 0))
     features["market_risk_score_component"] = float(market.get("market_risk_score", 0)) * 1.5
     features["sector_rotation_score"] = (features["sector_strength_score"] * 0.15).clip(0, 15)
@@ -293,6 +299,7 @@ def _score_features(features: pd.DataFrame, *, market: dict[str, Any], config: d
             "PANIC_VOLUME": 0,
         }
     ).fillna(0)
+    _add_signal_stage_and_failure_fields(features, market_state=market_state)
     features["risk_penalty"] = (
         features["support_broken_today"].astype(float) * 8
         + features["high_volume_upper_shadow"].astype(float) * 6
@@ -363,6 +370,7 @@ def _score_features(features: pd.DataFrame, *, market: dict[str, Any], config: d
         ["A", "B", "C"],
         default="",
     )
+    features["grade"] = features.apply(_apply_market_grade_cap, axis=1)
     features["risk_grade"] = np.select(
         [
             features["fall_risk_score"] >= float(scoring.get("fall_high", 80)),
@@ -408,6 +416,10 @@ def _rise_reasons(row: pd.Series) -> list[str]:
         reasons.append("大戶/主力proxy加分")
     if row["margin_score"] > 0:
         reasons.append("融資結構較乾淨")
+    if row.get("signal_stage"):
+        reasons.append(f"訊號階段={row['signal_stage']}")
+    if row.get("trigger_type"):
+        reasons.append(f"觸發={row['trigger_type']}")
     if not reasons:
         reasons.append("訊號不足，僅列觀察")
     return reasons
@@ -429,9 +441,158 @@ def _risk_reasons(row: pd.Series) -> list[str]:
         reasons.append("融資風險")
     if bool(row.get("support_broken_today", False)):
         reasons.append("跌破支撐或20日線")
+    if row.get("failure_type"):
+        reasons.append(f"失敗型態={row['failure_type']}")
     if not reasons:
         reasons.append("未達明顯風險條件")
     return reasons
+
+
+def _add_signal_stage_and_failure_fields(features: pd.DataFrame, *, market_state: str) -> None:
+    """Add signal lifecycle fields and hard-risk labels."""
+    features["high_level_supply_pressure"] = (
+        (features["distance_to_60d_high"].fillna(1.0) <= 0.05)
+        & (features["vol_ratio_20"].fillna(0.0) >= 1.5)
+        & (features["upper_shadow_pct"].fillna(0.0) >= 0.025)
+        & (features["close_position_in_range"].fillna(0.5) < 0.65)
+    )
+    features["supply_pressure_score"] = np.maximum(
+        features["supply_pressure_score"].fillna(0.0),
+        features["high_level_supply_pressure"].astype(float) * 8.0,
+    )
+    features["institutional_divergence"] = (
+        (features["institutional_total_buy_sell"].fillna(0.0) > 0)
+        & (features["black_k"].fillna(False) | (features["return_1d"].fillna(0.0) <= 0))
+    )
+    features["institutional_support"] = (
+        (features["institutional_total_buy_sell"].fillna(0.0) < 0)
+        & (features["return_1d"].fillna(0.0) >= 0)
+    )
+    features["margin_crowding_risk"] = (
+        ((features["close"] < features["ma20"]) | features["support_broken_today"].fillna(False))
+        & (
+            (features["margin_change_1d"].fillna(0.0) > 0)
+            | (features["margin_consecutive_increase_days"].fillna(0.0) > 0)
+        )
+    )
+    features["reversal_state"] = features.apply(_reversal_state, axis=1)
+    features["trigger_type"] = features.apply(_trigger_type, axis=1)
+    features["failure_type"] = features.apply(
+        lambda row: "|".join(_failure_types(row, market_state=market_state)),
+        axis=1,
+    )
+    features["signal_stage"] = features.apply(_signal_stage, axis=1)
+    features["invalid_price"] = features.apply(_invalid_price, axis=1)
+    features["confirm_price"] = features.apply(_confirm_price, axis=1)
+    features["non_holder_observation"] = features.apply(_non_holder_observation, axis=1)
+    features["holder_discipline"] = features.apply(_holder_discipline, axis=1)
+
+
+def _reversal_state(row: pd.Series) -> str:
+    if bool(row.get("close_above_prev_high", False)) and bool(row.get("close_above_ma5", False)) and bool(row.get("volume_expansion", False)):
+        return "confirmed_reversal"
+    if bool(row.get("hammer_like", False)) or bool(row.get("red_k", False)) or bool(row.get("failed_breakdown", False)):
+        return "reversal_attempt"
+    if row.get("trend_state") == "WEAK_REBOUND" or (row.get("return_1d", 0.0) > 0 and not bool(row.get("close_above_ma5", False))):
+        return "weak_rebound"
+    return "none"
+
+
+def _trigger_type(row: pd.Series) -> str:
+    if bool(row.get("close_above_prev_high", False)) and bool(row.get("close_above_ma5", False)) and bool(row.get("volume_expansion", False)):
+        return "RANGE_BREAKOUT"
+    if bool(row.get("ma_reclaim_20", False)) or bool(row.get("ma_reclaim_10", False)) or bool(row.get("ma_reclaim_5", False)):
+        return "MA_RECLAIM"
+    if bool(row.get("close_above_prev_high", False)):
+        return "BREAK_PREV_HIGH"
+    if row.get("reversal_state") == "confirmed_reversal":
+        return "BOTTOM_REVERSAL"
+    if row.get("trend_state") == "PULLBACK_IN_UPTREND" and bool(row.get("low_volume_pullback", False)):
+        return "PULLBACK_RESTART"
+    return ""
+
+
+def _failure_types(row: pd.Series, *, market_state: str) -> list[str]:
+    failures: list[str] = []
+    if bool(row.get("failed_breakout", False)):
+        failures.append("FALSE_BREAKOUT")
+    if row.get("trigger_type") and not bool(row.get("volume_expansion", False)):
+        failures.append("NO_VOLUME_FOLLOW")
+    if market_state in {"MARKET_WEAK_REBOUND", "MARKET_DOWNTREND", "MARKET_HIGH_RISK_BREAKDOWN"}:
+        failures.append("MARKET_DRAG")
+    if row.get("sector_state") in {"SECTOR_ROTATING_OUT", "SECTOR_WEAK"} or row.get("sector_risk_score", 0.0) >= 60:
+        failures.append("SECTOR_ROTATION_OUT")
+    if bool(row.get("institutional_divergence", False)):
+        failures.append("INSTITUTIONAL_DIVERGENCE")
+    if bool(row.get("margin_crowding_risk", False)):
+        failures.append("MARGIN_CROWDING")
+    if bool(row.get("high_level_supply_pressure", False)) or row.get("supply_pressure_score", 0.0) >= 8:
+        failures.append("SUPPLY_PRESSURE")
+    if bool(row.get("support_broken_today", False)):
+        failures.append("SUPPORT_BREAK")
+    return failures
+
+
+def _signal_stage(row: pd.Series) -> str:
+    hard_failed = bool(row.get("support_broken_today", False)) or bool(row.get("margin_crowding_risk", False))
+    hard_failed = hard_failed or row.get("trend_state") == "BREAKDOWN"
+    hard_failed = hard_failed or bool(row.get("high_level_supply_pressure", False))
+    if hard_failed:
+        return "FAILED"
+    if row.get("trigger_type") and bool(row.get("volume_expansion", False)) and bool(row.get("close_above_ma5", False)):
+        return "CONFIRMED"
+    if row.get("trigger_type"):
+        return "TRIGGER"
+    if row.get("trend_state") in {"UPTREND", "PULLBACK_IN_UPTREND", "RANGE_BOUND"}:
+        return "SETUP"
+    return "FAILED"
+
+
+def _invalid_price(row: pd.Series) -> float | None:
+    for column in ("support_1", "ma20", "prev_low"):
+        value = row.get(column)
+        if pd.notna(value):
+            return float(value)
+    return None
+
+
+def _confirm_price(row: pd.Series) -> float | None:
+    for column in ("resistance_1", "prev_high", "ma5"):
+        value = row.get(column)
+        if pd.notna(value):
+            return float(value)
+    return None
+
+
+def _non_holder_observation(row: pd.Series) -> str:
+    confirm = row.get("confirm_price")
+    if pd.notna(confirm):
+        return f"觀察價/確認價 {confirm:.2f}，未站上前不追價"
+    return "沒有明確確認價，空手等待下一根訊號"
+
+
+def _holder_discipline(row: pd.Series) -> str:
+    invalid = row.get("invalid_price")
+    if pd.notna(invalid):
+        return f"防守價 {invalid:.2f}，跌破收不回就視為訊號失敗"
+    return "缺少明確防守價，降低部位或維持觀察"
+
+
+def _apply_market_grade_cap(row: pd.Series) -> str:
+    grade = str(row.get("grade", ""))
+    if not grade:
+        return ""
+    if row.get("signal_stage") == "FAILED":
+        return ""
+    if row.get("reversal_state") == "weak_rebound" and grade in {"A", "B"}:
+        grade = "C"
+    if row.get("market_state") == "MARKET_WEAK_REBOUND" and grade == "A":
+        return "B"
+    if row.get("market_state") == "MARKET_DOWNTREND" and grade in {"A", "B"}:
+        return "C"
+    if row.get("market_state") == "MARKET_HIGH_RISK_BREAKDOWN":
+        return ""
+    return grade
 
 
 def _hit_rate(frame: pd.DataFrame, side: str, column: str) -> float | None:

@@ -1,5 +1,43 @@
 # OUTBOX
 
+## 2026-07-09 Direct Follow-Up - Zhu Walkline Signal Discipline
+
+## 修改檔案
+- `config/zhu_walkline_shadow.yaml`: changed default mode to `shadow_observation_only`.
+- `src/abc_quant/signals/zhu_walkline_shadow.py`: added bullish watchlist alias, signal lifecycle fields, failure taxonomy, market grade caps, high-level supply pressure, institutional divergence, and margin crowding risk.
+- `src/abc_quant/reports/zhu_walkline_report.py`: added `top_bullish_watchlist` CSV/summary output, shadow log CSV, signal/failure columns, and fixed non-holder/holder discipline report text.
+- `tests/test_zhu_walkline_features.py`: added regression coverage for shadow mode, required signal fields, market grade caps, and failure-type tagging.
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: recorded this follow-up and validation evidence.
+
+## 實作摘要
+- Renamed the primary bullish output contract to `top_bullish_watchlist` while keeping `top_rise_candidates` as a legacy-compatible alias.
+- Added `signal_stage`, `trigger_type`, `invalid_price`, `confirm_price`, `failure_type`, and `reversal_state` to feature/report outputs.
+- Added SETUP/TRIGGER/CONFIRMED/FAILED signal staging and trigger labels for MA reclaim, previous-high break, range breakout, bottom reversal, and pullback restart.
+- Added hard market-state caps: weak rebound caps bullish grade at B, downtrend caps at C, high-risk breakdown suppresses A/B bullish candidates.
+- Added high-level supply-pressure detection for near-60-day-high, high-volume, long-upper-shadow bars that fail to close near the high.
+- Added failure tags for institutional buy/price weakness divergence, margin crowding under MA20/support, support break, no-volume follow-through, market drag, sector rotation out, supply pressure, and false breakout.
+- Added fixed report language for `未持有者` and `已持有者` with observation/confirmation/defense/stop conditions.
+- Added `latest_zhu_walkline_shadow_log.csv` to archive why candidates failed, not only their rank.
+
+## 測試方式
+- `.\.venv\Scripts\ruff.exe check .`
+- `.\.venv\Scripts\python.exe -m pytest tests/test_zhu_walkline_features.py tests/test_zhu_walkline_no_lookahead.py tests/test_web_research_no_lookahead.py -q`
+- `.\.venv\Scripts\python.exe -m pytest -q`
+- `.\.venv\Scripts\python.exe scripts\run_zhu_walkline_shadow.py --asof latest --top-n 30 --no-web --verbose`
+
+## 測試結果
+- `ruff check .`: passed.
+- Focused Zhu walkline tests: 10 passed.
+- Full pytest: 423 passed in 29.38s.
+- Latest no-web scanner smoke passed and wrote asof `2026-07-08` outputs including `latest_zhu_walkline_top_bullish_watchlist.csv`, legacy `latest_zhu_walkline_top_rise_candidates.csv`, `latest_zhu_walkline_shadow_log.csv`, summary JSON, market report, stock report, and data-quality report.
+
+## 邊界
+- `mode=shadow_observation_only`.
+- `formal_champion_changed=False`.
+- `formal_trade_effect=False`.
+- This follow-up does not modify formal champion, formal strategy, weights, orders, positions, or trade instructions.
+- Web research remains supplementary and was disabled for the validation smoke (`--no-web`).
+
 ## 2026-07-09 Closed-Loop Task 055 - Walk-Forward Constant-Baseline Evaluation Smoke Diagnostics
 
 ## 修改檔案

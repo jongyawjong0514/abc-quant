@@ -21,6 +21,12 @@ RISE_CSV_COLUMNS = [
     "close",
     "rise_score",
     "grade",
+    "signal_stage",
+    "trigger_type",
+    "confirm_price",
+    "invalid_price",
+    "failure_type",
+    "reversal_state",
     "sector",
     "concepts",
     "market_state",
@@ -53,6 +59,9 @@ FALL_CSV_COLUMNS = [
     "close",
     "fall_risk_score",
     "risk_grade",
+    "signal_stage",
+    "failure_type",
+    "invalid_price",
     "sector",
     "concepts",
     "market_state",
@@ -68,6 +77,34 @@ FALL_CSV_COLUMNS = [
     "web_event_risk_score",
     "support_broken",
     "next_support",
+    "risk_reason_summary",
+]
+
+SHADOW_LOG_COLUMNS = [
+    "asof_date",
+    "stock_id",
+    "stock_name",
+    "close",
+    "rise_score",
+    "grade",
+    "fall_risk_score",
+    "risk_grade",
+    "signal_stage",
+    "trigger_type",
+    "confirm_price",
+    "invalid_price",
+    "failure_type",
+    "reversal_state",
+    "institutional_divergence",
+    "margin_crowding_risk",
+    "high_level_supply_pressure",
+    "market_state",
+    "sector",
+    "trend_state",
+    "ma_state",
+    "kline_state",
+    "volume_state",
+    "reason_summary",
     "risk_reason_summary",
 ]
 
@@ -95,6 +132,11 @@ def write_zhu_walkline_outputs(
             result.top_rise_candidates,
             RISE_CSV_COLUMNS,
         )
+        outputs[f"{prefix}_bullish_watchlist"] = _write_csv(
+            root / f"{prefix}_zhu_walkline_top_bullish_watchlist.csv",
+            result.top_bullish_watchlist,
+            RISE_CSV_COLUMNS,
+        )
         outputs[f"{prefix}_fall"] = _write_csv(
             root / f"{prefix}_zhu_walkline_top_fall_risks.csv",
             result.top_fall_risks,
@@ -118,6 +160,11 @@ def write_zhu_walkline_outputs(
         web_path = root / f"{prefix}_zhu_walkline_web_sources.jsonl"
         write_web_sources_jsonl(web_path, result.web_records, append=False)
         outputs[f"{prefix}_web_sources"] = web_path
+        outputs[f"{prefix}_shadow_log"] = _write_csv(
+            root / f"{prefix}_zhu_walkline_shadow_log.csv",
+            _shadow_log_frame(result.feature_matrix),
+            SHADOW_LOG_COLUMNS,
+        )
 
         if evaluation_frame is not None and evaluation_summary is not None:
             outputs[f"{prefix}_evaluation"] = _write_csv(
@@ -153,8 +200,10 @@ def _summary_payload(result: ZhuWalklineResult, quality: DataQualityReport) -> d
         "market": result.market,
         "sector_rotation": _records(result.sector_rotation.head(30)),
         "concept_rotation": _records(result.concept_rotation.head(30)),
+        "top_bullish_watchlist": _candidate_records(result.top_bullish_watchlist),
         "top_rise_candidates": _candidate_records(result.top_rise_candidates),
         "top_fall_risks": _risk_records(result.top_fall_risks),
+        "shadow_log_columns": SHADOW_LOG_COLUMNS,
         "run_notes": result.run_notes,
     }
 
@@ -169,6 +218,12 @@ def _candidate_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
                 "close": _float(row.get("close")),
                 "rise_score": _float(row.get("rise_score")),
                 "grade": row.get("grade", ""),
+                "signal_stage": row.get("signal_stage", ""),
+                "trigger_type": row.get("trigger_type", ""),
+                "invalid_price": _float(row.get("invalid_price")),
+                "confirm_price": _float(row.get("confirm_price")),
+                "failure_type": row.get("failure_type", ""),
+                "reversal_state": row.get("reversal_state", ""),
                 "sector": row.get("sector", ""),
                 "concepts": _as_list(row.get("concepts")),
                 "trend_state": row.get("trend_state", ""),
@@ -201,6 +256,9 @@ def _risk_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
                 "close": _float(row.get("close")),
                 "fall_risk_score": _float(row.get("fall_risk_score")),
                 "risk_grade": row.get("risk_grade", ""),
+                "signal_stage": row.get("signal_stage", ""),
+                "failure_type": row.get("failure_type", ""),
+                "invalid_price": _float(row.get("invalid_price")),
                 "sector": row.get("sector", ""),
                 "concepts": _as_list(row.get("concepts")),
                 "trend_break_reason": row.get("trend_break_reason", ""),
@@ -219,7 +277,7 @@ def _risk_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
 
 
 def _market_report(result: ZhuWalklineResult, quality: DataQualityReport) -> str:
-    rise_preview = result.top_rise_candidates.head(10)
+    rise_preview = result.top_bullish_watchlist.head(10)
     fall_preview = result.top_fall_risks.head(10)
     lines = [
         f"# {result.asof_date} 走圖／走線 shadow 全市場報告",
@@ -249,9 +307,23 @@ def _market_report(result: ZhuWalklineResult, quality: DataQualityReport) -> str
             ["concept", "concept_rotation_rank", "concept_strength_score", "concept_risk_score", "concept_leader_stock"],
         ),
         "",
-        "## 四、可能即將上漲觀察名單",
+        "## 四、多方轉強觀察股",
         "",
-        _markdown_table(rise_preview, ["stock_id", "stock_name", "close", "rise_score", "grade", "reason_summary"]),
+        "不是買進名單，不是明日必漲股。走圖不是預言，走圖是等訊號。",
+        "",
+        _markdown_table(
+            rise_preview,
+            [
+                "stock_id",
+                "stock_name",
+                "close",
+                "rise_score",
+                "grade",
+                "signal_stage",
+                "trigger_type",
+                "failure_type",
+            ],
+        ),
         "",
         "## 五、可能即將下跌風險名單",
         "",
@@ -267,8 +339,8 @@ def _market_report(result: ZhuWalklineResult, quality: DataQualityReport) -> str
 
 
 def _stock_report(result: ZhuWalklineResult) -> str:
-    if not result.top_rise_candidates.empty:
-        row = result.top_rise_candidates.iloc[0]
+    if not result.top_bullish_watchlist.empty:
+        row = result.top_bullish_watchlist.iloc[0]
     elif not result.top_fall_risks.empty:
         row = result.top_fall_risks.iloc[0]
     else:
@@ -295,6 +367,9 @@ def _stock_report(result: ZhuWalklineResult) -> str:
         f"- 大盤背景：{row.get('market_state', '')}",
         f"- 類股輪動：{row.get('sector', '')} rank={row.get('sector_rotation_rank', '')}",
         f"- 概念股輪動：{', '.join(_as_list(row.get('concepts')))}",
+        f"- 訊號階段：{row.get('signal_stage', '')}",
+        f"- 觸發型態：{row.get('trigger_type', '')}",
+        f"- 失敗型態：{row.get('failure_type', '')}",
         f"- 結論：rise_score={row.get('rise_score', 0):.1f}，fall_risk_score={row.get('fall_risk_score', 0):.1f}",
         "",
         "## 二、趨勢",
@@ -354,11 +429,20 @@ def _stock_report(result: ZhuWalklineResult) -> str:
         "",
         "## 十二、未持有者",
         "",
-        f"同學，未持有不要急。{row.get('entry_observation', '')}",
+        f"同學，未持有不要急。{row.get('non_holder_observation', row.get('entry_observation', ''))}",
+        "",
+        f"- 觀察價：{row.get('confirm_price', np.nan):.2f}",
+        f"- 確認價：{row.get('confirm_price', np.nan):.2f}",
+        "- 不追價條件：沒有站上壓力就只是觀察。",
         "",
         "## 十三、已持有者",
         "",
-        f"同學，已持有先看防守點。{row.get('stop_reference', '')}",
+        f"同學，已持有先看防守點。{row.get('holder_discipline', row.get('stop_reference', ''))}",
+        "",
+        f"- 防守價：{row.get('invalid_price', np.nan):.2f}",
+        "- 續抱條件：站穩確認價且沒有放量上影。",
+        "- 減碼條件：跌破短均線或出現高檔供給。",
+        "- 停損條件：跌破防守價收不回。",
         "",
         "## 十四、網路補充資料",
         "",
@@ -412,6 +496,17 @@ def _data_quality_report(quality: DataQualityReport, result: ZhuWalklineResult) 
         _fixed_statement(result),
     ]
     return "\n".join(lines)
+
+
+def _shadow_log_frame(feature_matrix: pd.DataFrame) -> pd.DataFrame:
+    output = feature_matrix.copy()
+    for column in SHADOW_LOG_COLUMNS:
+        if column not in output.columns:
+            output[column] = ""
+    return output[SHADOW_LOG_COLUMNS].sort_values(
+        ["failure_type", "fall_risk_score", "rise_score"],
+        ascending=[False, False, False],
+    )
 
 
 def _fixed_statement(result: ZhuWalklineResult) -> str:

@@ -1,6 +1,6 @@
 project:
   root: "E:/abc"
-  mode: "shadow_advisory_only"
+  mode: "shadow_observation_only"
   formal_champion_changed: false
   formal_trade_effect: false
 
