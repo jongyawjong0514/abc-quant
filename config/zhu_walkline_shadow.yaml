@@ -1,0 +1,33 @@
+project:
+  root: "E:/abc"
+  mode: "shadow_advisory_only"
+  formal_champion_changed: false
+  formal_trade_effect: false
+
+data:
+  sqlite_path: "C:/Users/User/Desktop/新增資料夾 (4)/state/tw_data_mirror.sqlite"
+  finlab_items_root: "C:/Users/User/Desktop/finlab_ml_course/history/history/items"
+  output_dir: "reports/zhu_walkline_shadow"
+  web_cache_dir: "data/web_cache"
+
+runtime:
+  default_asof: "latest"
+  default_top_n: 30
+  no_web_default: true
+  fail_loud: true
+  lookback_calendar_days: 420
+
+scoring:
+  web_score_cap: 5
+  rise_min_c: 60
+  rise_min_b: 70
+  rise_min_a: 80
+  fall_watch: 50
+  fall_medium: 65
+  fall_high: 80
+
+report:
+  tone: "walkline_teaching"
+  avoid_impersonation: true
+  include_non_holder_section: true
+  include_holder_section: true

@@ -1,0 +1,33 @@
+AI_SERVER:
+  - "6669"
+  - "2382"
+  - "3231"
+
+PCB:
+  - "2368"
+  - "2313"
+
+CCL:
+  - "2383"
+  - "6274"
+
+ROBOTICS:
+  - "2464"
+  - "1590"
+
+SEMICONDUCTOR_EQUIPMENT:
+  - "6830"
+
+CPO_SILICON_PHOTONICS: []
+
+THERMAL: []
+
+HEAVY_ELECTRIC: []
+
+AUTOMATION: []
+
+BIOTECH: []
+
+SHIPPING: []
+
+FINANCIAL: []

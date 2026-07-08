@@ -2371,3 +2371,35 @@
 - Add a small sample-data loader plus end-to-end fixture that validates data -> builds features -> creates labels -> computes metrics.
 - Add transaction cost and slippage-aware backtest scaffolding.
 - Ask ChatGPT Pro to review the horizon/entry label semantics before building model training around it.
+## 2026-07-09 Direct User Task - Zhu Walkline Shadow Scanner
+
+## 修改檔案
+- `CODEx_ZHU_WALKLINE_SHADOW_TASK.md`: 保存使用者提供的完整任務書。
+- `config/zhu_walkline_shadow.yaml`, `config/concept_stock_map.yaml`: 新增 scanner 設定與人工維護概念股模板。
+- `src/abc_quant/data/local_tw_loader.py`, `web_cache.py`, `web_research.py`: 新增本地 SQLite loader、官方事件 cache、官方重大訊息補充。
+- `src/abc_quant/features/*walkline/chip/margin/market/news*`: 新增走圖、法人、大戶proxy、融資券、市場/類股/概念輪動與網路事件特徵。
+- `src/abc_quant/signals/zhu_walkline_shadow.py`: 新增 shadow/advisory scoring、候選/風險分級與 evaluator-only forward metrics。
+- `src/abc_quant/reports/zhu_walkline_report.py`: 新增 JSON/CSV/Markdown/parquet/JSONL 報告輸出。
+- `scripts/run_zhu_walkline_shadow.py`: 新增 CLI 入口。
+- `tests/test_zhu_walkline_features.py`, `tests/test_zhu_walkline_no_lookahead.py`, `tests/test_web_research_no_lookahead.py`: 新增 focused tests。
+- `pyproject.toml`, `requirements.txt`: 新增 `pyarrow>=14.0` 以支援 parquet 輸出。
+
+## 實作摘要
+- 預設 `--no-web`；`--use-web` 僅讀本地官方 TWSE/TPEx 重大訊息 mirror 並寫入 `data/web_cache/`，不取代 OHLCV/法人/融資券。
+- 所有輸出固定 `mode=shadow_advisory_only`、`formal_champion_changed=False`、`formal_trade_effect=False`。
+- No-lookahead：價格、法人、融資、大戶、類股 snapshot 均以 `<= asof_date` 過濾；forward return 只在 `--evaluate-forward` evaluator 檔案輸出。
+
+## 測試結果
+- Ruff：`All checks passed!`
+- Focused tests：`8 passed`。
+- Full test suite：`421 passed`。
+- Scanner smoke：`python scripts/run_zhu_walkline_shadow.py --asof latest --top-n 30 --no-web --verbose` 成功。
+- 單檔 smoke：`--stock 6830` 成功。
+- Web smoke：`--use-web --web-max-results 5` 成功。
+- Forward evaluation smoke：`--asof 2026-07-01 --evaluate-forward --output-dir reports/zhu_walkline_shadow/eval_smoke` 成功。
+
+## 資料狀態
+- SQLite：找到 `C:/Users/User/Desktop/新增資料夾 (4)/state/tw_data_mirror.sqlite`。
+- Price / 法人 / 融資券最新日期：`2026-07-08`。
+- 大戶/TDCC 最新日期：`2026-06-26`。
+- 正式大盤指數均線較股價資料舊，報告已降級使用全市場等權 proxy 並寫入 data quality warning。
