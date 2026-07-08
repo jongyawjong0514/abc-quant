@@ -73,6 +73,7 @@
 - [x] LightGBM optional evaluation smoke diagnostics。
 - [x] Walk-forward split contract。
 - [x] Walk-forward supervised dataset smoke diagnostics。
+- [x] Walk-forward constant-baseline evaluation smoke diagnostics。
 - [ ] LightGBM。
 - [ ] Walk-forward validation。
 - [ ] 模型解釋。
