@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Task 052 deterministic walk-forward split contract：`WalkForwardWindow` / `WalkForwardSplitPlan` 與 `build_walk_forward_split_plan(...)` 定義 expanding-train、rolling validation/test 的 deterministic integer-position windows，`validate_walk_forward_split_plan(...)` 驗證 contiguous/no-overlap/bounds/JSON-friendly contract；不讀資料、不 fit model、不改 temporal split、不新增策略或回測行為。
 - 新增 Task 051 optional LightGBM evaluation smoke diagnostics：`run_lightgbm_evaluation_smoke(...)` 預設只回 dependency/default-parameter diagnostics，`fitting_enabled=True` 且 optional package 可用時才透過既有 train-only `fit_lightgbm_regressor(...)` 產生 in-memory train/validation/test evaluation summary；新增 summary validator/constants 與 focused tests，不改 dependency-smoke/CLI outputs、不新增 mandatory dependency。
 - 新增 Task 050 LightGBM dependency smoke summary contract package exports：`abc_quant.pipeline` 直接匯出 `LIGHTGBM_DEPENDENCY_SMOKE_*` constants 與 `validate_lightgbm_dependency_smoke_summary(...)`，讓 callers 可用 public pipeline import 驗證 diagnostics summary，不改輸出 schema、不改 validator semantics。
 - 新增 Task 049 LightGBM dependency smoke summary contract validator：集中定義 diagnostics summary/default params key constants 與 `validate_lightgbm_dependency_smoke_summary(...)`，`run_lightgbm_dependency_smoke(...)` 回傳前會驗證 shape、JSON-friendly values 與 forbidden keys，不改輸出 schema、不 require/fitting/search/select/strategy/backtest。

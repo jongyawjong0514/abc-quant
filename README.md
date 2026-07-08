@@ -94,6 +94,23 @@ The first pre-modeling validation contract is:
 
 Temporal splits are date-based, sorted by `date` and then `ticker` when present, and require training dates to be strictly earlier than validation/test dates. The split helper rejects missing or unsortable dates, non-increasing boundaries, empty requested splits, and rows that would fall after an explicit `test_end`.
 
+The walk-forward split contract is:
+
+- `src/abc_quant/validation/walk_forward.py`: `build_walk_forward_split_plan(...)` creates deterministic expanding-train walk-forward windows over integer observation positions.
+
+Each `WalkForwardWindow` records inclusive train/validation/test boundaries and
+the exact positional indices for the three contiguous splits. The generated
+plan expands the train range from position 0, rolls validation/test forward by
+`step_size`, defaults `step_size` to `test_size`, and stops before any
+validation or test position would exceed `observation_count`.
+
+`validate_walk_forward_split_plan(...)` rejects invalid sizes, empty plans,
+duplicate or out-of-order window ids, non-contiguous split indices,
+overlapping split indices, out-of-bounds positions, and non-JSON-friendly
+plans. This is a split contract only; it does not read data, fit models,
+compare or choose models, create strategy signals, define allocation logic,
+build performance curves, create orders or positions, or run simulations.
+
 The standardization contract rejects unknown, duplicate, nonnumeric, missing-training, and zero-variance training feature inputs. Its fitted means and standard deviations come only from `train_index`, so validation/test feature values cannot leak into preprocessing parameters.
 
 The deterministic preprocessing smoke diagnostic is:

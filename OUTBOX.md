@@ -1,5 +1,58 @@
 # OUTBOX
 
+## 2026-07-08 Closed-Loop Task 052 - Deterministic Walk-Forward Split Contract
+
+## 修改檔案
+- `src/abc_quant/validation/walk_forward.py`: added frozen walk-forward window/plan dataclasses, deterministic split-plan builder, validator, and forbidden-key constants.
+- `src/abc_quant/validation/__init__.py`: exported the walk-forward dataclasses, builder, and validator from `abc_quant.validation`.
+- `tests/test_validation_walk_forward.py`: added exact deterministic window tests, default step-size coverage, max-window truncation, invalid configuration coverage, validator malformed-plan coverage, JSON-friendly rejection, and forbidden-key checks.
+- `README.md`: documented the walk-forward split contract as a pre-modeling split plan only.
+- `docs/modeling.md`: documented builder behavior, validator behavior, and the no-model/no-backtest boundary.
+- `STATUS.md`, `OUTBOX.md`, `CHANGELOG.md`, `TODO.md`: recorded Task 052 progress and completion evidence.
+- `INBOX.md`: reset the active Task 052 block to the commented empty template before PR handoff.
+
+## 實作摘要
+- Added `WalkForwardWindow`.
+- Added `WalkForwardSplitPlan`.
+- Added `build_walk_forward_split_plan(...)`.
+- Added `validate_walk_forward_split_plan(...)`.
+- Builder uses integer observation positions only.
+- Default `step_size` equals `test_size`.
+- Generated windows are deterministic and ordered by ascending `window_id`.
+- Each generated window is contiguous with train before validation before test.
+- Train expands from position 0 while validation/test roll forward by `step_size`.
+- Builder stops before validation/test positions exceed `observation_count`.
+- Validator rejects non-plan inputs, empty windows, duplicate/out-of-order ids, non-contiguous indices, overlapping indices, out-of-bounds indices, invalid sizes, and non-JSON-friendly values.
+- No existing `build_temporal_split(...)`, LightGBM diagnostics/evaluation, model fitting, model comparison, strategy, allocation, performance, order, position, or simulation behavior was changed.
+
+## 測試方式
+- `python -m pytest tests\test_validation_walk_forward.py`
+- `python -m pytest`
+- `python -m compileall src tests`
+- `git diff --check`
+- `.\.venv\Scripts\python.exe -m ruff check .`
+- `.\.venv\Scripts\python.exe -m abc_quant.cli.lightgbm_dependency_smoke --indent 2`
+- `.\.venv\Scripts\abc-quant-lightgbm-dependency-smoke.exe --indent 2`
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_codex_closed_loop.ps1`
+
+## 測試結果
+- Focused walk-forward validation tests: 18 passed in 0.91s.
+- `pytest`: 396 passed in 26.68s.
+- `compileall`: passed for `src` and `tests`.
+- `git diff --check`: passed.
+- Local `.venv` ruff: passed.
+- Module dependency-smoke execution: passed with project `.venv` Python and printed sorted indented JSON.
+- Packaged dependency-smoke execution: passed with project `.venv` console script and printed sorted indented JSON.
+- `run_codex_closed_loop.ps1`: `status=no_task` after `INBOX.md` reset.
+
+## 已知限制
+- This task adds split contracts only. It does not wire walk-forward plans into model evaluation, LightGBM evaluation, model comparison, strategy logic, allocation logic, performance curves, orders, positions, or simulation engines.
+- The builder operates on integer observation counts and does not consume date metadata directly.
+
+## 建議下一步
+- Open a draft PR for ChatGPT Pro Tech Lead fast review, then let GitHub Actions verify Python 3.11 / 3.12 CI.
+- A later bounded task can wire this split plan into model evaluation diagnostics without adding strategy or backtest behavior.
+
 ## 2026-07-07 Closed-Loop Task 051 - Optional LightGBM Evaluation Smoke Diagnostics
 
 ## 修改檔案
