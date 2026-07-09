@@ -24,10 +24,13 @@ RISE_CSV_COLUMNS = [
     "signal_stage",
     "trigger_type",
     "buy_observation_type",
+    "buy_observation_detail_types",
     "buy_trigger_price",
+    "buy_trigger_price_role",
     "target_resistance_1",
     "target_resistance_2",
     "sell_warning_type",
+    "sell_warning_detail_types",
     "invalidation_price",
     "confirm_price",
     "invalid_price",
@@ -82,8 +85,10 @@ FALL_CSV_COLUMNS = [
     "signal_stage",
     "failure_type",
     "sell_warning_type",
+    "sell_warning_detail_types",
     "invalidation_price",
     "invalid_price",
+    "stop_reference",
     "sector",
     "concepts",
     "market_state",
@@ -120,10 +125,13 @@ SHADOW_LOG_COLUMNS = [
     "signal_stage",
     "trigger_type",
     "buy_observation_type",
+    "buy_observation_detail_types",
     "buy_trigger_price",
+    "buy_trigger_price_role",
     "target_resistance_1",
     "target_resistance_2",
     "sell_warning_type",
+    "sell_warning_detail_types",
     "invalidation_price",
     "confirm_price",
     "invalid_price",
@@ -150,6 +158,7 @@ SHADOW_LOG_COLUMNS = [
     "volume_state",
     "reason_summary",
     "risk_reason_summary",
+    "stop_reference",
 ]
 
 
@@ -258,35 +267,40 @@ def _candidate_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
         rows.append(
             {
                 "stock_id": row["stock_id"],
-                "stock_name": row.get("stock_name", ""),
+                "stock_name": _text(row.get("stock_name", "")),
                 "close": _float(row.get("close")),
                 "rise_score": _float(row.get("rise_score")),
-                "grade": row.get("grade", ""),
-                "signal_stage": row.get("signal_stage", ""),
-                "trigger_type": row.get("trigger_type", ""),
-                "buy_observation_type": row.get("buy_observation_type", ""),
+                "grade": _text(row.get("grade", "")),
+                "signal_stage": _text(row.get("signal_stage", "")),
+                "trigger_type": _text(row.get("trigger_type", "")),
+                "buy_observation_type": _text(row.get("buy_observation_type", "")),
+                "buy_observation_detail_types": _text(row.get("buy_observation_detail_types", "")),
                 "buy_trigger_price": _float(row.get("buy_trigger_price")),
+                "buy_trigger_price_role": _text(row.get("buy_trigger_price_role", "")),
                 "target_resistance_1": _float(row.get("target_resistance_1")),
                 "target_resistance_2": _float(row.get("target_resistance_2")),
-                "sell_warning_type": row.get("sell_warning_type", ""),
+                "sell_warning_type": _text(row.get("sell_warning_type", "")),
+                "sell_warning_detail_types": _text(row.get("sell_warning_detail_types", "")),
                 "invalidation_price": _float(row.get("invalidation_price")),
                 "invalid_price": _float(row.get("invalid_price")),
                 "confirm_price": _float(row.get("confirm_price")),
-                "failure_type": row.get("failure_type", ""),
-                "reversal_state": row.get("reversal_state", ""),
-                "sector": row.get("sector", ""),
+                "failure_type": _text(row.get("failure_type", "")),
+                "reversal_state": _text(row.get("reversal_state", "")),
+                "sector": _text(row.get("sector", "")),
                 "concepts": _as_list(row.get("concepts")),
-                "trend_state": row.get("trend_state", ""),
-                "ma_state": row.get("ma_state", ""),
-                "kline_state": row.get("kline_state", ""),
-                "volume_state": row.get("volume_state", ""),
+                "trend_state": _text(row.get("trend_state", "")),
+                "ma_state": _text(row.get("ma_state", "")),
+                "kline_state": _text(row.get("kline_state", "")),
+                "volume_state": _text(row.get("volume_state", "")),
                 "institutional_score": _float(row.get("institutional_score")),
                 "big_holder_score": _float(row.get("big_holder_score")),
                 "margin_score": _float(row.get("margin_score")),
                 "web_event_score": _float(row.get("web_event_score")),
-                "support": [v for v in [row.get("support_1"), row.get("support_2")] if pd.notna(v)],
+                "support": [v for v in [row.get("support_1"), row.get("support_2")] if not _is_missing(v)],
                 "resistance": [
-                    v for v in [row.get("resistance_1"), row.get("resistance_2")] if pd.notna(v)
+                    v
+                    for v in [row.get("resistance_1"), row.get("resistance_2")]
+                    if not _is_missing(v)
                 ],
                 "support_zones": _zone_records(row, "support"),
                 "resistance_zones": _zone_records(row, "resistance"),
@@ -294,8 +308,8 @@ def _candidate_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
                 "resistance_zone_breakout_today": bool(
                     row.get("resistance_zone_breakout_today", False)
                 ),
-                "entry_observation": row.get("entry_observation", ""),
-                "stop_reference": row.get("stop_reference", ""),
+                "entry_observation": _text(row.get("entry_observation", "")),
+                "stop_reference": _text(row.get("stop_reference", "")),
                 "reason": _as_list(row.get("reason")),
             }
         )
@@ -308,23 +322,25 @@ def _risk_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
         rows.append(
             {
                 "stock_id": row["stock_id"],
-                "stock_name": row.get("stock_name", ""),
+                "stock_name": _text(row.get("stock_name", "")),
                 "close": _float(row.get("close")),
                 "fall_risk_score": _float(row.get("fall_risk_score")),
-                "risk_grade": row.get("risk_grade", ""),
-                "signal_stage": row.get("signal_stage", ""),
-                "failure_type": row.get("failure_type", ""),
-                "sell_warning_type": row.get("sell_warning_type", ""),
+                "risk_grade": _text(row.get("risk_grade", "")),
+                "signal_stage": _text(row.get("signal_stage", "")),
+                "failure_type": _text(row.get("failure_type", "")),
+                "sell_warning_type": _text(row.get("sell_warning_type", "")),
+                "sell_warning_detail_types": _text(row.get("sell_warning_detail_types", "")),
                 "invalidation_price": _float(row.get("invalidation_price")),
                 "invalid_price": _float(row.get("invalid_price")),
-                "sector": row.get("sector", ""),
+                "stop_reference": _text(row.get("stop_reference", "")),
+                "sector": _text(row.get("sector", "")),
                 "concepts": _as_list(row.get("concepts")),
-                "trend_break_reason": row.get("trend_break_reason", ""),
-                "ma_break_reason": row.get("ma_break_reason", ""),
-                "kline_weakness": row.get("kline_weakness", ""),
-                "volume_distribution": row.get("volume_distribution", ""),
-                "institutional_selling": row.get("institutional_selling", ""),
-                "margin_risk": row.get("margin_risk", ""),
+                "trend_break_reason": _text(row.get("trend_break_reason", "")),
+                "ma_break_reason": _text(row.get("ma_break_reason", "")),
+                "kline_weakness": _text(row.get("kline_weakness", "")),
+                "volume_distribution": _text(row.get("volume_distribution", "")),
+                "institutional_selling": _text(row.get("institutional_selling", "")),
+                "margin_risk": _text(row.get("margin_risk", "")),
                 "web_event_risk_score": _float(row.get("web_event_risk_score")),
                 "support_broken": _as_list(row.get("support_broken")),
                 "next_support": _as_list(row.get("next_support")),
@@ -348,23 +364,23 @@ def _zone_records(row: pd.Series, side: str) -> list[dict[str, Any]]:
 def _zone_record_from_prefix(row: pd.Series, prefix: str) -> dict[str, Any] | None:
     low = row.get(f"{prefix}_low")
     high = row.get(f"{prefix}_high")
-    if pd.isna(low) or pd.isna(high):
+    if _is_missing(low) or _is_missing(high):
         return None
     return {
         "low": _float(low),
         "high": _float(high),
         "label": _zone_text(row, prefix),
-        "sources": row.get(f"{prefix}_sources", ""),
+        "sources": _text(row.get(f"{prefix}_sources", "")),
     }
 
 
 def _zone_text(row: pd.Series, prefix: str) -> str:
     label = row.get(f"{prefix}_label")
-    if label:
-        return str(label)
+    if _text(label):
+        return _text(label)
     low = row.get(f"{prefix}_low")
     high = row.get(f"{prefix}_high")
-    if pd.isna(low) or pd.isna(high):
+    if _is_missing(low) or _is_missing(high):
         return ""
     low_float = float(low)
     high_float = float(high)
@@ -407,6 +423,7 @@ def _market_report(result: ZhuWalklineResult, quality: DataQualityReport) -> str
         "## 四、多方轉強觀察股",
         "",
         "不是買進名單，不是明日必漲股。走圖不是預言，走圖是等訊號。",
+        "不是買進名單，不是賣出指令，僅為支撐壓力觀察價與訊號失效價。",
         "",
         _markdown_table(
             rise_preview,
@@ -419,8 +436,11 @@ def _market_report(result: ZhuWalklineResult, quality: DataQualityReport) -> str
                 "signal_stage",
                 "trigger_type",
                 "buy_observation_type",
+                "buy_observation_detail_types",
                 "buy_trigger_price",
+                "buy_trigger_price_role",
                 "sell_warning_type",
+                "sell_warning_detail_types",
                 "failure_type",
             ],
         ),
@@ -436,6 +456,8 @@ def _market_report(result: ZhuWalklineResult, quality: DataQualityReport) -> str
                 "fall_risk_score",
                 "risk_grade",
                 "sell_warning_type",
+                "sell_warning_detail_types",
+                "stop_reference",
                 "risk_reason_summary",
             ],
         ),
@@ -461,6 +483,13 @@ def _stock_report(result: ZhuWalklineResult) -> str:
         if result.web_research_used
         else "本次分析未使用網路補充資料，僅依本地資料庫計算。"
     )
+    buy_trigger_role = _text(row.get("buy_trigger_price_role", ""))
+    if buy_trigger_role == "NEXT_CONFIRMATION_PRICE":
+        buy_trigger_role_note = "NEXT_CONFIRMATION_PRICE（尚未觸發，這是下一個確認觀察價，不是買進價）"
+    elif buy_trigger_role == "TRIGGERED_PRICE":
+        buy_trigger_role_note = "TRIGGERED_PRICE（已觸發的支撐壓力觀察價，仍不是買進指令）"
+    else:
+        buy_trigger_role_note = "EMPTY（尚無可用觀察價）"
     lines = [
         f"# {row['stock_id']} {row.get('stock_name', '')}｜走圖分析",
         "",
@@ -480,10 +509,13 @@ def _stock_report(result: ZhuWalklineResult) -> str:
         f"- 概念股輪動：{', '.join(_as_list(row.get('concepts')))}",
         f"- 訊號階段：{row.get('signal_stage', '')}",
         f"- 觸發型態：{row.get('trigger_type', '')}",
-        f"- 買點觀察型態：{row.get('buy_observation_type', '')}",
+        f"- 買點觀察型態：{_text(row.get('buy_observation_type', ''))}",
+        f"- 買點觀察明細：{_text(row.get('buy_observation_detail_types', ''))}",
         f"- 買點觀察價：{_format_price(row.get('buy_trigger_price'))}",
-        f"- 賣點警示型態：{row.get('sell_warning_type', '')}",
-        f"- 失敗型態：{row.get('failure_type', '')}",
+        f"- 買點觀察價角色：{buy_trigger_role_note}",
+        f"- 賣點警示型態：{_text(row.get('sell_warning_type', ''))}",
+        f"- 賣點警示明細：{_text(row.get('sell_warning_detail_types', ''))}",
+        f"- 失敗型態：{_text(row.get('failure_type', ''))}",
         f"- 結論：rise_score={row.get('rise_score', 0):.1f}，fall_risk_score={row.get('fall_risk_score', 0):.1f}",
         "",
         "## 二、趨勢",
@@ -551,22 +583,29 @@ def _stock_report(result: ZhuWalklineResult) -> str:
         "",
         "## 十二、未持有者",
         "",
+        "不是買進名單，不是賣出指令，僅為支撐壓力觀察價與訊號失效價。",
+        "",
         f"同學，未持有不要急。{row.get('non_holder_observation', row.get('entry_observation', ''))}",
         "",
-        f"- 觀察型態：{row.get('buy_observation_type', '') or '尚未觸發'}",
+        f"- 觀察型態：{_text(row.get('buy_observation_type', '')) or '尚未觸發'}",
+        f"- 觀察明細：{_text(row.get('buy_observation_detail_types', ''))}",
         f"- 觀察價：{_format_price(row.get('buy_trigger_price'))}",
+        f"- 觀察價角色：{buy_trigger_role_note}",
         f"- 確認價：{_format_price(row.get('confirm_price'))}",
         "- 不追價條件：沒有站上壓力就只是觀察。",
         "",
         "## 十三、已持有者",
         "",
+        "不是買進名單，不是賣出指令，僅為支撐壓力觀察價與訊號失效價。",
+        "",
         f"同學，已持有先看防守點。{row.get('holder_discipline', row.get('stop_reference', ''))}",
         "",
         f"- 防守價：{_format_price(row.get('invalidation_price', row.get('invalid_price')))}",
-        f"- 賣點警示：{row.get('sell_warning_type', '') or '尚未觸發'}",
-        "- 續抱條件：站穩確認價且沒有放量上影。",
-        "- 減碼條件：跌破短均線或出現高檔供給。",
-        "- 停損條件：跌破防守價收不回。",
+        f"- 賣點警示：{_text(row.get('sell_warning_type', '')) or '尚未觸發'}",
+        f"- 賣點警示明細：{_text(row.get('sell_warning_detail_types', ''))}",
+        "- 續強觀察條件：站穩確認價且沒有放量上影。",
+        "- 風險升高觀察條件：跌破短均線或出現高檔供給。",
+        "- 訊號失效觀察條件：跌破防守價收不回。",
         "",
         "## 十四、網路補充資料",
         "",
@@ -627,10 +666,11 @@ def _shadow_log_frame(feature_matrix: pd.DataFrame) -> pd.DataFrame:
     for column in SHADOW_LOG_COLUMNS:
         if column not in output.columns:
             output[column] = ""
-    return output[SHADOW_LOG_COLUMNS].sort_values(
+    output = output[SHADOW_LOG_COLUMNS].sort_values(
         ["failure_type", "fall_risk_score", "rise_score"],
         ascending=[False, False, False],
     )
+    return output.map(_clean_output_value)
 
 
 def _fixed_statement(result: ZhuWalklineResult) -> str:
@@ -663,7 +703,12 @@ def _write_csv(path: Path, frame: pd.DataFrame, columns: list[str]) -> Path:
     output = output[columns].copy()
     for column in output.columns:
         if output[column].map(lambda value: isinstance(value, list)).any():
-            output[column] = output[column].map(lambda value: "|".join(map(str, value)) if isinstance(value, list) else value)
+            output[column] = output[column].map(
+                lambda value: "|".join(_text(item) for item in value if _text(item))
+                if isinstance(value, list)
+                else value
+            )
+        output[column] = output[column].map(_clean_output_value)
     output.to_csv(path, index=False, encoding="utf-8-sig")
     return path
 
@@ -691,13 +736,13 @@ def _markdown_table(frame: pd.DataFrame, columns: list[str]) -> str:
 
 
 def _format_cell(value: Any) -> str:
+    if _is_missing(value):
+        return ""
     if isinstance(value, list):
-        return ", ".join(map(str, value))
+        return ", ".join(_text(item) for item in value if _text(item))
     if isinstance(value, float):
-        if np.isnan(value):
-            return ""
         return f"{value:.4g}"
-    return str(value).replace("\n", " ")
+    return _text(value).replace("\n", " ")
 
 
 def _format_price(value: Any) -> str:
@@ -711,8 +756,8 @@ def _records(frame: pd.DataFrame) -> list[dict[str, Any]]:
 
 def _as_list(value: Any) -> list[Any]:
     if isinstance(value, list):
-        return value
-    if value is None or (isinstance(value, float) and np.isnan(value)):
+        return [_clean_output_value(item) for item in value if not _is_missing(item)]
+    if _is_missing(value):
         return []
     return [value]
 
@@ -727,6 +772,35 @@ def _float(value: Any) -> float | None:
     return number
 
 
+def _text(value: Any) -> str:
+    if _is_missing(value):
+        return ""
+    text = str(value).strip()
+    if text.lower() in {"nan", "none", "<na>"}:
+        return ""
+    return text
+
+
+def _is_missing(value: Any) -> bool:
+    if value is None:
+        return True
+    try:
+        missing = pd.isna(value)
+    except (TypeError, ValueError):
+        return False
+    if isinstance(missing, (bool, np.bool_)):
+        return bool(missing)
+    return False
+
+
+def _clean_output_value(value: Any) -> Any:
+    if _is_missing(value):
+        return ""
+    if isinstance(value, str):
+        return _text(value)
+    return value
+
+
 def _json_default(value: Any) -> Any:
     if isinstance(value, (np.integer,)):
         return int(value)
@@ -739,6 +813,6 @@ def _json_default(value: Any) -> Any:
         return value.date().isoformat()
     if isinstance(value, Path):
         return str(value)
-    if pd.isna(value):
+    if _is_missing(value):
         return None
     raise TypeError(f"Object is not JSON serializable: {type(value)!r}")

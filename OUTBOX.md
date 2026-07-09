@@ -2502,3 +2502,40 @@
 - Diff check：`git diff --check` 通過。
 - Scanner smoke：`python scripts/run_zhu_walkline_shadow.py --asof latest --top-n 30 --no-web --verbose` 成功，寫出 `2026-07-09` 與 `latest` 報告。
 - CSV header check：bullish watchlist 與 shadow log 包含 `buy_observation_type`、`buy_trigger_price`、`target_resistance_1`、`target_resistance_2`、`sell_warning_type`、`invalidation_price`；fall risk 包含 `sell_warning_type`、`invalidation_price`。
+
+## 2026-07-09 Review Fix - Zhu Walkline Observation Points
+
+## 修改檔案
+- `src/abc_quant/signals/zhu_walkline_shadow.py`: hard-lock shadow mode, split main/detail observation fields, add trigger price role, strict retest logic, support-breakdown guard, target resistance filtering, and missing-value-safe price selection.
+- `src/abc_quant/reports/zhu_walkline_report.py`: add `stop_reference`, detail fields, and trigger role to CSV/summary/shadow log; clean missing values; replace trade-command wording with observation wording.
+- `tests/test_zhu_walkline_features.py`: add tests for mode lock, trigger role semantics, strict resistance-turn-support, support-breakdown overmarking, target resistance filtering, report wording, and missing-value output safety.
+- `tests/test_zhu_walkline_no_lookahead.py`: add multi-stock future row, future high/low/volume, future chip/margin/holder, and future retest no-lookahead tests.
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: record the review fix and formal-boundary guarantees.
+
+## 實作摘要
+- `ZhuWalklineResult.mode` is always `shadow_observation_only`; config attempts to set another mode are ignored with a run note.
+- `buy_observation_type` and `sell_warning_type` are single highest-priority main fields; complete details are in `buy_observation_detail_types` and `sell_warning_detail_types`.
+- `buy_trigger_price_role` clarifies `TRIGGERED_PRICE` versus `NEXT_CONFIRMATION_PRICE` versus `EMPTY`; Markdown states untriggered prices are confirmation observation prices, not buy prices.
+- `RESISTANCE_TURN_SUPPORT` now requires an old resistance, prior close above it, current retest near it, current close above it, no same-candle first breakout, and no high-level upper-shadow supply pressure.
+- `SUPPORT_BREAKDOWN` requires a clear broken support zone, support zone, or previous low breach; `price_down_volume_up` remains risk context but is not enough by itself.
+- `target_resistance_1/2` only outputs resistance above current close; lower/equal fallback levels are blank.
+- CSV/JSON/Markdown output avoids `nan`, `None`, and `<NA>` strings.
+- Report language uses `續強觀察條件`, `風險升高觀察條件`, `訊號失效觀察條件`, and explicitly states: `不是買進名單，不是賣出指令，僅為支撐壓力觀察價與訊號失效價。`
+
+## 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+
+## 目前驗證
+- Ruff：project `.venv` `ruff check .`，All checks passed。
+- Focused tests：`python -m pytest tests/test_zhu_walkline_features.py tests/test_zhu_walkline_no_lookahead.py -q`，25 passed。
+- Full pytest：`python -m pytest -q`，440 passed。
+- Diff check：`git diff --check` 通過。
+- Scanner smoke：`python scripts/run_zhu_walkline_shadow.py --asof latest --top-n 30 --no-web --verbose` 成功，寫出 `2026-07-09` 與 `latest` 報告。
+- Output audit：bullish watchlist、fall risk、shadow log、summary JSON 均含 required `stop_reference`/detail/role 欄位；CSV 未出現 `nan`、`None`、`<NA>` 字串；market/stock reports 含 required observation disclaimer。

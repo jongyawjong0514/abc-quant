@@ -3,6 +3,13 @@ import pytest
 
 from abc_quant.data.local_tw_loader import DataQualityReport, LocalTwDataBundle
 from abc_quant.features.walkline_features import compute_walkline_features, _cluster_price_zones
+from abc_quant.reports.zhu_walkline_report import (
+    _candidate_records,
+    _risk_records,
+    _shadow_log_frame,
+    _stock_report,
+    _summary_payload,
+)
 from abc_quant.signals.zhu_walkline_shadow import build_zhu_walkline_shadow_result, _score_features
 
 
@@ -30,6 +37,32 @@ def _mock_price_frame(stock_id: str = "2330", bearish: bool = False) -> pd.DataF
             }
         )
     return pd.DataFrame(rows)
+
+
+def _mock_bundle(price: pd.DataFrame) -> LocalTwDataBundle:
+    stock_ids = sorted(price["stock_id"].astype(str).unique())
+    quality = DataQualityReport(sqlite_path="mock.sqlite", sqlite_exists=True)
+    return LocalTwDataBundle(
+        asof_date="2026-06-30",
+        requested_asof="2026-06-30",
+        price_history=price,
+        stock_info=pd.DataFrame(
+            {
+                "stock_id": stock_ids,
+                "stock_name": [f"測試{stock_id}" for stock_id in stock_ids],
+                "sector": ["半導體"] * len(stock_ids),
+                "market": ["TWSE"] * len(stock_ids),
+            }
+        ),
+        chip_history=pd.DataFrame(),
+        margin_history=pd.DataFrame(),
+        holder_latest=pd.DataFrame(),
+        market_history=pd.DataFrame(),
+        sector_sentiment=pd.DataFrame(),
+        stock_context=pd.DataFrame(),
+        class_membership=pd.DataFrame(),
+        data_quality=quality,
+    )
 
 
 def test_walkline_features_compute_core_fields() -> None:
@@ -80,28 +113,7 @@ def test_walkline_features_detect_bearish_alignment() -> None:
 
 def test_zhu_walkline_scores_stay_bounded() -> None:
     price = pd.concat([_mock_price_frame("2330"), _mock_price_frame("2317", bearish=True)])
-    quality = DataQualityReport(sqlite_path="mock.sqlite", sqlite_exists=True)
-    bundle = LocalTwDataBundle(
-        asof_date="2026-06-30",
-        requested_asof="2026-06-30",
-        price_history=price,
-        stock_info=pd.DataFrame(
-            {
-                "stock_id": ["2330", "2317"],
-                "stock_name": ["台積電", "鴻海"],
-                "sector": ["半導體", "電子零組件"],
-                "market": ["TWSE", "TWSE"],
-            }
-        ),
-        chip_history=pd.DataFrame(),
-        margin_history=pd.DataFrame(),
-        holder_latest=pd.DataFrame(),
-        market_history=pd.DataFrame(),
-        sector_sentiment=pd.DataFrame(),
-        stock_context=pd.DataFrame(),
-        class_membership=pd.DataFrame(),
-        data_quality=quality,
-    )
+    bundle = _mock_bundle(price)
     result = build_zhu_walkline_shadow_result(
         bundle,
         concept_map={"SEMICONDUCTOR": ["2330"]},
@@ -120,15 +132,34 @@ def test_zhu_walkline_scores_stay_bounded() -> None:
         "signal_stage",
         "trigger_type",
         "buy_observation_type",
+        "buy_observation_detail_types",
         "buy_trigger_price",
+        "buy_trigger_price_role",
         "target_resistance_1",
         "target_resistance_2",
         "sell_warning_type",
+        "sell_warning_detail_types",
+        "stop_reference",
         "invalidation_price",
         "invalid_price",
         "confirm_price",
         "failure_type",
     }.issubset(result.feature_matrix.columns)
+
+
+def test_zhu_walkline_mode_is_locked_to_shadow_observation() -> None:
+    bundle = _mock_bundle(_mock_price_frame("2330"))
+    result = build_zhu_walkline_shadow_result(
+        bundle,
+        concept_map={"SEMICONDUCTOR": ["2330"]},
+        web_records=[],
+        top_n=10,
+        web_research_used=False,
+        config={"project": {"mode": "formal_trade"}, "scoring": {"web_score_cap": 5}},
+    )
+
+    assert result.mode == "shadow_observation_only"
+    assert any("project.mode=formal_trade ignored" in note for note in result.run_notes)
 
 
 def test_market_state_caps_bullish_grades() -> None:
@@ -186,11 +217,71 @@ def test_buy_observation_fields_flag_resistance_breakout() -> None:
         config={"scoring": {"web_score_cap": 5}},
     )
 
-    assert "RESISTANCE_BREAKOUT" in frame.loc[0, "buy_observation_type"]
+    assert frame.loc[0, "buy_observation_type"] == "RESISTANCE_BREAKOUT"
+    assert "RESISTANCE_BREAKOUT" in frame.loc[0, "buy_observation_detail_types"]
+    assert "|" not in frame.loc[0, "buy_observation_type"]
     assert frame.loc[0, "buy_trigger_price"] == pytest.approx(102.0)
+    assert frame.loc[0, "buy_trigger_price_role"] == "TRIGGERED_PRICE"
     assert frame.loc[0, "target_resistance_1"] == pytest.approx(112.0)
     assert frame.loc[0, "target_resistance_2"] == pytest.approx(120.0)
     assert frame.loc[0, "invalidation_price"] == pytest.approx(95.0)
+
+
+def test_resistance_turn_support_requires_prior_breakout_then_retest() -> None:
+    frame = _scoring_frame()
+    frame.loc[0, "prev_close"] = 104.0
+    frame.loc[0, "close"] = 105.0
+    frame.loc[0, "low"] = 101.5
+    frame.loc[0, "breakout_zone_high"] = 102.0
+    frame.loc[0, "resistance_zone_breakout_today"] = False
+
+    _score_features(
+        frame,
+        market={"market_state": "MARKET_RANGE_BOUND", "market_score": 4, "market_risk_score": 4},
+        config={"scoring": {"web_score_cap": 5}},
+    )
+
+    assert frame.loc[0, "buy_observation_type"] == "RESISTANCE_TURN_SUPPORT"
+    assert frame.loc[0, "buy_trigger_price"] == pytest.approx(102.0)
+
+
+def test_same_day_breakout_is_not_resistance_turn_support() -> None:
+    frame = _scoring_frame()
+    frame.loc[0, "prev_close"] = 100.0
+    frame.loc[0, "close"] = 105.0
+    frame.loc[0, "low"] = 101.5
+    frame.loc[0, "breakout_zone_high"] = 102.0
+    frame.loc[0, "resistance_zone_breakout_today"] = True
+
+    _score_features(
+        frame,
+        market={"market_state": "MARKET_RANGE_BOUND", "market_score": 4, "market_risk_score": 4},
+        config={"scoring": {"web_score_cap": 5}},
+    )
+
+    assert frame.loc[0, "buy_observation_type"] == "RESISTANCE_BREAKOUT"
+    assert "RESISTANCE_TURN_SUPPORT" not in frame.loc[0, "buy_observation_detail_types"]
+
+
+def test_buy_trigger_price_role_marks_next_confirmation_when_not_triggered() -> None:
+    frame = _scoring_frame()
+    frame.loc[0, "close"] = 100.0
+    frame.loc[0, "close_above_prev_high"] = False
+    frame.loc[0, "resistance_zone_breakout_today"] = False
+    frame.loc[0, "support_zone_holding_today"] = False
+    frame.loc[0, "volume"] = 900.0
+    frame.loc[0, "vol_ma5"] = 1200.0
+    frame.loc[0, "vol_ma20"] = 1000.0
+
+    _score_features(
+        frame,
+        market={"market_state": "MARKET_RANGE_BOUND", "market_score": 4, "market_risk_score": 4},
+        config={"scoring": {"web_score_cap": 5}},
+    )
+
+    assert frame.loc[0, "buy_observation_type"] == ""
+    assert frame.loc[0, "buy_trigger_price"] == pytest.approx(103.0)
+    assert frame.loc[0, "buy_trigger_price_role"] == "NEXT_CONFIRMATION_PRICE"
 
 
 def test_sell_warning_fields_flag_breakdown_false_breakout_and_ma_failure() -> None:
@@ -211,11 +302,119 @@ def test_sell_warning_fields_flag_breakdown_false_breakout_and_ma_failure() -> N
         config={"scoring": {"web_score_cap": 5}},
     )
 
-    sell_warning_type = frame.loc[0, "sell_warning_type"]
-    assert "SUPPORT_BREAKDOWN" in sell_warning_type
-    assert "FALSE_BREAKOUT" in sell_warning_type
-    assert "ATTACK_K_FAILURE" in sell_warning_type
-    assert "MA_SUPPORT_FAILURE" in sell_warning_type
+    assert frame.loc[0, "sell_warning_type"] == "SUPPORT_BREAKDOWN"
+    assert "|" not in frame.loc[0, "sell_warning_type"]
+    sell_warning_detail_types = frame.loc[0, "sell_warning_detail_types"]
+    assert "SUPPORT_BREAKDOWN" in sell_warning_detail_types
+    assert "FALSE_BREAKOUT" in sell_warning_detail_types
+    assert "ATTACK_K_FAILURE" in sell_warning_detail_types
+    assert "MA_SUPPORT_FAILURE" in sell_warning_detail_types
+
+
+def test_price_down_volume_up_alone_does_not_mark_support_breakdown() -> None:
+    frame = _scoring_frame()
+    frame.loc[0, "close"] = 100.0
+    frame.loc[0, "support_zone_failed_today"] = True
+    frame.loc[0, "price_down_volume_up"] = True
+    frame.loc[0, "close_below_prev_low"] = False
+    frame.loc[0, "broken_support_zone_low"] = pd.NA
+
+    _score_features(
+        frame,
+        market={"market_state": "MARKET_RANGE_BOUND", "market_score": 4, "market_risk_score": 4},
+        config={"scoring": {"web_score_cap": 5}},
+    )
+
+    assert frame.loc[0, "sell_warning_type"] != "SUPPORT_BREAKDOWN"
+    assert "SUPPORT_BREAKDOWN" not in frame.loc[0, "sell_warning_detail_types"]
+
+
+def test_target_resistance_must_be_above_close() -> None:
+    frame = _scoring_frame()
+    frame.loc[0, "close"] = 105.0
+    frame.loc[0, "resistance_zone_1_high"] = 103.0
+    frame.loc[0, "resistance_1"] = 104.0
+    frame.loc[0, "prev_high"] = 104.5
+    frame.loc[0, "resistance_zone_2_high"] = 104.0
+    frame.loc[0, "resistance_2"] = 104.5
+    frame.loc[0, "high_20d"] = 104.9
+    frame.loc[0, "high_60d"] = 104.9
+
+    _score_features(
+        frame,
+        market={"market_state": "MARKET_RANGE_BOUND", "market_score": 4, "market_risk_score": 4},
+        config={"scoring": {"web_score_cap": 5}},
+    )
+
+    assert pd.isna(frame.loc[0, "target_resistance_1"])
+    assert pd.isna(frame.loc[0, "target_resistance_2"])
+
+
+def test_missing_price_fields_do_not_emit_nan_like_strings() -> None:
+    frame = _scoring_frame()
+    for column in [
+        "support_zone_1_low",
+        "support_1",
+        "ma20",
+        "prev_low",
+        "resistance_zone_1_high",
+        "resistance_1",
+        "prev_high",
+        "ma5",
+        "stop_reference",
+    ]:
+        frame.loc[0, column] = pd.NA
+
+    _score_features(
+        frame,
+        market={"market_state": "MARKET_RANGE_BOUND", "market_score": 4, "market_risk_score": 4},
+        config={"scoring": {"web_score_cap": 5}},
+    )
+    log_frame = _shadow_log_frame(frame)
+
+    assert pd.isna(frame.loc[0, "invalid_price"])
+    assert pd.isna(frame.loc[0, "confirm_price"])
+    assert not log_frame.map(lambda value: str(value).lower() in {"nan", "none", "<na>"}).any().any()
+
+
+def test_summary_records_include_stop_reference_and_detail_fields() -> None:
+    frame = _scoring_frame()
+    _score_features(
+        frame,
+        market={"market_state": "MARKET_RANGE_BOUND", "market_score": 4, "market_risk_score": 4},
+        config={"scoring": {"web_score_cap": 5}},
+    )
+
+    candidate = _candidate_records(frame)[0]
+    risk = _risk_records(frame)[0]
+
+    assert "stop_reference" in candidate
+    assert "stop_reference" in risk
+    assert "buy_observation_detail_types" in candidate
+    assert "buy_trigger_price_role" in candidate
+    assert "sell_warning_detail_types" in candidate
+    assert "sell_warning_detail_types" in risk
+
+
+def test_reports_use_observation_language_not_trade_commands() -> None:
+    result = build_zhu_walkline_shadow_result(
+        _mock_bundle(_mock_price_frame("2330")),
+        concept_map={"SEMICONDUCTOR": ["2330"]},
+        web_records=[],
+        top_n=5,
+        web_research_used=False,
+        config={"scoring": {"web_score_cap": 5}},
+    )
+    payload = _summary_payload(result, DataQualityReport(sqlite_path="mock.sqlite", sqlite_exists=True))
+    report = _stock_report(result)
+
+    assert "不是買進名單，不是賣出指令，僅為支撐壓力觀察價與訊號失效價。" in report
+    assert "NEXT_CONFIRMATION_PRICE" in report or "TRIGGERED_PRICE" in report or "EMPTY" in report
+    banned_phrases = ["續" + "抱條件", "減" + "碼條件", "停" + "損條件", "降低" + "部位"]
+    for banned in banned_phrases:
+        assert banned not in report
+    assert payload["mode"] == "shadow_observation_only"
+
 
 
 def _score_one_market_state(market_state: str) -> pd.DataFrame:
@@ -236,6 +435,7 @@ def _scoring_frame() -> pd.DataFrame:
             "high": [101.0],
             "low": [96.0],
             "close": [100.0],
+            "prev_close": [97.0],
             "volume": [1600.0],
             "vol_ma5": [1200.0],
             "vol_ma20": [1000.0],
@@ -258,6 +458,8 @@ def _scoring_frame() -> pd.DataFrame:
             "resistance_zone_1_label": ["102.00~103.00"],
             "resistance_zone_2_low": [110.0],
             "resistance_zone_2_high": [111.0],
+            "high_20d": [111.0],
+            "high_60d": [115.0],
             "broken_support_zone_low": [pd.NA],
             "broken_support_zone_high": [pd.NA],
             "breakout_zone_low": [pd.NA],
@@ -315,5 +517,6 @@ def _scoring_frame() -> pd.DataFrame:
             "ma_state": ["BULL_ALIGNMENT"],
             "volume_state": ["ATTACK_VOLUME"],
             "market_state": ["MARKET_RANGE_BOUND"],
+            "stop_reference": ["跌破支撐區 95.00~96.00 重新評估"],
         }
     )

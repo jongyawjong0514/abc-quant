@@ -22,6 +22,22 @@ from abc_quant.features.walkline_features import (
     forbidden_signal_feature_columns,
 )
 
+SHADOW_OBSERVATION_MODE = "shadow_observation_only"
+BUY_OBSERVATION_PRIORITY = (
+    "RESISTANCE_BREAKOUT",
+    "RESISTANCE_TURN_SUPPORT",
+    "FAILED_BREAKDOWN_RECLAIM",
+    "SUPPORT_REBOUND",
+)
+SELL_WARNING_PRIORITY = (
+    "SUPPORT_BREAKDOWN",
+    "FALSE_BREAKOUT",
+    "ATTACK_K_FAILURE",
+    "MA_SUPPORT_FAILURE",
+    "RESISTANCE_REJECTION",
+)
+RETEST_TOLERANCE_PCT = 0.015
+
 
 @dataclass(frozen=True)
 class ZhuWalklineResult:
@@ -65,7 +81,10 @@ def build_zhu_walkline_shadow_result(
     )
     concept_rotation, concept_context = compute_concept_rotation(walkline, concept_map)
     chip = compute_chip_features(bundle.chip_history, asof_date=bundle.asof_date)
-    holder = compute_big_holder_features(bundle.holder_latest, walkline)
+    holder = compute_big_holder_features(
+        _filter_snapshot_asof(bundle.holder_latest, date_column="date", asof_date=bundle.asof_date),
+        walkline,
+    )
     margin = compute_margin_features(bundle.margin_history, walkline, asof_date=bundle.asof_date)
     news = compute_news_event_features(
         web_records,
@@ -95,11 +114,17 @@ def build_zhu_walkline_shadow_result(
         ["fall_risk_score", "rise_score"], ascending=[False, True]
     ).head(top_n)
     run_notes = list(bundle.data_quality.warnings)
+    configured_mode = str(config.get("project", {}).get("mode", SHADOW_OBSERVATION_MODE))
+    if configured_mode != SHADOW_OBSERVATION_MODE:
+        run_notes.append(
+            f"project.mode={configured_mode} ignored; Zhu walkline scanner is locked to "
+            f"{SHADOW_OBSERVATION_MODE}."
+        )
     if not web_research_used:
         run_notes.append("未啟用或無法使用網路搜尋，本次分析僅使用本地資料庫。")
     return ZhuWalklineResult(
         asof_date=bundle.asof_date,
-        mode=str(config.get("project", {}).get("mode", "shadow_observation_only")),
+        mode=SHADOW_OBSERVATION_MODE,
         formal_champion_changed=False,
         formal_trade_effect=False,
         web_research_used=web_research_used,
@@ -212,6 +237,20 @@ def _merge_feature_layers(
     features["market_state"] = market["market_state"]
     features = _fill_defaults(features)
     return features
+
+
+def _filter_snapshot_asof(frame: pd.DataFrame, *, date_column: str, asof_date: str) -> pd.DataFrame:
+    if frame.empty or date_column not in frame.columns:
+        return frame
+    data = frame.copy()
+    data[date_column] = pd.to_datetime(data[date_column], errors="coerce")
+    data = data[data[date_column] <= pd.to_datetime(asof_date)].copy()
+    if data.empty:
+        return data
+    if "stock_id" in data.columns:
+        data["stock_id"] = data["stock_id"].astype(str)
+        return data.sort_values(["stock_id", date_column]).groupby("stock_id", sort=False).tail(1)
+    return data.sort_values(date_column).tail(1)
 
 
 def _fill_defaults(features: pd.DataFrame) -> pd.DataFrame:
@@ -479,8 +518,10 @@ def _add_signal_stage_and_failure_fields(features: pd.DataFrame, *, market_state
         (features["institutional_total_buy_sell"].fillna(0.0) < 0)
         & (features["return_1d"].fillna(0.0) >= 0)
     )
+    close_numeric = pd.to_numeric(features["close"], errors="coerce")
+    ma20_numeric = pd.to_numeric(features["ma20"], errors="coerce")
     features["margin_crowding_risk"] = (
-        ((features["close"] < features["ma20"]) | features["support_broken_today"].fillna(False))
+        ((close_numeric < ma20_numeric).fillna(False) | features["support_broken_today"].fillna(False))
         & (
             (features["margin_change_1d"].fillna(0.0) > 0)
             | (features["margin_consecutive_increase_days"].fillna(0.0) > 0)
@@ -495,17 +536,36 @@ def _add_signal_stage_and_failure_fields(features: pd.DataFrame, *, market_state
     features["signal_stage"] = features.apply(_signal_stage, axis=1)
     features["invalid_price"] = features.apply(_invalid_price, axis=1)
     features["confirm_price"] = features.apply(_confirm_price, axis=1)
-    features["buy_observation_type"] = features.apply(_buy_observation_type, axis=1)
+    features["buy_observation_detail_types"] = features.apply(
+        lambda row: "|".join(_buy_observation_types(row)),
+        axis=1,
+    )
+    features["buy_observation_type"] = features["buy_observation_detail_types"].map(
+        lambda value: _primary_type(value, BUY_OBSERVATION_PRIORITY)
+    )
     features["buy_trigger_price"] = features.apply(_buy_trigger_price, axis=1)
+    features["buy_trigger_price_role"] = features.apply(_buy_trigger_price_role, axis=1)
     features["target_resistance_1"] = features.apply(
-        lambda row: _first_price(row, ("resistance_zone_1_high", "resistance_1", "prev_high")),
+        lambda row: _target_resistance(
+            row,
+            ("resistance_zone_1_high", "resistance_1", "prev_high", "high_20d"),
+        ),
         axis=1,
     )
     features["target_resistance_2"] = features.apply(
-        lambda row: _first_price(row, ("resistance_zone_2_high", "resistance_2", "high_20d")),
+        lambda row: _target_resistance(
+            row,
+            ("resistance_zone_2_high", "resistance_2", "high_60d", "high_20d"),
+        ),
         axis=1,
     )
-    features["sell_warning_type"] = features.apply(_sell_warning_type, axis=1)
+    features["sell_warning_detail_types"] = features.apply(
+        lambda row: "|".join(_sell_warning_types(row)),
+        axis=1,
+    )
+    features["sell_warning_type"] = features["sell_warning_detail_types"].map(
+        lambda value: _primary_type(value, SELL_WARNING_PRIORITY)
+    )
     features["invalidation_price"] = features["invalid_price"]
     features["non_holder_observation"] = features.apply(_non_holder_observation, axis=1)
     features["holder_discipline"] = features.apply(_holder_discipline, axis=1)
@@ -553,14 +613,12 @@ def _failure_types(row: pd.Series, *, market_state: str) -> list[str]:
         failures.append("MARGIN_CROWDING")
     if bool(row.get("high_level_supply_pressure", False)) or row.get("supply_pressure_score", 0.0) >= 8:
         failures.append("SUPPLY_PRESSURE")
-    if bool(row.get("support_broken_today", False)) or bool(
-        row.get("support_zone_failed_today", False)
-    ):
+    if _support_breakdown_warning(row):
         failures.append("SUPPORT_BREAK")
     return failures
 
 
-def _buy_observation_type(row: pd.Series) -> str:
+def _buy_observation_types(row: pd.Series) -> list[str]:
     observations: list[str] = []
     if _resistance_breakout_observation(row):
         observations.append("RESISTANCE_BREAKOUT")
@@ -570,18 +628,19 @@ def _buy_observation_type(row: pd.Series) -> str:
         observations.append("FAILED_BREAKDOWN_RECLAIM")
     if _support_rebound_observation(row):
         observations.append("SUPPORT_REBOUND")
-    return "|".join(dict.fromkeys(observations))
+    return [signal for signal in BUY_OBSERVATION_PRIORITY if signal in set(observations)]
 
 
 def _buy_trigger_price(row: pd.Series) -> float | None:
+    detail_types = set(_split_types(row.get("buy_observation_detail_types", "")))
     triggered_prices: list[float] = []
-    if _resistance_breakout_observation(row):
+    if "RESISTANCE_BREAKOUT" in detail_types:
         triggered_prices.append(_first_price(row, ("breakout_zone_high", "resistance_zone_1_high")) or np.nan)
-    if _resistance_turn_support_observation(row):
+    if "RESISTANCE_TURN_SUPPORT" in detail_types:
         triggered_prices.append(_first_price(row, ("breakout_zone_high", "support_zone_1_high")) or np.nan)
-    if _failed_breakdown_reclaim_observation(row):
+    if "FAILED_BREAKDOWN_RECLAIM" in detail_types:
         triggered_prices.append(_first_price(row, ("prev_low", "broken_support_zone_high")) or np.nan)
-    if _support_rebound_observation(row):
+    if "SUPPORT_REBOUND" in detail_types:
         triggered_prices.append(_first_price(row, ("prev_high", "resistance_zone_1_high")) or np.nan)
     valid_triggered = [price for price in triggered_prices if _is_finite_price(price)]
     if valid_triggered:
@@ -598,13 +657,19 @@ def _buy_trigger_price(row: pd.Series) -> float | None:
     )
 
 
-def _sell_warning_type(row: pd.Series) -> str:
+def _buy_trigger_price_role(row: pd.Series) -> str:
+    trigger_price = row.get("buy_trigger_price")
+    if not _is_finite_price(trigger_price):
+        return "EMPTY"
+    if str(row.get("buy_observation_type", "") or "").strip():
+        return "TRIGGERED_PRICE"
+    return "NEXT_CONFIRMATION_PRICE"
+
+
+def _sell_warning_types(row: pd.Series) -> list[str]:
     warnings: list[str] = []
-    support_low = _first_price(row, ("broken_support_zone_low", "support_zone_1_low", "support_1"))
     close = _first_price(row, ("close",))
-    if bool(row.get("support_zone_failed_today", False)) or (
-        _is_finite_price(close) and _is_finite_price(support_low) and close < support_low
-    ):
+    if _support_breakdown_warning(row):
         warnings.append("SUPPORT_BREAKDOWN")
     attack_low = _first_price(row, ("high_volume_red_k_low",))
     if _is_finite_price(close) and _is_finite_price(attack_low) and close < attack_low:
@@ -631,7 +696,7 @@ def _sell_warning_type(row: pd.Series) -> str:
         warnings.append("RESISTANCE_REJECTION")
     if _ma_support_failure(row):
         warnings.append("MA_SUPPORT_FAILURE")
-    return "|".join(dict.fromkeys(warnings))
+    return [signal for signal in SELL_WARNING_PRIORITY if signal in set(warnings)]
 
 
 def _resistance_breakout_observation(row: pd.Series) -> bool:
@@ -641,18 +706,29 @@ def _resistance_breakout_observation(row: pd.Series) -> bool:
 
 def _resistance_turn_support_observation(row: pd.Series) -> bool:
     old_resistance_high = _first_price(row, ("breakout_zone_high",))
-    support_low = _first_price(row, ("support_zone_1_low",))
-    support_high = _first_price(row, ("support_zone_1_high",))
+    prev_close = _first_price(row, ("prev_close",))
     low = _first_price(row, ("low",))
+    close = _first_price(row, ("close",))
     if not all(
         _is_finite_price(value)
-        for value in [old_resistance_high, support_low, support_high, low]
+        for value in [old_resistance_high, prev_close, low, close]
     ):
         return False
-    retest = support_low <= old_resistance_high <= support_high or low <= old_resistance_high
+    already_above = prev_close > old_resistance_high
+    retest = low <= old_resistance_high * (1.0 + RETEST_TOLERANCE_PCT)
+    held = close > old_resistance_high
+    first_breakout_same_candle = bool(row.get("resistance_zone_breakout_today", False)) or (
+        prev_close <= old_resistance_high and close > old_resistance_high
+    )
+    supply_pressure = bool(row.get("high_level_supply_pressure", False)) or bool(
+        row.get("high_volume_upper_shadow", False)
+    )
     return (
-        retest
-        and bool(row.get("support_zone_holding_today", False))
+        already_above
+        and retest
+        and held
+        and not first_breakout_same_candle
+        and not supply_pressure
         and _effective_buy_observation(row, old_resistance_high)
     )
 
@@ -721,6 +797,21 @@ def _effective_sell_warning_condition(row: pd.Series) -> bool:
     )
 
 
+def _support_breakdown_warning(row: pd.Series) -> bool:
+    close = _first_price(row, ("close",))
+    broken_support_low = _first_price(row, ("broken_support_zone_low",))
+    support_low = _first_price(row, ("support_zone_1_low", "support_1"))
+    prev_low = _first_price(row, ("prev_low",))
+    if not _is_finite_price(close):
+        return False
+    return (
+        (_is_finite_price(broken_support_low) and close < broken_support_low)
+        or (_is_finite_price(support_low) and close < support_low)
+        or bool(row.get("close_below_prev_low", False))
+        or (_is_finite_price(prev_low) and close < prev_low)
+    )
+
+
 def _ma_support_failure(row: pd.Series) -> bool:
     if any(bool(row.get(f"ma_break_{window}", False)) for window in (5, 10, 20)):
         return True
@@ -741,6 +832,34 @@ def _has_clear_stop_reference(row: pd.Series) -> bool:
         return True
     stop_reference = row.get("stop_reference")
     return isinstance(stop_reference, str) and bool(stop_reference.strip())
+
+
+def _split_types(value: object) -> list[str]:
+    if value is None or value is pd.NA:
+        return []
+    text = str(value).strip()
+    if not text or text.lower() in {"nan", "none", "<na>"}:
+        return []
+    return [item for item in text.split("|") if item]
+
+
+def _primary_type(value: object, priority: tuple[str, ...]) -> str:
+    detail_types = set(_split_types(value))
+    for signal_type in priority:
+        if signal_type in detail_types:
+            return signal_type
+    return ""
+
+
+def _target_resistance(row: pd.Series, columns: tuple[str, ...]) -> float | None:
+    close = _first_price(row, ("close",))
+    if not _is_finite_price(close):
+        return None
+    for column in columns:
+        value = _first_price(row, (column,))
+        if _is_finite_price(value) and value > close:
+            return float(value)
+    return None
 
 
 def _first_price(row: pd.Series, columns: tuple[str, ...]) -> float | None:
@@ -775,39 +894,31 @@ def _signal_stage(row: pd.Series) -> str:
 
 
 def _invalid_price(row: pd.Series) -> float | None:
-    for column in ("support_zone_1_low", "support_1", "ma20", "prev_low"):
-        value = row.get(column)
-        if pd.notna(value):
-            return float(value)
-    return None
+    return _first_price(row, ("support_zone_1_low", "support_1", "ma20", "prev_low"))
 
 
 def _confirm_price(row: pd.Series) -> float | None:
-    for column in ("resistance_zone_1_high", "resistance_1", "prev_high", "ma5"):
-        value = row.get(column)
-        if pd.notna(value):
-            return float(value)
-    return None
+    return _first_price(row, ("resistance_zone_1_high", "resistance_1", "prev_high", "ma5"))
 
 
 def _non_holder_observation(row: pd.Series) -> str:
     confirm = row.get("confirm_price")
     zone = row.get("resistance_zone_1_label", "")
-    if pd.notna(confirm):
+    if _is_finite_price(confirm):
         if zone:
             return f"觀察壓力區 {zone}，未收盤站上前不追價"
-        return f"觀察價/確認價 {confirm:.2f}，未站上前不追價"
+        return f"觀察價/確認價 {float(confirm):.2f}，未站上前不追價"
     return "沒有明確確認價，空手等待下一根訊號"
 
 
 def _holder_discipline(row: pd.Series) -> str:
     invalid = row.get("invalid_price")
     zone = row.get("support_zone_1_label", "")
-    if pd.notna(invalid):
+    if _is_finite_price(invalid):
         if zone:
             return f"防守支撐區 {zone}，跌破收不回就視為訊號失敗"
-        return f"防守價 {invalid:.2f}，跌破收不回就視為訊號失敗"
-    return "缺少明確防守價，降低部位或維持觀察"
+        return f"防守價 {float(invalid):.2f}，跌破收不回就視為訊號失敗"
+    return "缺少明確防守價，僅列風險暴露觀察"
 
 
 def _zone_label(row: pd.Series, prefix: str) -> str:
