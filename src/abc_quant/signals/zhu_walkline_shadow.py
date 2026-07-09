@@ -495,6 +495,18 @@ def _add_signal_stage_and_failure_fields(features: pd.DataFrame, *, market_state
     features["signal_stage"] = features.apply(_signal_stage, axis=1)
     features["invalid_price"] = features.apply(_invalid_price, axis=1)
     features["confirm_price"] = features.apply(_confirm_price, axis=1)
+    features["buy_observation_type"] = features.apply(_buy_observation_type, axis=1)
+    features["buy_trigger_price"] = features.apply(_buy_trigger_price, axis=1)
+    features["target_resistance_1"] = features.apply(
+        lambda row: _first_price(row, ("resistance_zone_1_high", "resistance_1", "prev_high")),
+        axis=1,
+    )
+    features["target_resistance_2"] = features.apply(
+        lambda row: _first_price(row, ("resistance_zone_2_high", "resistance_2", "high_20d")),
+        axis=1,
+    )
+    features["sell_warning_type"] = features.apply(_sell_warning_type, axis=1)
+    features["invalidation_price"] = features["invalid_price"]
     features["non_holder_observation"] = features.apply(_non_holder_observation, axis=1)
     features["holder_discipline"] = features.apply(_holder_discipline, axis=1)
 
@@ -546,6 +558,205 @@ def _failure_types(row: pd.Series, *, market_state: str) -> list[str]:
     ):
         failures.append("SUPPORT_BREAK")
     return failures
+
+
+def _buy_observation_type(row: pd.Series) -> str:
+    observations: list[str] = []
+    if _resistance_breakout_observation(row):
+        observations.append("RESISTANCE_BREAKOUT")
+    if _resistance_turn_support_observation(row):
+        observations.append("RESISTANCE_TURN_SUPPORT")
+    if _failed_breakdown_reclaim_observation(row):
+        observations.append("FAILED_BREAKDOWN_RECLAIM")
+    if _support_rebound_observation(row):
+        observations.append("SUPPORT_REBOUND")
+    return "|".join(dict.fromkeys(observations))
+
+
+def _buy_trigger_price(row: pd.Series) -> float | None:
+    triggered_prices: list[float] = []
+    if _resistance_breakout_observation(row):
+        triggered_prices.append(_first_price(row, ("breakout_zone_high", "resistance_zone_1_high")) or np.nan)
+    if _resistance_turn_support_observation(row):
+        triggered_prices.append(_first_price(row, ("breakout_zone_high", "support_zone_1_high")) or np.nan)
+    if _failed_breakdown_reclaim_observation(row):
+        triggered_prices.append(_first_price(row, ("prev_low", "broken_support_zone_high")) or np.nan)
+    if _support_rebound_observation(row):
+        triggered_prices.append(_first_price(row, ("prev_high", "resistance_zone_1_high")) or np.nan)
+    valid_triggered = [price for price in triggered_prices if _is_finite_price(price)]
+    if valid_triggered:
+        return float(max(valid_triggered))
+    return _first_price(
+        row,
+        (
+            "confirm_price",
+            "resistance_zone_1_high",
+            "resistance_1",
+            "prev_high",
+            "ma5",
+        ),
+    )
+
+
+def _sell_warning_type(row: pd.Series) -> str:
+    warnings: list[str] = []
+    support_low = _first_price(row, ("broken_support_zone_low", "support_zone_1_low", "support_1"))
+    close = _first_price(row, ("close",))
+    if bool(row.get("support_zone_failed_today", False)) or (
+        _is_finite_price(close) and _is_finite_price(support_low) and close < support_low
+    ):
+        warnings.append("SUPPORT_BREAKDOWN")
+    attack_low = _first_price(row, ("high_volume_red_k_low",))
+    if _is_finite_price(close) and _is_finite_price(attack_low) and close < attack_low:
+        warnings.append("ATTACK_K_FAILURE")
+    if bool(row.get("resistance_zone_breakout_failed_today", False)) or bool(
+        row.get("failed_breakout", False)
+    ):
+        warnings.append("FALSE_BREAKOUT")
+    resistance_low = _first_price(row, ("resistance_zone_1_low", "resistance_1"))
+    resistance_high = _first_price(row, ("resistance_zone_1_high", "resistance_1"))
+    high = _first_price(row, ("high",))
+    rejection_shape = bool(row.get("shooting_star_like", False)) or bool(
+        row.get("high_volume_upper_shadow", False)
+    )
+    if (
+        _is_finite_price(high)
+        and _is_finite_price(close)
+        and _is_finite_price(resistance_low)
+        and _is_finite_price(resistance_high)
+        and high >= resistance_low
+        and close < resistance_high
+        and (rejection_shape or _effective_sell_warning_condition(row))
+    ):
+        warnings.append("RESISTANCE_REJECTION")
+    if _ma_support_failure(row):
+        warnings.append("MA_SUPPORT_FAILURE")
+    return "|".join(dict.fromkeys(warnings))
+
+
+def _resistance_breakout_observation(row: pd.Series) -> bool:
+    trigger = _first_price(row, ("breakout_zone_high", "resistance_zone_1_high"))
+    return bool(row.get("resistance_zone_breakout_today", False)) and _effective_buy_observation(row, trigger)
+
+
+def _resistance_turn_support_observation(row: pd.Series) -> bool:
+    old_resistance_high = _first_price(row, ("breakout_zone_high",))
+    support_low = _first_price(row, ("support_zone_1_low",))
+    support_high = _first_price(row, ("support_zone_1_high",))
+    low = _first_price(row, ("low",))
+    if not all(
+        _is_finite_price(value)
+        for value in [old_resistance_high, support_low, support_high, low]
+    ):
+        return False
+    retest = support_low <= old_resistance_high <= support_high or low <= old_resistance_high
+    return (
+        retest
+        and bool(row.get("support_zone_holding_today", False))
+        and _effective_buy_observation(row, old_resistance_high)
+    )
+
+
+def _failed_breakdown_reclaim_observation(row: pd.Series) -> bool:
+    trigger = _first_price(row, ("prev_low", "broken_support_zone_high", "support_zone_1_low"))
+    reclaimed = bool(row.get("failed_breakdown", False)) or (
+        bool(row.get("break_prev_low", False)) and not bool(row.get("close_below_prev_low", False))
+    )
+    return reclaimed and _effective_buy_observation(row, trigger)
+
+
+def _support_rebound_observation(row: pd.Series) -> bool:
+    trigger = _first_price(row, ("prev_high", "resistance_zone_1_high"))
+    support_turn = bool(row.get("support_zone_holding_today", False)) and bool(
+        row.get("close_above_prev_high", False)
+    )
+    return support_turn and _effective_buy_observation(row, trigger)
+
+
+def _effective_buy_observation(row: pd.Series, trigger_price: float | None) -> bool:
+    close = _first_price(row, ("close",))
+    if not _is_finite_price(close) or not _is_finite_price(trigger_price) or close <= trigger_price:
+        return False
+    volume = _first_price(row, ("volume",))
+    vol_ma5 = _first_price(row, ("vol_ma5",))
+    vol_ma20 = _first_price(row, ("vol_ma20",))
+    has_volume = (
+        _is_finite_price(volume)
+        and (
+            (_is_finite_price(vol_ma5) and volume > vol_ma5)
+            or (_is_finite_price(vol_ma20) and volume > vol_ma20)
+        )
+    )
+    if not has_volume:
+        return False
+    if float(row.get("close_position_in_range", 0.0) or 0.0) <= 0.6:
+        return False
+    if bool(row.get("high_level_supply_pressure", False)) or bool(
+        row.get("high_volume_upper_shadow", False)
+    ):
+        return False
+    if float(row.get("upper_shadow_pct", 0.0) or 0.0) >= 0.025 and float(
+        row.get("close_position_in_range", 0.0) or 0.0
+    ) < 0.65:
+        return False
+    return _has_clear_stop_reference(row)
+
+
+def _effective_sell_warning_condition(row: pd.Series) -> bool:
+    close = _first_price(row, ("close",))
+    support_low = _first_price(row, ("support_zone_1_low", "support_1"))
+    resistance_high = _first_price(row, ("resistance_zone_1_high", "resistance_1"))
+    high = _first_price(row, ("high",))
+    return (
+        (_is_finite_price(close) and _is_finite_price(support_low) and close < support_low)
+        or (
+            _is_finite_price(high)
+            and _is_finite_price(close)
+            and _is_finite_price(resistance_high)
+            and high > resistance_high
+            and close < resistance_high
+        )
+        or bool(row.get("close_below_prev_low", False))
+        or bool(row.get("price_down_volume_up", False))
+    )
+
+
+def _ma_support_failure(row: pd.Series) -> bool:
+    if any(bool(row.get(f"ma_break_{window}", False)) for window in (5, 10, 20)):
+        return True
+    close = _first_price(row, ("close",))
+    if not _is_finite_price(close):
+        return False
+    below_short_ma = any(
+        _is_finite_price(ma_value := _first_price(row, (f"ma{window}",))) and close < ma_value
+        for window in (5, 10, 20)
+    )
+    return below_short_ma and row.get("ma_state") in {"MA_BREAK", "BEAR_ALIGNMENT"}
+
+
+def _has_clear_stop_reference(row: pd.Series) -> bool:
+    if _is_finite_price(row.get("invalid_price")):
+        return True
+    if _first_price(row, ("support_zone_1_low", "support_1", "prev_low")) is not None:
+        return True
+    stop_reference = row.get("stop_reference")
+    return isinstance(stop_reference, str) and bool(stop_reference.strip())
+
+
+def _first_price(row: pd.Series, columns: tuple[str, ...]) -> float | None:
+    for column in columns:
+        value = row.get(column)
+        if _is_finite_price(value):
+            return float(value)
+    return None
+
+
+def _is_finite_price(value: object) -> bool:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return False
+    return bool(np.isfinite(number))
 
 
 def _signal_stage(row: pd.Series) -> str:

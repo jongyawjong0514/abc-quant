@@ -2478,3 +2478,27 @@
 - Price / 法人 / 融資券最新日期：`2026-07-08`。
 - 大戶/TDCC 最新日期：`2026-06-26`。
 - 正式大盤指數均線較股價資料舊，報告已降級使用全市場等權 proxy 並寫入 data quality warning。
+
+## 2026-07-09 Direct User Task - Zhu Walkline Observation Points
+
+## 修改檔案
+- `src/abc_quant/signals/zhu_walkline_shadow.py`: 新增支撐壓力買賣觀察點欄位與規則。
+- `src/abc_quant/reports/zhu_walkline_report.py`: 將觀察型態、trigger、目標壓力、賣點警示與失敗價輸出到 CSV、summary JSON、shadow log、Markdown。
+- `tests/test_zhu_walkline_features.py`: 新增突破觀察與賣點警示欄位測試。
+- `tests/test_zhu_walkline_no_lookahead.py`: 新增觀察欄位忽略未來價格列測試。
+- `CHANGELOG.md`, `STATUS.md`: 記錄本輪 shadow-only 變更。
+
+## 實作摘要
+- 買點觀察型態：`SUPPORT_REBOUND`、`RESISTANCE_BREAKOUT`、`RESISTANCE_TURN_SUPPORT`、`FAILED_BREAKDOWN_RECLAIM`。
+- 賣點警示型態：`RESISTANCE_REJECTION`、`SUPPORT_BREAKDOWN`、`ATTACK_K_FAILURE`、`FALSE_BREAKOUT`、`MA_SUPPORT_FAILURE`。
+- 有效買點觀察必須同時具備收盤越過 trigger、量能大於 5 日或 20 日均量、收在相對高檔、非高檔長上影，且有明確 stop/invalidation reference。
+- 本輪仍是 `shadow_observation_only`；不修改 formal champion，不產生正式交易指令。
+
+## 目前驗證
+- Focused tests：`tests/test_zhu_walkline_features.py tests/test_zhu_walkline_no_lookahead.py -q`，12 passed。
+- Ruff focused：指定 signal/report/test 檔案，All checks passed。
+- Ruff full：`ruff check .`，All checks passed。
+- Full pytest：`427 passed`。
+- Diff check：`git diff --check` 通過。
+- Scanner smoke：`python scripts/run_zhu_walkline_shadow.py --asof latest --top-n 30 --no-web --verbose` 成功，寫出 `2026-07-09` 與 `latest` 報告。
+- CSV header check：bullish watchlist 與 shadow log 包含 `buy_observation_type`、`buy_trigger_price`、`target_resistance_1`、`target_resistance_2`、`sell_warning_type`、`invalidation_price`；fall risk 包含 `sell_warning_type`、`invalidation_price`。

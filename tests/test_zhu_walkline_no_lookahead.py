@@ -55,12 +55,37 @@ def test_forbidden_signal_feature_columns_detect_labels_and_forward_returns() ->
 
 
 def test_signal_feature_matrix_excludes_forward_return_columns() -> None:
-    price = _price_with_future(99.0)
+    result = _signal_result(99.0)
+
+    assert forbidden_signal_feature_columns(result.feature_matrix.columns) == []
+    assert "future_return_d1" not in result.feature_matrix.columns
+    assert "label_d1" not in result.feature_matrix.columns
+
+
+def test_signal_observation_fields_ignore_future_price_rows() -> None:
+    base = _signal_result(15.0).feature_matrix
+    mutated = _signal_result(999.0).feature_matrix
+
+    columns = [
+        "buy_observation_type",
+        "buy_trigger_price",
+        "target_resistance_1",
+        "target_resistance_2",
+        "sell_warning_type",
+        "invalidation_price",
+        "signal_stage",
+        "trigger_type",
+        "failure_type",
+    ]
+    pd.testing.assert_frame_equal(base[columns], mutated[columns])
+
+
+def _signal_result(future_close: float):
     quality = DataQualityReport(sqlite_path="mock.sqlite", sqlite_exists=True)
     bundle = LocalTwDataBundle(
         asof_date="2026-07-08",
         requested_asof="2026-07-08",
-        price_history=price,
+        price_history=_price_with_future(future_close),
         stock_info=pd.DataFrame(
             {"stock_id": ["6830"], "stock_name": ["汎銓"], "sector": ["半導體設備"], "market": ["TWSE"]}
         ),
@@ -73,7 +98,7 @@ def test_signal_feature_matrix_excludes_forward_return_columns() -> None:
         class_membership=pd.DataFrame(),
         data_quality=quality,
     )
-    result = build_zhu_walkline_shadow_result(
+    return build_zhu_walkline_shadow_result(
         bundle,
         concept_map={"SEMICONDUCTOR_EQUIPMENT": ["6830"]},
         web_records=[],
@@ -81,7 +106,3 @@ def test_signal_feature_matrix_excludes_forward_return_columns() -> None:
         web_research_used=False,
         config={"scoring": {"web_score_cap": 5}},
     )
-
-    assert forbidden_signal_feature_columns(result.feature_matrix.columns) == []
-    assert "future_return_d1" not in result.feature_matrix.columns
-    assert "label_d1" not in result.feature_matrix.columns

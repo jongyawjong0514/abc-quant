@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 新增 Zhu walkline 支撐壓力買賣觀察點欄位：`buy_observation_type`、`buy_trigger_price`、`target_resistance_1/2`、`sell_warning_type`、`invalidation_price`，支援 `SUPPORT_REBOUND`、`RESISTANCE_BREAKOUT`、`RESISTANCE_TURN_SUPPORT`、`FAILED_BREAKDOWN_RECLAIM` 與 `RESISTANCE_REJECTION`、`SUPPORT_BREAKDOWN`、`ATTACK_K_FAILURE`、`FALSE_BREAKOUT`、`MA_SUPPORT_FAILURE`；輸出至 CSV、summary JSON、shadow log 與 Markdown 報告，仍為 shadow observation / 教學觀察欄位，不產生交易指令。
 - 強化 Zhu walkline 支撐/壓力計算：將單點支撐壓力升級為 1.5% 內合併的 `support_zone_*` / `resistance_zone_*` 區間，來源納入前高低、3/5/20/60日高低、5/10/20/60日均線、大量紅黑K、長上下影線、跳空缺口與整數關卡；新增支撐有效/失敗、壓力有效突破/假突破欄位，報告與 summary JSON 同步輸出 zone records，正式策略與交易效果仍不變。
 - 強化 Zhu walkline shadow scanner 訊號紀律：將主要輸出改為 `top_bullish_watchlist`/「多方轉強觀察股」並保留 legacy `top_rise_candidates`，新增 `signal_stage`、`trigger_type`、`invalid_price`、`confirm_price`、`failure_type`、`reversal_state` 與 shadow log；加入大盤弱勢分級上限、高檔爆量長上影供給壓力、法人買超價弱背離、跌破20日線/支撐且融資增加風險，並固定 `mode=shadow_observation_only`、`formal_champion_changed=False`、`formal_trade_effect=False`。
 - 新增 direct task Zhu walkline shadow scanner：保存原始任務書 `CODEx_ZHU_WALKLINE_SHADOW_TASK.md`，新增 `config/zhu_walkline_shadow.yaml`、概念股 mapping、local SQLite loader、走圖技術特徵、法人/大戶proxy/融資券/市場與概念輪動、官方重大訊息 web cache 補充、shadow scoring、Markdown/CSV/JSON/parquet 報告與 `scripts/run_zhu_walkline_shadow.py`；預設 `--no-web`，`--use-web` 僅補充官方 mirror 事件，不修改 formal champion / formal weights / formal trades；新增 no-lookahead、feature、web cache focused tests，並加入 `pyarrow` 依賴以輸出 parquet。

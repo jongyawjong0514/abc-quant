@@ -116,9 +116,19 @@ def test_zhu_walkline_scores_stay_bounded() -> None:
     assert result.mode == "shadow_observation_only"
     assert result.formal_champion_changed is False
     assert result.formal_trade_effect is False
-    assert {"signal_stage", "trigger_type", "invalid_price", "confirm_price", "failure_type"}.issubset(
-        result.feature_matrix.columns
-    )
+    assert {
+        "signal_stage",
+        "trigger_type",
+        "buy_observation_type",
+        "buy_trigger_price",
+        "target_resistance_1",
+        "target_resistance_2",
+        "sell_warning_type",
+        "invalidation_price",
+        "invalid_price",
+        "confirm_price",
+        "failure_type",
+    }.issubset(result.feature_matrix.columns)
 
 
 def test_market_state_caps_bullish_grades() -> None:
@@ -157,6 +167,57 @@ def test_failure_type_flags_supply_institutional_and_margin_risks() -> None:
     assert frame.loc[0, "grade"] == ""
 
 
+def test_buy_observation_fields_flag_resistance_breakout() -> None:
+    frame = _scoring_frame()
+    frame.loc[0, "close"] = 105.0
+    frame.loc[0, "high"] = 106.0
+    frame.loc[0, "breakout_zone_high"] = 102.0
+    frame.loc[0, "resistance_zone_breakout_today"] = True
+    frame.loc[0, "resistance_zone_1_low"] = 110.0
+    frame.loc[0, "resistance_zone_1_high"] = 112.0
+    frame.loc[0, "resistance_zone_2_high"] = 120.0
+    frame.loc[0, "volume"] = 2000.0
+    frame.loc[0, "vol_ma5"] = 1500.0
+    frame.loc[0, "vol_ma20"] = 1400.0
+
+    _score_features(
+        frame,
+        market={"market_state": "MARKET_RANGE_BOUND", "market_score": 4, "market_risk_score": 4},
+        config={"scoring": {"web_score_cap": 5}},
+    )
+
+    assert "RESISTANCE_BREAKOUT" in frame.loc[0, "buy_observation_type"]
+    assert frame.loc[0, "buy_trigger_price"] == pytest.approx(102.0)
+    assert frame.loc[0, "target_resistance_1"] == pytest.approx(112.0)
+    assert frame.loc[0, "target_resistance_2"] == pytest.approx(120.0)
+    assert frame.loc[0, "invalidation_price"] == pytest.approx(95.0)
+
+
+def test_sell_warning_fields_flag_breakdown_false_breakout_and_ma_failure() -> None:
+    frame = _scoring_frame()
+    frame.loc[0, "close"] = 93.0
+    frame.loc[0, "high"] = 106.0
+    frame.loc[0, "support_zone_failed_today"] = True
+    frame.loc[0, "close_below_prev_low"] = True
+    frame.loc[0, "price_down_volume_up"] = True
+    frame.loc[0, "resistance_zone_breakout_failed_today"] = True
+    frame.loc[0, "high_volume_red_k_low"] = 96.0
+    frame.loc[0, "ma_break_5"] = True
+    frame.loc[0, "ma_state"] = "MA_BREAK"
+
+    _score_features(
+        frame,
+        market={"market_state": "MARKET_RANGE_BOUND", "market_score": 4, "market_risk_score": 4},
+        config={"scoring": {"web_score_cap": 5}},
+    )
+
+    sell_warning_type = frame.loc[0, "sell_warning_type"]
+    assert "SUPPORT_BREAKDOWN" in sell_warning_type
+    assert "FALSE_BREAKOUT" in sell_warning_type
+    assert "ATTACK_K_FAILURE" in sell_warning_type
+    assert "MA_SUPPORT_FAILURE" in sell_warning_type
+
+
 def _score_one_market_state(market_state: str) -> pd.DataFrame:
     frame = _scoring_frame()
     _score_features(
@@ -171,22 +232,49 @@ def _scoring_frame() -> pd.DataFrame:
     return pd.DataFrame(
         {
             "stock_id": ["2330"],
+            "open": [97.0],
+            "high": [101.0],
+            "low": [96.0],
             "close": [100.0],
+            "volume": [1600.0],
+            "vol_ma5": [1200.0],
+            "vol_ma20": [1000.0],
             "ma5": [98.0],
+            "ma10": [97.0],
             "ma20": [95.0],
             "prev_high": [99.0],
             "prev_low": [94.0],
             "support_1": [95.0],
             "support_2": [90.0],
             "resistance_1": [102.0],
+            "resistance_2": [110.0],
+            "support_zone_1_low": [95.0],
+            "support_zone_1_high": [96.0],
+            "support_zone_1_label": ["95.00~96.00"],
+            "support_zone_2_low": [90.0],
+            "support_zone_2_high": [91.0],
+            "resistance_zone_1_low": [102.0],
+            "resistance_zone_1_high": [103.0],
+            "resistance_zone_1_label": ["102.00~103.00"],
+            "resistance_zone_2_low": [110.0],
+            "resistance_zone_2_high": [111.0],
+            "broken_support_zone_low": [pd.NA],
+            "broken_support_zone_high": [pd.NA],
+            "breakout_zone_low": [pd.NA],
+            "breakout_zone_high": [pd.NA],
             "distance_to_60d_high": [0.1],
             "vol_ratio_20": [1.6],
             "upper_shadow_pct": [0.01],
+            "lower_shadow_pct": [0.02],
             "close_position_in_range": [0.9],
             "institutional_total_buy_sell": [0.0],
             "black_k": [False],
             "return_1d": [0.03],
             "support_broken_today": [False],
+            "support_zone_holding_today": [False],
+            "support_zone_failed_today": [False],
+            "resistance_zone_breakout_today": [False],
+            "resistance_zone_breakout_failed_today": [False],
             "margin_change_1d": [0.0],
             "margin_consecutive_increase_days": [0.0],
             "close_above_prev_high": [True],
@@ -195,12 +283,20 @@ def _scoring_frame() -> pd.DataFrame:
             "ma_reclaim_20": [False],
             "ma_reclaim_10": [False],
             "ma_reclaim_5": [False],
+            "ma_break_5": [False],
+            "ma_break_10": [False],
+            "ma_break_20": [False],
             "hammer_like": [False],
+            "shooting_star_like": [False],
             "red_k": [True],
             "failed_breakdown": [False],
+            "break_prev_low": [False],
+            "close_below_prev_low": [False],
+            "price_down_volume_up": [False],
             "trend_state": ["UPTREND"],
             "low_volume_pullback": [False],
             "failed_breakout": [False],
+            "high_volume_red_k_low": [pd.NA],
             "sector_state": ["SECTOR_LEADING"],
             "sector_risk_score": [10.0],
             "high_volume_upper_shadow": [False],
