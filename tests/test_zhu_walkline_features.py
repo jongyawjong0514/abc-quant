@@ -11,7 +11,12 @@ from abc_quant.reports.zhu_walkline_report import (
     _stock_report,
     _summary_payload,
 )
-from abc_quant.signals.zhu_walkline_shadow import build_zhu_walkline_shadow_result, _score_features
+from abc_quant.signals.zhu_walkline_shadow import (
+    ZhuWalklineResult,
+    build_zhu_walkline_shadow_result,
+    compute_forward_evaluation,
+    _score_features,
+)
 
 
 def _mock_price_frame(stock_id: str = "2330", bearish: bool = False) -> pd.DataFrame:
@@ -435,6 +440,52 @@ def test_reports_use_observation_language_not_trade_commands() -> None:
     for banned in banned_phrases:
         assert banned not in report
     assert payload["mode"] == "shadow_observation_only"
+
+
+def test_forward_evaluation_marks_incomplete_horizon_missing() -> None:
+    candidate = pd.DataFrame(
+        {
+            "asof_date": ["2026-06-30"],
+            "stock_id": ["2330"],
+            "stock_name": ["測試2330"],
+            "close": [100.0],
+        }
+    )
+    result = ZhuWalklineResult(
+        asof_date="2026-06-30",
+        mode="shadow_observation_only",
+        formal_champion_changed=False,
+        formal_trade_effect=False,
+        web_research_used=False,
+        web_research_is_supplementary=True,
+        feature_matrix=candidate,
+        top_bullish_watchlist=candidate,
+        top_rise_candidates=candidate,
+        top_fall_risks=pd.DataFrame(columns=candidate.columns),
+        market={},
+        sector_rotation=pd.DataFrame(),
+        concept_rotation=pd.DataFrame(),
+        web_records=[],
+        run_notes=[],
+    )
+    future_prices = pd.DataFrame(
+        {
+            "date": pd.to_datetime(["2026-07-01", "2026-07-02", "2026-07-03"]),
+            "stock_id": ["2330", "2330", "2330"],
+            "close": [101.0, 102.0, 99.0],
+            "high": [102.0, 103.0, 100.0],
+            "low": [99.0, 100.0, 98.0],
+        }
+    )
+
+    frame, summary = compute_forward_evaluation(result, future_prices)
+
+    assert frame.loc[0, "future_return_d1"] == pytest.approx(0.01)
+    assert bool(frame.loc[0, "hit_d1"]) is True
+    assert pd.isna(frame.loc[0, "future_return_d5"])
+    assert pd.isna(frame.loc[0, "hit_d5"])
+    assert summary["rise_candidate_d5_hit_rate"] is None
+    assert summary["precision_at_10"] is None
 
 
 

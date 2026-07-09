@@ -173,10 +173,12 @@ def compute_forward_evaluation(
         }
         for horizon in (1, 3, 5, 10):
             value = np.nan
+            hit: object = pd.NA
             if len(stock_future) >= horizon:
                 value = float(stock_future.loc[horizon - 1, "close"] / stock["close"] - 1.0)
+                hit = bool(value > 0) if stock["candidate_side"] == "rise" else bool(value < 0)
             row[f"future_return_d{horizon}"] = value
-            row[f"hit_d{horizon}"] = bool(value > 0) if stock["candidate_side"] == "rise" else bool(value < 0)
+            row[f"hit_d{horizon}"] = hit
         first5 = stock_future.head(5)
         row["max_drawdown_next_5d"] = (
             float(first5["low"].min() / stock["close"] - 1.0) if not first5.empty else np.nan
@@ -955,9 +957,12 @@ def _apply_market_grade_cap(row: pd.Series) -> str:
 
 def _hit_rate(frame: pd.DataFrame, side: str, column: str) -> float | None:
     subset = frame[frame["candidate_side"] == side]
-    if subset.empty:
+    if subset.empty or column not in subset.columns:
         return None
-    return float(subset[column].mean())
+    values = pd.to_numeric(subset[column], errors="coerce").dropna()
+    if values.empty:
+        return None
+    return float(values.mean())
 
 
 def _mean(frame: pd.DataFrame, column: str) -> float | None:
@@ -973,5 +978,8 @@ def _precision_at(frame: pd.DataFrame, n: int) -> float | None:
     subset = frame.head(n)
     hits = []
     for _, row in subset.iterrows():
-        hits.append(bool(row["hit_d5"]))
+        hit = row.get("hit_d5")
+        if pd.isna(hit):
+            continue
+        hits.append(bool(hit))
     return float(np.mean(hits)) if hits else None

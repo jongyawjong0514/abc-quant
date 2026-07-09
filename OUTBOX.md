@@ -1,5 +1,60 @@
 # OUTBOX
 
+## 2026-07-10 Direct Follow-Up - Zhu Walkline Range Backtest Metric Review Fix
+
+## 修改檔案
+- `src/abc_quant/signals/zhu_walkline_shadow.py`: fixed forward evaluator incomplete-horizon hits so missing future rows stay missing instead of counting as misses.
+- `scripts/backtest_zhu_walkline_shadow_range.py`: added row-weighted metrics, daily equal-weighted metrics, horizon completeness, baseline metrics, excess vs baseline, monthly metrics, fixed-seed random same-count baselines, score-decile baselines, and fall downside/adverse-rally semantics.
+- `tests/test_zhu_walkline_features.py`: added incomplete-horizon regression coverage.
+- `tests/test_zhu_walkline_range_backtest.py`: added sidecar summary, monthly semantics, and baseline regression coverage.
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: recorded review fix, validation, and hard boundaries.
+
+## 實作摘要
+- Missing future rows now produce `future_return_dN` missing and `hit_dN` missing; hit-rate helpers drop missing rows.
+- Summary JSON now exposes `daily_equal_weighted_metrics`, `row_weighted_metrics`, `valid_row_count_by_horizon`, `baseline_metrics`, `excess_vs_baseline`, `monthly_preview`, `baseline_rows`, `monthly_rows`, and `max_future_date_used`.
+- Range sidecar now writes `zhu_walkline_range_baseline_metrics.csv` and `zhu_walkline_range_monthly_metrics.csv`.
+- Fall-risk D5 semantics are split into `fall_tail_down_rate_d5` and `fall_adverse_rally_rate_d5`; rise keeps `rise_tail_loss_rate_d5`.
+- Baselines are all-market, fixed-seed random same-count, and score-decile groups, all observation-only.
+
+## 回測輸出
+- Command: `python scripts/backtest_zhu_walkline_shadow_range.py --start-date 2026-01-01 --end-date 2026-05-31 --top-n 30 --future-calendar-days 25 --output-dir reports/zhu_walkline_shadow_backtest_2026_01_05 --verbose`
+- Output directory: `reports/zhu_walkline_shadow_backtest_2026_01_05/`
+- Resolved dates: `2026-01-02`~`2026-05-29`
+- Trading days: 95
+- Evaluation rows: 5,368
+- Baseline rows: 2,280
+- Monthly rows: 10
+- `max_future_date_used=2026-06-23`
+- Row-weighted D5 rise: hit 0.529833, average return 0.028668, median return 0.008547, valid/missing 2514/4.
+- Row-weighted D5 fall-risk: correct 0.520924, average forward return 0.004332, median -0.002999, valid/missing 2772/78.
+- Fall-risk D5 downside rate: 0.246032.
+- Fall-risk D5 adverse rally rate: 0.229437.
+
+## 測試方式
+- `.\.venv\Scripts\ruff.exe check .`
+- `python -m pytest -q`
+- `git diff --check`
+- `python scripts/run_zhu_walkline_shadow.py --asof latest --top-n 30 --no-web --verbose`
+- `python scripts/backtest_zhu_walkline_shadow_range.py --start-date 2026-01-01 --end-date 2026-05-31 --top-n 30 --future-calendar-days 25 --output-dir reports/zhu_walkline_shadow_backtest_2026_01_05 --verbose`
+- `rg -n "NaN|nan|None|<NA>" reports/zhu_walkline_shadow_backtest_2026_01_05`
+
+## 測試結果
+- `ruff check .`: passed.
+- Full pytest: 445 passed in 38.41s.
+- `git diff --check`: passed.
+- Latest no-web scanner passed and wrote asof `2026-07-09` outputs.
+- Jan-May range backtest completed with empty stderr and wrote evaluation, daily, baseline, monthly, summary JSON, and summary Markdown files.
+- Output grep found no `NaN`/`nan`/`None`/`<NA>` strings.
+
+## 邊界
+- `mode=shadow_observation_only`.
+- `formal_champion_changed=False`.
+- `formal_trade_effect=False`.
+- no formal strategy modified.
+- no formal champion modified.
+- no formal trade effect.
+- No trade instructions, orders, holdings, weights, or formal promotion.
+
 ## 2026-07-09 Direct Follow-Up - Zhu Walkline Support And Resistance Zones
 
 ## 修改檔案
