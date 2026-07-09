@@ -2,6 +2,7 @@ import pandas as pd
 import pytest
 
 from abc_quant.data.local_tw_loader import DataQualityReport, LocalTwDataBundle
+from abc_quant.features.market_rotation import classify_market_state
 from abc_quant.features.walkline_features import compute_walkline_features, _cluster_price_zones
 from abc_quant.reports.zhu_walkline_report import (
     _candidate_records,
@@ -109,6 +110,26 @@ def test_walkline_features_detect_bearish_alignment() -> None:
     assert bool(row["ma_bear_alignment"])
     assert row["ma_state"] in {"BEAR_ALIGNMENT", "MA_BREAK"}
     assert row["kline_state"] in {"LONG_BLACK_K", "BREAKDOWN_K", "UPPER_SHADOW_SUPPLY"}
+
+
+def test_market_state_falls_back_to_proxy_when_official_history_lacks_volume() -> None:
+    market_history = pd.DataFrame(
+        {
+            "date": pd.date_range("2026-06-26", periods=5, freq="D"),
+            "open": [100, 101, 102, 103, 104],
+            "high": [101, 102, 103, 104, 105],
+            "low": [99, 100, 101, 102, 103],
+            "close": [100, 101, 102, 103, 104],
+        }
+    )
+
+    market = classify_market_state(
+        market_history,
+        _mock_price_frame("2330"),
+        asof_date="2026-06-30",
+    )
+
+    assert market["source"] == "equal_weight_stock_proxy"
 
 
 def test_zhu_walkline_scores_stay_bounded() -> None:

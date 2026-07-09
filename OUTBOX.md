@@ -2539,3 +2539,69 @@
 - Diff check：`git diff --check` 通過。
 - Scanner smoke：`python scripts/run_zhu_walkline_shadow.py --asof latest --top-n 30 --no-web --verbose` 成功，寫出 `2026-07-09` 與 `latest` 報告。
 - Output audit：bullish watchlist、fall risk、shadow log、summary JSON 均含 required `stop_reference`/detail/role 欄位；CSV 未出現 `nan`、`None`、`<NA>` 字串；market/stock reports 含 required observation disclaimer。
+
+## 2026-07-10 User Request - Backtest 2026-01 to 2026-05
+
+## 修改檔案
+- `scripts/backtest_zhu_walkline_shadow_range.py`: 新增區間回測 sidecar，逐交易日跑 Zhu walkline shadow scanner 與 evaluator-only forward outcomes，輸出 evaluations/daily metrics/summary。
+- `src/abc_quant/features/market_rotation.py`: 歷史正式大盤資料缺 `volume` 時改用等權市場 proxy，避免 `_add_market_rolling` 在 Jan 2026 as-of 中斷。
+- `tests/test_zhu_walkline_features.py`: 新增 official market history 缺 `volume` 時 fallback proxy 的 regression test。
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: 記錄本輪回測與 hard boundary。
+
+## 回測指令
+```powershell
+python scripts/backtest_zhu_walkline_shadow_range.py --start-date 2026-01-01 --end-date 2026-05-31 --top-n 30 --output-dir reports/zhu_walkline_shadow_backtest_2026_01_05 --verbose
+```
+
+## 產出檔案
+- `reports/zhu_walkline_shadow_backtest_2026_01_05/zhu_walkline_range_evaluations.csv`
+- `reports/zhu_walkline_shadow_backtest_2026_01_05/zhu_walkline_range_daily_metrics.csv`
+- `reports/zhu_walkline_shadow_backtest_2026_01_05/zhu_walkline_range_summary.json`
+- `reports/zhu_walkline_shadow_backtest_2026_01_05/zhu_walkline_range_summary.md`
+- `reports/zhu_walkline_shadow_backtest_2026_01_05/run.log`
+- `reports/zhu_walkline_shadow_backtest_2026_01_05/run.err.log`
+
+## 回測摘要
+- Requested range：`2026-01-01` ~ `2026-05-31`
+- Resolved trading dates：`2026-01-02` ~ `2026-05-29`
+- Trading days：95
+- Evaluator rows：5,368
+- `run.err.log`：empty
+- Market states：`MARKET_STRONG_UPTREND` 55 days, `MARKET_PULLBACK_IN_UPTREND` 26 days, `MARKET_RANGE_BOUND` 14 days。
+
+## 全段平均
+- `rise_hit_rate_d1=0.522470`
+- `rise_hit_rate_d3=0.508352`
+- `rise_hit_rate_d5=0.529002`
+- `rise_avg_forward_return_d5=0.028781`
+- `rise_median_forward_return_d5=0.006783`
+- `rise_tail_loss_rate_d5=0.344207`
+- `fall_hit_rate_d5=0.506667`
+- `fall_avg_forward_return_d5=0.004272`
+- `fall_median_forward_return_d5=-0.002529`
+- `fall_tail_loss_rate_d5=0.246612`
+
+## 月度 D+5 摘要
+| month | side | rows | hit_d5 | avg_d5 | median_d5 | tail_loss_d5 |
+|---|---|---:|---:|---:|---:|---:|
+| 2026-01 | rise | 628 | 0.466561 | 0.010097 | -0.005606 | 0.396497 |
+| 2026-02 | rise | 287 | 0.550523 | 0.034863 | 0.009615 | 0.306620 |
+| 2026-03 | rise | 461 | 0.416486 | 0.004483 | -0.013793 | 0.431670 |
+| 2026-04 | rise | 551 | 0.626134 | 0.053481 | 0.036585 | 0.266788 |
+| 2026-05 | rise | 591 | 0.582064 | 0.041292 | 0.021645 | 0.292724 |
+| 2026-01 | fall | 630 | 0.504762 | 0.009032 | -0.001663 | 0.192063 |
+| 2026-02 | fall | 360 | 0.486111 | 0.001511 | 0.000000 | 0.241667 |
+| 2026-03 | fall | 660 | 0.587879 | -0.007461 | -0.010176 | 0.316667 |
+| 2026-04 | fall | 600 | 0.510000 | 0.005521 | -0.005508 | 0.241667 |
+| 2026-05 | fall | 600 | 0.428333 | 0.012966 | 0.002703 | 0.200000 |
+
+## 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+- 本回測是 observation-only gross forward outcome，不是交易 PnL；未套用交易成本/滑價，因為沒有模擬成交、部位或持倉。

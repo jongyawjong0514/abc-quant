@@ -233,7 +233,13 @@ def _prepare_market_history(
         data = market_history.copy()
         data["date"] = pd.to_datetime(data["date"], errors="coerce")
         data = data[data["date"] <= cutoff].copy()
-        if not data.empty and data["date"].max().date().isoformat() == asof_date:
+        required_market_columns = {"open", "high", "low", "close", "volume"}
+        has_required_market_columns = required_market_columns.issubset(data.columns)
+        if (
+            not data.empty
+            and data["date"].max().date().isoformat() == asof_date
+            and has_required_market_columns
+        ):
             data = data.sort_values("date")
             data["source"] = "official_index"
             return _add_market_rolling(data)
