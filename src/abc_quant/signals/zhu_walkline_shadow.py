@@ -391,11 +391,22 @@ def _score_features(features: pd.DataFrame, *, market: dict[str, Any], config: d
     features["institutional_selling"] = features["institutional_selling_score"].map(lambda v: f"{v:.1f}")
     features["margin_risk"] = features["margin_risk_score"].map(lambda v: f"{v:.1f}")
     features["support_broken"] = features.apply(
-        lambda row: [row["support_1"]] if bool(row["support_broken_today"]) and pd.notna(row["support_1"]) else [],
+        lambda row: [_zone_label(row, "broken_support_zone")]
+        if bool(row.get("support_zone_failed_today", False))
+        and pd.notna(row.get("broken_support_zone_low"))
+        else (
+            [_zone_label(row, "support_zone_1")]
+            if bool(row["support_broken_today"]) and pd.notna(row.get("support_zone_1_low"))
+            else []
+        ),
         axis=1,
     )
     features["next_support"] = features.apply(
-        lambda row: [value for value in [row.get("support_1"), row.get("support_2")] if pd.notna(value)],
+        lambda row: [
+            _zone_label(row, prefix)
+            for prefix in ["support_zone_1", "support_zone_2"]
+            if pd.notna(row.get(f"{prefix}_low"))
+        ],
         axis=1,
     )
 
@@ -514,7 +525,9 @@ def _trigger_type(row: pd.Series) -> str:
 
 def _failure_types(row: pd.Series, *, market_state: str) -> list[str]:
     failures: list[str] = []
-    if bool(row.get("failed_breakout", False)):
+    if bool(row.get("failed_breakout", False)) or bool(
+        row.get("resistance_zone_breakout_failed_today", False)
+    ):
         failures.append("FALSE_BREAKOUT")
     if row.get("trigger_type") and not bool(row.get("volume_expansion", False)):
         failures.append("NO_VOLUME_FOLLOW")
@@ -528,7 +541,9 @@ def _failure_types(row: pd.Series, *, market_state: str) -> list[str]:
         failures.append("MARGIN_CROWDING")
     if bool(row.get("high_level_supply_pressure", False)) or row.get("supply_pressure_score", 0.0) >= 8:
         failures.append("SUPPLY_PRESSURE")
-    if bool(row.get("support_broken_today", False)):
+    if bool(row.get("support_broken_today", False)) or bool(
+        row.get("support_zone_failed_today", False)
+    ):
         failures.append("SUPPORT_BREAK")
     return failures
 
@@ -549,7 +564,7 @@ def _signal_stage(row: pd.Series) -> str:
 
 
 def _invalid_price(row: pd.Series) -> float | None:
-    for column in ("support_1", "ma20", "prev_low"):
+    for column in ("support_zone_1_low", "support_1", "ma20", "prev_low"):
         value = row.get(column)
         if pd.notna(value):
             return float(value)
@@ -557,7 +572,7 @@ def _invalid_price(row: pd.Series) -> float | None:
 
 
 def _confirm_price(row: pd.Series) -> float | None:
-    for column in ("resistance_1", "prev_high", "ma5"):
+    for column in ("resistance_zone_1_high", "resistance_1", "prev_high", "ma5"):
         value = row.get(column)
         if pd.notna(value):
             return float(value)
@@ -566,16 +581,37 @@ def _confirm_price(row: pd.Series) -> float | None:
 
 def _non_holder_observation(row: pd.Series) -> str:
     confirm = row.get("confirm_price")
+    zone = row.get("resistance_zone_1_label", "")
     if pd.notna(confirm):
+        if zone:
+            return f"觀察壓力區 {zone}，未收盤站上前不追價"
         return f"觀察價/確認價 {confirm:.2f}，未站上前不追價"
     return "沒有明確確認價，空手等待下一根訊號"
 
 
 def _holder_discipline(row: pd.Series) -> str:
     invalid = row.get("invalid_price")
+    zone = row.get("support_zone_1_label", "")
     if pd.notna(invalid):
+        if zone:
+            return f"防守支撐區 {zone}，跌破收不回就視為訊號失敗"
         return f"防守價 {invalid:.2f}，跌破收不回就視為訊號失敗"
     return "缺少明確防守價，降低部位或維持觀察"
+
+
+def _zone_label(row: pd.Series, prefix: str) -> str:
+    label = row.get(f"{prefix}_label")
+    if label:
+        return str(label)
+    low = row.get(f"{prefix}_low")
+    high = row.get(f"{prefix}_high")
+    if pd.isna(low) or pd.isna(high):
+        return ""
+    low_float = float(low)
+    high_float = float(high)
+    if abs(low_float - high_float) <= 1e-8:
+        return f"{low_float:.2f}"
+    return f"{low_float:.2f}~{high_float:.2f}"
 
 
 def _apply_market_grade_cap(row: pd.Series) -> str:

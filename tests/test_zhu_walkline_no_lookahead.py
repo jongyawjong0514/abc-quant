@@ -27,7 +27,22 @@ def test_asof_filter_ignores_future_price_rows() -> None:
     base = compute_walkline_features(_price_with_future(15.0), asof_date="2026-07-08")
     mutated = compute_walkline_features(_price_with_future(999.0), asof_date="2026-07-08")
 
-    columns = ["close", "ma5", "return_1d", "vol_ratio_5", "support_1", "resistance_1"]
+    columns = [
+        "close",
+        "ma5",
+        "return_1d",
+        "vol_ratio_5",
+        "support_1",
+        "resistance_1",
+        "support_zone_1_low",
+        "support_zone_1_high",
+        "support_zone_1_label",
+        "resistance_zone_1_low",
+        "resistance_zone_1_high",
+        "resistance_zone_1_label",
+        "support_zone_failed_today",
+        "resistance_zone_breakout_today",
+    ]
     pd.testing.assert_frame_equal(base[columns], mutated[columns])
 
 

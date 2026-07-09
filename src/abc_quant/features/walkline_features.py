@@ -10,6 +10,8 @@ import pandas as pd
 
 MOVING_AVERAGE_WINDOWS = (5, 10, 20, 60, 120, 240)
 RETURN_WINDOWS = (1, 3, 5, 10, 20)
+ZONE_MERGE_PCT = 0.015
+MAX_PRICE_ZONES = 3
 
 
 def compute_walkline_features(price_history: pd.DataFrame, *, asof_date: str) -> pd.DataFrame:
@@ -70,6 +72,10 @@ def compute_walkline_features(price_history: pd.DataFrame, *, asof_date: str) ->
     data["prev_high"] = grouped["high"].shift(1)
     data["prev_low"] = grouped["low"].shift(1)
     data["prev_close"] = grouped["close"].shift(1)
+    data["swing_high_3d"] = grouped["high"].transform(
+        lambda s: s.rolling(3, min_periods=1).max()
+    )
+    data["swing_low_3d"] = grouped["low"].transform(lambda s: s.rolling(3, min_periods=1).min())
     data["swing_high_1"] = grouped["high"].transform(lambda s: s.rolling(5, min_periods=1).max())
     data["swing_high_2"] = grouped["high"].transform(
         lambda s: s.rolling(20, min_periods=1).max()
@@ -107,9 +113,14 @@ def compute_walkline_features(price_history: pd.DataFrame, *, asof_date: str) ->
         )
 
     _add_kline_features(data)
+    data = data.copy()
     _add_volume_state_features(data)
+    data = data.copy()
+    _add_price_zone_source_features(data)
+    data = data.copy()
     _add_state_labels(data)
 
+    grouped = data.groupby("stock_id", group_keys=False, sort=False)
     latest = grouped.tail(1).copy().reset_index(drop=True)
     latest["asof_date"] = asof_date
     _add_support_resistance(latest)
@@ -199,6 +210,33 @@ def _add_volume_state_features(data: pd.DataFrame) -> None:
     )
 
 
+def _add_price_zone_source_features(data: pd.DataFrame) -> None:
+    grouped = data.groupby("stock_id", group_keys=False, sort=False)
+    data["high_volume_red_k_low"] = data["low"].where(data["long_red_k"] & data["volume_expansion"])
+    data["long_lower_shadow_low"] = data["low"].where(
+        data["hammer_like"]
+        | (
+            (data["lower_shadow_pct"] > data["upper_shadow_pct"])
+            & (data["close_position_in_range"] > 0.5)
+        )
+    )
+    data["high_volume_black_k_high"] = data["high"].where(data["long_black_k"] & data["volume_expansion"])
+    data["long_upper_shadow_high"] = data["high"].where(
+        data["shooting_star_like"] | data["high_volume_upper_shadow"]
+    )
+    data["gap_up_support"] = data["prev_high"].where(data["gap_up"])
+    data["gap_down_resistance"] = data["prev_low"].where(data["gap_down"])
+    for column in [
+        "high_volume_red_k_low",
+        "long_lower_shadow_low",
+        "high_volume_black_k_high",
+        "long_upper_shadow_high",
+        "gap_up_support",
+        "gap_down_resistance",
+    ]:
+        data[column] = grouped[column].ffill()
+
+
 def _add_state_labels(data: pd.DataFrame) -> None:
     trend_conditions = [
         data["close"] < data["prev_low_20d"],
@@ -265,69 +303,247 @@ def _add_state_labels(data: pd.DataFrame) -> None:
 
 
 def _add_support_resistance(latest: pd.DataFrame) -> None:
-    supports: list[list[float]] = []
-    resistances: list[list[float]] = []
+    supports: list[list[dict[str, object]]] = []
+    resistances: list[list[dict[str, object]]] = []
+    broken_supports: list[dict[str, object] | None] = []
+    breakout_zones: list[dict[str, object] | None] = []
     for _, row in latest.iterrows():
-        support_candidates = _finite_values(
-            [
-                row.get("swing_low_1"),
-                row.get("swing_low_2"),
-                row.get("low_20d"),
-                row.get("low_60d"),
-                row.get("prev_low"),
-                row.get("ma5"),
-                row.get("ma10"),
-                row.get("ma20"),
-                row.get("ma60"),
-            ]
-        )
-        resistance_candidates = _finite_values(
-            [
-                row.get("swing_high_1"),
-                row.get("swing_high_2"),
-                row.get("high_20d"),
-                row.get("high_60d"),
-                row.get("prev_high"),
-                row.get("ma5"),
-                row.get("ma10"),
-                row.get("ma20"),
-                row.get("ma60"),
-            ]
-        )
         close = float(row["close"])
-        support = sorted({round(v, 4) for v in support_candidates if v <= close}, reverse=True)[:3]
-        resistance = sorted({round(v, 4) for v in resistance_candidates if v >= close})[:3]
-        supports.append(support)
-        resistances.append(resistance)
+        support_candidates = _price_candidates(
+            [
+                (row.get("prev_low"), "prev_low"),
+                (row.get("swing_low_3d"), "swing_low_3d"),
+                (row.get("swing_low_1"), "swing_low_5d"),
+                (row.get("swing_low_2"), "swing_low_20d"),
+                (row.get("low_20d"), "low_20d"),
+                (row.get("low_60d"), "low_60d"),
+                (row.get("ma5"), "ma5"),
+                (row.get("ma10"), "ma10"),
+                (row.get("ma20"), "ma20"),
+                (row.get("ma60"), "ma60"),
+                (row.get("high_volume_red_k_low"), "high_volume_red_k_low"),
+                (row.get("long_lower_shadow_low"), "long_lower_shadow_low"),
+                (row.get("gap_up_support"), "gap_up_support"),
+                *_round_number_candidates(close, side="support"),
+            ]
+        )
+        resistance_candidates = _price_candidates(
+            [
+                (row.get("prev_high"), "prev_high"),
+                (row.get("swing_high_3d"), "swing_high_3d"),
+                (row.get("swing_high_1"), "swing_high_5d"),
+                (row.get("swing_high_2"), "swing_high_20d"),
+                (row.get("high_20d"), "high_20d"),
+                (row.get("high_60d"), "high_60d"),
+                (row.get("ma5"), "ma5"),
+                (row.get("ma10"), "ma10"),
+                (row.get("ma20"), "ma20"),
+                (row.get("ma60"), "ma60"),
+                (row.get("high_volume_black_k_high"), "high_volume_black_k_high"),
+                (row.get("long_upper_shadow_high"), "long_upper_shadow_high"),
+                (row.get("gap_down_resistance"), "gap_down_resistance"),
+                *_round_number_candidates(close, side="resistance"),
+            ]
+        )
+        support_clusters = _cluster_price_zones(support_candidates)
+        resistance_clusters = _cluster_price_zones(resistance_candidates)
+        supports.append(_select_price_zones(support_clusters, close, side="support"))
+        resistances.append(_select_price_zones(resistance_clusters, close, side="resistance"))
+        broken_supports.append(_nearest_zone_above(support_clusters, close))
+        breakout_zones.append(_nearest_zone_below(resistance_clusters, close))
 
-    for idx in range(3):
-        latest[f"support_{idx + 1}"] = [values[idx] if len(values) > idx else np.nan for values in supports]
-        latest[f"resistance_{idx + 1}"] = [
-            values[idx] if len(values) > idx else np.nan for values in resistances
-        ]
-    latest["nearest_support_distance"] = _safe_div(latest["close"] - latest["support_1"], latest["close"])
+    for idx in range(MAX_PRICE_ZONES):
+        number = idx + 1
+        for side, zones in [("support", supports), ("resistance", resistances)]:
+            latest[f"{side}_zone_{number}_low"] = _zone_field_values(zones, idx, "low", np.nan)
+            latest[f"{side}_zone_{number}_high"] = _zone_field_values(zones, idx, "high", np.nan)
+            latest[f"{side}_zone_{number}_mid"] = _zone_field_values(zones, idx, "mid", np.nan)
+            latest[f"{side}_zone_{number}_sources"] = _zone_field_values(zones, idx, "sources", "")
+        latest[f"support_{number}"] = latest[f"support_zone_{number}_low"]
+        latest[f"resistance_{number}"] = latest[f"resistance_zone_{number}_high"]
+
+    for prefix, zones in [("broken_support_zone", broken_supports), ("breakout_zone", breakout_zones)]:
+        latest[f"{prefix}_low"] = [zone["low"] if zone is not None else np.nan for zone in zones]
+        latest[f"{prefix}_high"] = [zone["high"] if zone is not None else np.nan for zone in zones]
+        latest[f"{prefix}_sources"] = [zone["sources"] if zone is not None else "" for zone in zones]
+
+    latest["nearest_support_distance"] = _safe_div(
+        latest["close"] - latest["support_zone_1_high"], latest["close"]
+    )
     latest["nearest_resistance_distance"] = _safe_div(
-        latest["resistance_1"] - latest["close"], latest["close"]
+        latest["resistance_zone_1_low"] - latest["close"], latest["close"]
     )
     latest["risk_reward_proxy"] = _safe_div(
         latest["nearest_resistance_distance"], latest["nearest_support_distance"].abs()
     )
-    latest["support_broken_today"] = latest["close_below_prev_low"] | (
+    latest["support_zone_holding_today"] = (
+        (latest["close"] >= latest["support_zone_1_low"])
+        & (latest["low"] <= latest["support_zone_1_high"])
+        & (latest["close_position_in_range"] > 0.5)
+        & (latest["lower_shadow_pct"] > latest["upper_shadow_pct"])
+        & (~latest["high_volume_long_black"].fillna(False))
+    )
+    latest["support_zone_failed_today"] = (
+        (latest["close"] < latest["broken_support_zone_low"])
+        | latest["close_below_prev_low"].fillna(False)
+        | latest["price_down_volume_up"].fillna(False)
+    )
+    latest["resistance_zone_breakout_today"] = (
+        latest["breakout_zone_high"].notna()
+        & (latest["prev_close"] <= latest["breakout_zone_high"])
+        & (latest["close"] > latest["breakout_zone_high"])
+        & ((latest["volume"] > latest["vol_ma5"]) | (latest["volume"] > latest["vol_ma20"]))
+        & (latest["close_position_in_range"] > 0.6)
+        & (~latest["high_volume_upper_shadow"].fillna(False))
+    )
+    latest["resistance_zone_breakout_failed_today"] = (
+        latest["resistance_zone_1_high"].notna()
+        & (latest["high"] > latest["resistance_zone_1_high"])
+        & (latest["close"] < latest["resistance_zone_1_high"])
+        & (latest["upper_shadow_pct"] >= 0.025)
+        & (latest["volume"] > latest["vol_ma20"])
+    )
+    latest["support_broken_today"] = latest["support_zone_failed_today"] | (
         latest["close"] < latest["ma20"]
     )
-    latest["resistance_reclaimed_today"] = latest["close_above_prev_high"] | latest["ma_reclaim_20"]
-    latest["stop_reference"] = latest["support_1"].map(
-        lambda value: "" if pd.isna(value) else f"跌破 {value:.2f} 重新評估"
+    latest["resistance_reclaimed_today"] = (
+        latest["close_above_prev_high"]
+        | latest["ma_reclaim_20"]
+        | latest["resistance_zone_breakout_today"]
+    )
+    latest["support_zone_1_label"] = latest.apply(
+        lambda row: _zone_label(row.get("support_zone_1_low"), row.get("support_zone_1_high")),
+        axis=1,
+    )
+    latest["resistance_zone_1_label"] = latest.apply(
+        lambda row: _zone_label(row.get("resistance_zone_1_low"), row.get("resistance_zone_1_high")),
+        axis=1,
+    )
+    latest["stop_reference"] = latest.apply(
+        lambda row: (
+            ""
+            if pd.isna(row.get("support_zone_1_low"))
+            else f"跌破支撐區 {row['support_zone_1_label']} 重新評估"
+        ),
+        axis=1,
     )
     latest["entry_observation"] = latest.apply(_entry_observation, axis=1)
 
 
 def _entry_observation(row: pd.Series) -> str:
+    if bool(row.get("resistance_zone_breakout_today", False)):
+        return f"觀察站穩壓力區 {row.get('resistance_zone_1_label', '')} 後的量價延續"
     if bool(row.get("resistance_reclaimed_today", False)):
-        return "觀察站穩前高或關鍵均線後的量價延續"
+        return "觀察站穩前高、壓力區或關鍵均線後的量價延續"
     if row.get("trend_state") == "PULLBACK_IN_UPTREND":
         return "觀察拉回守住20日線後是否重新放量"
     return "等待收過壓力或重新站回短均線"
+
+
+def _price_candidates(values: Iterable[tuple[object, str]]) -> list[tuple[float, str]]:
+    result: list[tuple[float, str]] = []
+    for value, source in values:
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            continue
+        if np.isfinite(number) and number > 0:
+            result.append((round(number, 4), source))
+    return result
+
+
+def _zone_field_values(
+    zones_by_row: list[list[dict[str, object]]],
+    idx: int,
+    field: str,
+    default: object,
+) -> list[object]:
+    return [values[idx][field] if len(values) > idx else default for values in zones_by_row]
+
+
+def _round_number_candidates(close: float, *, side: str) -> list[tuple[float, str]]:
+    if not np.isfinite(close) or close <= 0:
+        return []
+    if close >= 1000:
+        step = 50.0
+    elif close >= 100:
+        step = 5.0
+    elif close >= 10:
+        step = 1.0
+    else:
+        step = 0.5
+    base = np.floor(close / step) * step
+    offsets = range(-2, 1) if side == "support" else range(0, 3)
+    return [(base + step * offset, "round_number") for offset in offsets if base + step * offset > 0]
+
+
+def _cluster_price_zones(candidates: list[tuple[float, str]]) -> list[dict[str, object]]:
+    clusters: list[dict[str, object]] = []
+    for price, source in sorted(candidates, key=lambda item: item[0]):
+        if not clusters or not _is_price_inside_cluster(price, clusters[-1]):
+            clusters.append({"prices": [price], "sources": {source}})
+            continue
+        clusters[-1]["prices"].append(price)
+        clusters[-1]["sources"].add(source)
+    zones: list[dict[str, object]] = []
+    for cluster in clusters:
+        prices = [float(value) for value in cluster["prices"]]
+        low = round(min(prices), 4)
+        high = round(max(prices), 4)
+        zones.append(
+            {
+                "low": low,
+                "high": high,
+                "mid": round((low + high) / 2.0, 4),
+                "sources": "|".join(sorted(cluster["sources"])),
+            }
+        )
+    return zones
+
+
+def _is_price_inside_cluster(price: float, cluster: dict[str, object]) -> bool:
+    prices = [float(value) for value in cluster["prices"]]
+    midpoint = sum(prices) / len(prices)
+    if midpoint <= 0:
+        return False
+    return abs(price - midpoint) / midpoint <= ZONE_MERGE_PCT
+
+
+def _select_price_zones(
+    zones: list[dict[str, object]],
+    close: float,
+    *,
+    side: str,
+) -> list[dict[str, object]]:
+    if side == "support":
+        selected = [zone for zone in zones if float(zone["mid"]) <= close]
+        return sorted(selected, key=lambda zone: float(zone["high"]), reverse=True)[:MAX_PRICE_ZONES]
+    selected = [zone for zone in zones if float(zone["mid"]) >= close]
+    return sorted(selected, key=lambda zone: float(zone["low"]))[:MAX_PRICE_ZONES]
+
+
+def _nearest_zone_above(zones: list[dict[str, object]], close: float) -> dict[str, object] | None:
+    selected = [zone for zone in zones if float(zone["low"]) > close]
+    if not selected:
+        return None
+    return sorted(selected, key=lambda zone: float(zone["low"]))[0]
+
+
+def _nearest_zone_below(zones: list[dict[str, object]], close: float) -> dict[str, object] | None:
+    selected = [zone for zone in zones if float(zone["high"]) < close]
+    if not selected:
+        return None
+    return sorted(selected, key=lambda zone: float(zone["high"]), reverse=True)[0]
+
+
+def _zone_label(low: object, high: object) -> str:
+    if pd.isna(low) or pd.isna(high):
+        return ""
+    low_float = float(low)
+    high_float = float(high)
+    if abs(low_float - high_float) <= 1e-8:
+        return f"{low_float:.2f}"
+    return f"{low_float:.2f}~{high_float:.2f}"
 
 
 def _finite_values(values: Iterable[object]) -> list[float]:

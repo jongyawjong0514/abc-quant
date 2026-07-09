@@ -47,6 +47,20 @@ RISE_CSV_COLUMNS = [
     "support_2",
     "resistance_1",
     "resistance_2",
+    "support_zone_1_low",
+    "support_zone_1_high",
+    "support_zone_1_label",
+    "support_zone_2_low",
+    "support_zone_2_high",
+    "resistance_zone_1_low",
+    "resistance_zone_1_high",
+    "resistance_zone_1_label",
+    "resistance_zone_2_low",
+    "resistance_zone_2_high",
+    "support_zone_holding_today",
+    "support_zone_failed_today",
+    "resistance_zone_breakout_today",
+    "resistance_zone_breakout_failed_today",
     "entry_observation",
     "stop_reference",
     "reason_summary",
@@ -77,6 +91,12 @@ FALL_CSV_COLUMNS = [
     "web_event_risk_score",
     "support_broken",
     "next_support",
+    "support_zone_1_low",
+    "support_zone_1_high",
+    "support_zone_1_label",
+    "broken_support_zone_low",
+    "broken_support_zone_high",
+    "support_zone_failed_today",
     "risk_reason_summary",
 ]
 
@@ -95,6 +115,16 @@ SHADOW_LOG_COLUMNS = [
     "invalid_price",
     "failure_type",
     "reversal_state",
+    "support_zone_1_low",
+    "support_zone_1_high",
+    "support_zone_1_label",
+    "resistance_zone_1_low",
+    "resistance_zone_1_high",
+    "resistance_zone_1_label",
+    "support_zone_holding_today",
+    "support_zone_failed_today",
+    "resistance_zone_breakout_today",
+    "resistance_zone_breakout_failed_today",
     "institutional_divergence",
     "margin_crowding_risk",
     "high_level_supply_pressure",
@@ -238,6 +268,12 @@ def _candidate_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
                 "resistance": [
                     v for v in [row.get("resistance_1"), row.get("resistance_2")] if pd.notna(v)
                 ],
+                "support_zones": _zone_records(row, "support"),
+                "resistance_zones": _zone_records(row, "resistance"),
+                "support_zone_failed_today": bool(row.get("support_zone_failed_today", False)),
+                "resistance_zone_breakout_today": bool(
+                    row.get("resistance_zone_breakout_today", False)
+                ),
                 "entry_observation": row.get("entry_observation", ""),
                 "stop_reference": row.get("stop_reference", ""),
                 "reason": _as_list(row.get("reason")),
@@ -270,10 +306,49 @@ def _risk_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
                 "web_event_risk_score": _float(row.get("web_event_risk_score")),
                 "support_broken": _as_list(row.get("support_broken")),
                 "next_support": _as_list(row.get("next_support")),
+                "support_zones": _zone_records(row, "support"),
+                "broken_support_zone": _zone_record_from_prefix(row, "broken_support_zone"),
+                "support_zone_failed_today": bool(row.get("support_zone_failed_today", False)),
                 "reason": _as_list(row.get("risk_reason")),
             }
         )
     return rows
+
+
+def _zone_records(row: pd.Series, side: str) -> list[dict[str, Any]]:
+    return [
+        record
+        for idx in range(1, 4)
+        if (record := _zone_record_from_prefix(row, f"{side}_zone_{idx}")) is not None
+    ]
+
+
+def _zone_record_from_prefix(row: pd.Series, prefix: str) -> dict[str, Any] | None:
+    low = row.get(f"{prefix}_low")
+    high = row.get(f"{prefix}_high")
+    if pd.isna(low) or pd.isna(high):
+        return None
+    return {
+        "low": _float(low),
+        "high": _float(high),
+        "label": _zone_text(row, prefix),
+        "sources": row.get(f"{prefix}_sources", ""),
+    }
+
+
+def _zone_text(row: pd.Series, prefix: str) -> str:
+    label = row.get(f"{prefix}_label")
+    if label:
+        return str(label)
+    low = row.get(f"{prefix}_low")
+    high = row.get(f"{prefix}_high")
+    if pd.isna(low) or pd.isna(high):
+        return ""
+    low_float = float(low)
+    high_float = float(high)
+    if abs(low_float - high_float) <= 1e-8:
+        return f"{low_float:.2f}"
+    return f"{low_float:.2f}～{high_float:.2f}"
 
 
 def _market_report(result: ZhuWalklineResult, quality: DataQualityReport) -> str:
@@ -408,20 +483,25 @@ def _stock_report(result: ZhuWalklineResult) -> str:
         "",
         "| 價位 | 意義 |",
         "|---:|---|",
-        f"| {row.get('support_1', np.nan):.2f} | 支撐1 |",
-        f"| {row.get('support_2', np.nan):.2f} | 支撐2 |",
-        f"| {row.get('resistance_1', np.nan):.2f} | 壓力1 |",
-        f"| {row.get('resistance_2', np.nan):.2f} | 壓力2 |",
+        f"| {_zone_text(row, 'support_zone_1')} | 支撐區1 |",
+        f"| {_zone_text(row, 'support_zone_2')} | 支撐區2 |",
+        f"| {_zone_text(row, 'resistance_zone_1')} | 壓力區1 |",
+        f"| {_zone_text(row, 'resistance_zone_2')} | 壓力區2 |",
+        "",
+        f"- 支撐有效：{bool(row.get('support_zone_holding_today', False))}",
+        f"- 支撐失敗：{bool(row.get('support_zone_failed_today', False))}",
+        f"- 壓力有效突破：{bool(row.get('resistance_zone_breakout_today', False))}",
+        f"- 壓力突破失敗：{bool(row.get('resistance_zone_breakout_failed_today', False))}",
         "",
         "## 十一、明日劇本",
         "",
         "### 劇本A：轉強",
         "",
-        f"條件：收過壓力 {row.get('resistance_1', np.nan):.2f}，並維持量價同步。",
+        f"條件：收盤站上壓力區 {_zone_text(row, 'resistance_zone_1')}，並維持量價同步。",
         "",
         "### 劇本B：續弱",
         "",
-        f"條件：跌破防守點 {row.get('support_1', np.nan):.2f}，且量能放大。",
+        f"條件：跌破支撐區 {_zone_text(row, 'support_zone_1')}，且量能放大。",
         "",
         "### 劇本C：整理",
         "",

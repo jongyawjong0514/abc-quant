@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 
 from abc_quant.data.local_tw_loader import DataQualityReport, LocalTwDataBundle
-from abc_quant.features.walkline_features import compute_walkline_features
+from abc_quant.features.walkline_features import compute_walkline_features, _cluster_price_zones
 from abc_quant.signals.zhu_walkline_shadow import build_zhu_walkline_shadow_result, _score_features
 
 
@@ -46,7 +46,27 @@ def test_walkline_features_compute_core_fields() -> None:
     assert row["vol_ratio_5"] > 0
     assert row["support_1"] <= row["close"]
     assert row["resistance_1"] >= row["close"]
+    assert row["support_zone_1_low"] <= row["support_zone_1_high"] <= row["close"]
+    assert row["resistance_zone_1_low"] <= row["resistance_zone_1_high"]
+    assert isinstance(row["support_zone_1_label"], str)
+    assert isinstance(row["resistance_zone_1_label"], str)
+    assert "round_number" in row["support_zone_1_sources"]
     assert 0 <= row["risk_reward_proxy"] or pd.isna(row["risk_reward_proxy"])
+
+
+def test_price_zone_clustering_merges_nearby_levels() -> None:
+    zones = _cluster_price_zones(
+        [
+            (100.0, "prev_low"),
+            (101.4, "ma5"),
+            (106.0, "swing_low_20d"),
+        ]
+    )
+
+    assert zones[0]["low"] == pytest.approx(100.0)
+    assert zones[0]["high"] == pytest.approx(101.4)
+    assert zones[0]["sources"] == "ma5|prev_low"
+    assert zones[1]["low"] == pytest.approx(106.0)
 
 
 def test_walkline_features_detect_bearish_alignment() -> None:

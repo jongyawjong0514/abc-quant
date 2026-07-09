@@ -1,5 +1,42 @@
 # OUTBOX
 
+## 2026-07-09 Direct Follow-Up - Zhu Walkline Support And Resistance Zones
+
+## 修改檔案
+- `src/abc_quant/features/walkline_features.py`: added support/resistance zone clustering, zone source features, support-hold/fail flags, resistance-breakout/failure flags, and de-fragmented the feature pipeline to keep scanner CLI output clean.
+- `src/abc_quant/signals/zhu_walkline_shadow.py`: made invalid/confirm prices use support-zone lower bound and resistance-zone upper bound, and linked support-zone failure / resistance false-breakout into failure tagging.
+- `src/abc_quant/reports/zhu_walkline_report.py`: added zone columns to CSV/shadow-log outputs, structured zone records to summary JSON, and zone wording in the stock Markdown report.
+- `tests/test_zhu_walkline_features.py`: added zone clustering and required zone field coverage.
+- `tests/test_zhu_walkline_no_lookahead.py`: extended future-row invariance checks to zone lows/highs/labels and support/breakout flags.
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: recorded this follow-up and validation evidence.
+
+## 實作摘要
+- Support/resistance is no longer treated as only a single price. Nearby levels within 1.5% are merged into zones.
+- Support sources include previous low, 3/5/20/60-day lows, 5/10/20/60-day moving averages, high-volume red-K lows, long-lower-shadow lows, gap-up support, and round-number support.
+- Resistance sources include previous high, 3/5/20/60-day highs, 5/10/20/60-day moving averages, high-volume black-K highs, long-upper-shadow highs, gap-down resistance, and round-number resistance.
+- Added `support_zone_holding_today`, `support_zone_failed_today`, `resistance_zone_breakout_today`, and `resistance_zone_breakout_failed_today`.
+- Added zone labels and structured zone records to reports so explanations can say "支撐區" / "壓力區" instead of pretending a single price is magic.
+- Legacy `support_1/support_2/resistance_1/resistance_2` columns remain for compatibility.
+
+## 測試方式
+- `.\.venv\Scripts\ruff.exe check src\abc_quant\features\walkline_features.py src\abc_quant\signals\zhu_walkline_shadow.py src\abc_quant\reports\zhu_walkline_report.py tests\test_zhu_walkline_features.py tests\test_zhu_walkline_no_lookahead.py`
+- `.\.venv\Scripts\python.exe -m pytest tests/test_zhu_walkline_features.py tests/test_zhu_walkline_no_lookahead.py tests/test_web_research_no_lookahead.py -q`
+- `.\.venv\Scripts\python.exe scripts\run_zhu_walkline_shadow.py --asof latest --top-n 30 --no-web --verbose`
+
+## 測試結果
+- Full `ruff check .`: passed.
+- Focused Zhu/no-lookahead/web tests: 11 passed.
+- Full pytest: 424 passed in 29.28s.
+- `git diff --check`: passed.
+- Latest no-web scanner smoke passed without pandas fragmentation warnings and wrote asof `2026-07-09` outputs with zone fields in `latest_zhu_walkline_shadow_log.csv`, summary JSON, and stock report.
+
+## 邊界
+- `mode=shadow_observation_only`.
+- `formal_champion_changed=False`.
+- `formal_trade_effect=False`.
+- This follow-up does not modify formal champion, formal strategy, weights, orders, positions, or trade instructions.
+- Web research remains supplementary and was disabled for the validation smoke (`--no-web`).
+
 ## 2026-07-09 Direct Follow-Up - Zhu Walkline Signal Discipline
 
 ## 修改檔案
