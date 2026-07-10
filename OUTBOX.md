@@ -1,5 +1,37 @@
 # OUTBOX
 
+## 2026-07-10 Direct Follow-Up - Zhu Walkline Report Tone Spec
+
+## 修改檔案
+- `CODEx_WALKLINE_REPORT_TONE_SPEC.md`: saved the attached walkline teaching-style tone specification.
+- `src/abc_quant/reports/zhu_walkline_report.py`: rewrote the single-stock Markdown report into the fixed walkline teaching order and observation-only wording.
+- `tests/test_zhu_walkline_features.py`: added regression checks for report section order, scenario order, observation language, and banned deterministic trading phrases.
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: recorded this follow-up and hard boundaries.
+
+## 實作摘要
+- Single-stock reports now use the fixed section order: conclusion, trend, moving averages, K-bar, volume, institutional chips, big-holder/main-force proxy, margin/short data, support/resistance, tomorrow scenarios, non-holder view, holder view, and one-line summary.
+- Scenario order is fixed as `劇本A：轉強`, `劇本B：整理`, `劇本C：續弱`.
+- Reports use teaching-style observation language: observation price, defense point, signal invalidation, support/resistance, and confirmation watch price.
+- The runtime fixed statement remains `本報告為技術分析教育與 shadow observation，不是投資建議，不是買賣指令。`
+- The attached spec's example `mode=shadow_advisory_only` is preserved in the spec file only; generated runtime reports remain hard-locked to `mode=shadow_observation_only`.
+
+## 測試方式
+- `.\.venv\Scripts\ruff.exe check src\abc_quant\reports\zhu_walkline_report.py tests\test_zhu_walkline_features.py`
+- `python -m pytest tests/test_zhu_walkline_features.py::test_reports_use_observation_language_not_trade_commands -q`
+
+## 測試結果
+- Focused `ruff check`: passed.
+- Focused report-language pytest: 1 passed.
+
+## 邊界
+- `mode=shadow_observation_only`.
+- `formal_champion_changed=False`.
+- `formal_trade_effect=False`.
+- no formal strategy modified.
+- no formal champion modified.
+- no formal trade effect.
+- No trade instructions, orders, holdings, weights, or formal promotion.
+
 ## 2026-07-10 Direct Follow-Up - Zhu Walkline Range Backtest Metric Review Fix
 
 ## 修改檔案

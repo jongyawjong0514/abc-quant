@@ -422,7 +422,7 @@ def _market_report(result: ZhuWalklineResult, quality: DataQualityReport) -> str
         "",
         "## 四、多方轉強觀察股",
         "",
-        "不是買進名單，不是明日必漲股。走圖不是預言，走圖是等訊號。",
+        "不是買進名單，不是預測名單。走圖不是預言，走圖是等訊號。",
         "不是買進名單，不是賣出指令，僅為支撐壓力觀察價與訊號失效價。",
         "",
         _markdown_table(
@@ -478,6 +478,18 @@ def _stock_report(result: ZhuWalklineResult) -> str:
         row = result.top_fall_risks.iloc[0]
     else:
         row = result.feature_matrix.iloc[0]
+    support_1 = _zone_text(row, "support_zone_1") or _format_price(row.get("invalidation_price"))
+    support_2 = _zone_text(row, "support_zone_2") or _format_price(row.get("support_2"))
+    resistance_1 = _zone_text(row, "resistance_zone_1") or _format_price(row.get("confirm_price"))
+    resistance_2 = _zone_text(row, "resistance_zone_2") or _format_price(row.get("target_resistance_2"))
+    resistance_3 = _format_price(row.get("target_resistance_2")) or _format_price(row.get("resistance_2"))
+    trend_state = _text(row.get("trend_state", ""))
+    ma_state = _text(row.get("ma_state", ""))
+    kline_state = _text(row.get("kline_state", ""))
+    volume_state = _text(row.get("volume_state", ""))
+    institution_state = _institution_state(row)
+    margin_state = _margin_state(row)
+    summary_state = _summary_state(row)
     web_section = (
         "本次網路資料僅作為題材與事件補充，核心評分仍以本地量價、均線、法人、融資券資料為主。"
         if result.web_research_used
@@ -485,139 +497,234 @@ def _stock_report(result: ZhuWalklineResult) -> str:
     )
     buy_trigger_role = _text(row.get("buy_trigger_price_role", ""))
     if buy_trigger_role == "NEXT_CONFIRMATION_PRICE":
-        buy_trigger_role_note = "NEXT_CONFIRMATION_PRICE（尚未觸發，這是下一個確認觀察價，不是買進價）"
+        buy_trigger_role_note = "NEXT_CONFIRMATION_PRICE（尚未觸發，這是下一個確認觀察價，不是進場指令）"
     elif buy_trigger_role == "TRIGGERED_PRICE":
-        buy_trigger_role_note = "TRIGGERED_PRICE（已觸發的支撐壓力觀察價，仍不是買進指令）"
+        buy_trigger_role_note = "TRIGGERED_PRICE（已觸發的支撐壓力觀察價，仍不是動作指令）"
     else:
         buy_trigger_role_note = "EMPTY（尚無可用觀察價）"
     lines = [
         f"# {row['stock_id']} {row.get('stock_name', '')}｜走圖分析",
         "",
+        "同學，這張圖現在不要先問會不會漲。",
+        "你要先問三件事：趨勢有沒有轉強？均線有沒有站回？量有沒有出來？",
+        "",
         "## 一、先講結論",
         "",
         "同學，這張圖現在是：",
         "",
-        f"- 趨勢：{row.get('trend_state', '')}",
-        f"- 均線：{row.get('ma_state', '')}",
-        f"- K棒：{row.get('kline_state', '')}",
-        f"- 量能：{row.get('volume_state', '')}",
-        f"- 法人：5日外資 {row.get('foreign_5d', 0):,.0f}，投信 {row.get('investment_trust_5d', 0):,.0f}",
-        f"- 大戶／主力：{row.get('big_holder_data_source', 'proxy')} score={row.get('big_holder_score', 0):.1f}",
-        f"- 融資券：margin_score={row.get('margin_score', 0):.1f}，risk={row.get('margin_risk_score', 0):.1f}",
-        f"- 大盤背景：{row.get('market_state', '')}",
-        f"- 類股輪動：{row.get('sector', '')} rank={row.get('sector_rotation_rank', '')}",
-        f"- 概念股輪動：{', '.join(_as_list(row.get('concepts')))}",
-        f"- 訊號階段：{row.get('signal_stage', '')}",
-        f"- 觸發型態：{row.get('trigger_type', '')}",
-        f"- 買點觀察型態：{_text(row.get('buy_observation_type', ''))}",
-        f"- 買點觀察明細：{_text(row.get('buy_observation_detail_types', ''))}",
-        f"- 買點觀察價：{_format_price(row.get('buy_trigger_price'))}",
-        f"- 買點觀察價角色：{buy_trigger_role_note}",
-        f"- 賣點警示型態：{_text(row.get('sell_warning_type', ''))}",
-        f"- 賣點警示明細：{_text(row.get('sell_warning_detail_types', ''))}",
-        f"- 失敗型態：{_text(row.get('failure_type', ''))}",
-        f"- 結論：rise_score={row.get('rise_score', 0):.1f}，fall_risk_score={row.get('fall_risk_score', 0):.1f}",
+        "| 項目 | 判斷 |",
+        "|---|---|",
+        f"| 趨勢 | {trend_state} |",
+        f"| 均線 | {ma_state} |",
+        f"| K棒 | {kline_state} |",
+        f"| 量能 | {volume_state} |",
+        f"| 法人 | {institution_state} |",
+        f"| 融資券 | {margin_state} |",
+        f"| 結論 | {summary_state} |",
+        "",
+        "一句話：",
+        "",
+        f"> {support_1} 是防守，{resistance_1} 是第一關，{resistance_2} 是修復區；站不回去，就還是弱勢反彈。",
         "",
         "## 二、趨勢",
         "",
-        f"同學，趨勢狀態是 `{row.get('trend_state', '')}`。頭頭高／底底高與20日、60日位置要一起看。",
+        "同學，走圖第一步，不是問會不會漲，是先看頭跟底。",
+        "",
+        f"目前趨勢狀態是 `{trend_state}`。前面強，不代表現在還強；圖變了，想法也要跟著變。",
+        f"現在重點是有沒有守住 {support_1}，以及能不能站回 {resistance_1}。",
         "",
         "## 三、均線",
         "",
-        f"5日 {row.get('ma5', np.nan):.2f}、10日 {row.get('ma10', np.nan):.2f}、20日 {row.get('ma20', np.nan):.2f}、60日 {row.get('ma60', np.nan):.2f}。",
+        "同學，股價在均線上面，均線往上，才叫多方控盤。",
+        "",
+        f"5日 {_format_price(row.get('ma5'))}、10日 {_format_price(row.get('ma10'))}、20日 {_format_price(row.get('ma20'))}、60日 {_format_price(row.get('ma60'))}。",
+        f"均線狀態是 `{ma_state}`。站回5日線，是第一步；站回20日線，結構才開始修復。",
         "",
         "## 四、K線",
         "",
-        f"今日K棒判定為 `{row.get('kline_state', '')}`。同學，有下影線不等於轉強，收過壓力才叫轉強。",
+        f"今日K棒判定為 `{kline_state}`。",
+        "",
+        "記住：紅K不等於轉強，收過壓力才叫轉強。",
+        "有下影線，只代表下面有人接；要收過壓力，才叫多方拿回主控權。",
         "",
         "## 五、量能",
         "",
-        f"量能狀態為 `{row.get('volume_state', '')}`，20日量比 {row.get('vol_ratio_20', np.nan):.2f}。",
+        f"量能狀態為 `{volume_state}`，20日量比 {_format_number(row.get('vol_ratio_20'))}。",
+        "",
+        "量縮反彈可以看，但不能追。有量突破壓力，才有攻擊味道。",
         "",
         "## 六、法人籌碼",
         "",
-        f"法人分數 {row.get('institutional_score', 0):.1f}，法人賣壓分數 {row.get('institutional_selling_score', 0):.1f}。",
+        f"法人狀態：{institution_state}。",
+        f"法人分數 {_format_number(row.get('institutional_score'))}，法人賣壓分數 {_format_number(row.get('institutional_selling_score'))}。",
         "",
-        "## 七、大戶／主力代理",
+        "法人買超是加分，但不是通行證；還要看股價有沒有跟著過高。",
         "",
-        f"大戶/主力資料來源 `{row.get('big_holder_data_source', '')}`，分數 {row.get('big_holder_score', 0):.1f}。",
+        "## 七、大戶／主力 proxy",
+        "",
+        f"大戶／主力 proxy 資料來源 `{row.get('big_holder_data_source', '')}`，分數 {_format_number(row.get('big_holder_score'))}。",
+        "",
+        "這個欄位只能當作籌碼輔助，不能當作拉抬想像。",
         "",
         "## 八、融資券",
         "",
-        f"融資 score={row.get('margin_score', 0):.1f}，融資風險={row.get('margin_risk_score', 0):.1f}。",
+        f"融資券狀態：{margin_state}。",
+        f"融資 score={_format_number(row.get('margin_score'))}，融資風險={_format_number(row.get('margin_risk_score'))}。",
         "",
-        "## 九、大盤與類股背景",
+        "融資大增不是不能漲，但籌碼開始變熱，就不能亂追。",
         "",
         f"大盤 `{row.get('market_state', '')}`，類股 `{row.get('sector', '')}`。",
+        f"類股輪動 rank={row.get('sector_rotation_rank', '')}，概念股輪動：{', '.join(_as_list(row.get('concepts')))}。",
         "",
-        "## 十、支撐與壓力",
+        "同學，先看大盤，再看類股，再看個股。大盤沒有轉強以前，個股再強也要打折。",
+        "",
+        "## 九、支撐與壓力",
         "",
         "| 價位 | 意義 |",
         "|---:|---|",
-        f"| {_zone_text(row, 'support_zone_1')} | 支撐區1 |",
-        f"| {_zone_text(row, 'support_zone_2')} | 支撐區2 |",
-        f"| {_zone_text(row, 'resistance_zone_1')} | 壓力區1 |",
-        f"| {_zone_text(row, 'resistance_zone_2')} | 壓力區2 |",
+        f"| {support_1} | 第一防守 |",
+        f"| {support_2} | 最後短線防守 |",
+        f"| {resistance_1} | 第一關 |",
+        f"| {resistance_2} | 修復區 |",
+        f"| {resistance_3} | 前高壓力觀察 |",
+        "",
+        f"現在不要跳著想前高。先看：守不守 {support_1}，過不過 {resistance_1}，站不站回 {resistance_2}。",
         "",
         f"- 支撐有效：{bool(row.get('support_zone_holding_today', False))}",
         f"- 支撐失敗：{bool(row.get('support_zone_failed_today', False))}",
         f"- 壓力有效突破：{bool(row.get('resistance_zone_breakout_today', False))}",
         f"- 壓力突破失敗：{bool(row.get('resistance_zone_breakout_failed_today', False))}",
-        f"- 目標壓力1：{_format_price(row.get('target_resistance_1'))}",
-        f"- 目標壓力2：{_format_price(row.get('target_resistance_2'))}",
+        f"- 轉強觀察價：{_format_price(row.get('buy_trigger_price'))}",
+        f"- 觀察價角色：{buy_trigger_role_note}",
         f"- 訊號失敗價：{_format_price(row.get('invalidation_price'))}",
         "",
-        "## 十一、明日劇本",
+        "## 十、明日劇本",
         "",
         "### 劇本A：轉強",
         "",
-        f"條件：收盤站上壓力區 {_zone_text(row, 'resistance_zone_1')}，並維持量價同步。",
+        "條件：",
+        f"1. 不跌破 {support_1}。",
+        f"2. 收盤站上 {resistance_1}。",
+        "3. 成交量比今日放大。",
+        f"4. 進一步挑戰 {resistance_2}。",
         "",
-        "### 劇本B：續弱",
+        "這樣才叫短線開始修復。",
         "",
-        f"條件：跌破支撐區 {_zone_text(row, 'support_zone_1')}，且量能放大。",
+        "### 劇本B：整理",
         "",
-        "### 劇本C：整理",
+        "條件：",
+        f"1. 在 {support_1} 到 {resistance_1} 之間震盪。",
+        "2. 量縮。",
+        "3. K棒忽紅忽黑。",
+        "4. 沒有站回關鍵均線。",
         "",
-        "條件：沒有收過壓力，也沒有跌破支撐。同學，沒有訊號，就沒有動作。",
+        "這種盤不要亂猜，等方向出來。",
         "",
-        "## 十二、未持有者",
+        "### 劇本C：續弱",
+        "",
+        "條件：",
+        f"1. 跌破 {support_1}。",
+        "2. 收盤收不回。",
+        f"3. 反彈到 {resistance_1} 附近又被壓回。",
+        "4. 放量收黑K。",
+        "",
+        "這樣代表支撐失敗，短線續弱。",
+        "",
+        "## 十一、未持有者",
         "",
         "不是買進名單，不是賣出指令，僅為支撐壓力觀察價與訊號失效價。",
         "",
         f"同學，未持有不要急。{row.get('non_holder_observation', row.get('entry_observation', ''))}",
         "",
-        f"- 觀察型態：{_text(row.get('buy_observation_type', '')) or '尚未觸發'}",
-        f"- 觀察明細：{_text(row.get('buy_observation_detail_types', ''))}",
-        f"- 觀察價：{_format_price(row.get('buy_trigger_price'))}",
+        f"激進：收上 {resistance_1} 再看。",
+        f"穩健：站回 {resistance_2} 再看。",
+        f"更穩健：帶量突破 {resistance_3} 再談轉強。",
+        "",
+        f"- 轉強觀察型態：{_text(row.get('buy_observation_type', '')) or '尚未觸發'}",
+        f"- 轉強觀察明細：{_text(row.get('buy_observation_detail_types', ''))}",
         f"- 觀察價角色：{buy_trigger_role_note}",
-        f"- 確認價：{_format_price(row.get('confirm_price'))}",
         "- 不追價條件：沒有站上壓力就只是觀察。",
         "",
-        "## 十三、已持有者",
+        "沒有訊號，就沒有動作。空手不是沒有操作，空手是在等勝率。",
+        "",
+        "## 十二、已持有者",
         "",
         "不是買進名單，不是賣出指令，僅為支撐壓力觀察價與訊號失效價。",
         "",
         f"同學，已持有先看防守點。{row.get('holder_discipline', row.get('stop_reference', ''))}",
         "",
-        f"- 防守價：{_format_price(row.get('invalidation_price', row.get('invalid_price')))}",
-        f"- 賣點警示：{_text(row.get('sell_warning_type', '')) or '尚未觸發'}",
-        f"- 賣點警示明細：{_text(row.get('sell_warning_detail_types', ''))}",
+        f"如果跌破 {support_1} 收不回，這叫支撐失敗。",
+        f"如果站回 {resistance_1}，才是第一步修復。",
+        f"如果站回 {resistance_2}，短線轉強機率提高。",
+        "",
+        f"- 防守觀察價：{_format_price(row.get('invalidation_price', row.get('invalid_price')))}",
+        f"- 風險警示型態：{_text(row.get('sell_warning_type', '')) or '尚未觸發'}",
+        f"- 風險警示明細：{_text(row.get('sell_warning_detail_types', ''))}",
         "- 續強觀察條件：站穩確認價且沒有放量上影。",
         "- 風險升高觀察條件：跌破短均線或出現高檔供給。",
         "- 訊號失效觀察條件：跌破防守價收不回。",
         "",
-        "## 十四、網路補充資料",
+        "不要跌破了還找理由。找理由不是操作，照紀律才是操作。",
         "",
-        web_section,
+        "## 十三、一句話",
         "",
-        "## 十五、一句話",
+        f"{row['stock_id']} {row.get('stock_name', '')} 目前是 {summary_state}。",
+        f"{support_1} 是防守，{resistance_1} 是第一關，{resistance_2} 是修復區。",
+        "站不回去，就還是弱勢反彈；跌破防守，就要照紀律處理。",
         "",
         "同學，空手不是沒有操作，空手是在等勝率。",
+        "",
+        f"網路補充資料：{web_section}",
         "",
         _fixed_statement(result),
     ]
     return "\n".join(lines)
+
+
+def _institution_state(row: pd.Series) -> str:
+    divergence = bool(row.get("institutional_divergence", False))
+    selling = _float(row.get("institutional_selling_score")) or 0.0
+    score = _float(row.get("institutional_score")) or 0.0
+    foreign_5d = _float(row.get("foreign_5d")) or 0.0
+    investment_trust_5d = _float(row.get("investment_trust_5d")) or 0.0
+    if divergence:
+        return "法人買賣與價格背離，籌碼不同步"
+    if selling >= 60:
+        return "法人賣壓偏高，要提高風險觀察"
+    if score >= 60 and foreign_5d + investment_trust_5d > 0:
+        return "法人偏加分，但仍要看價格有沒有過壓力"
+    if foreign_5d + investment_trust_5d < 0:
+        return "法人偏賣超，價格若又跌破均線要小心"
+    return "法人籌碼中性，不能單靠法人解讀"
+
+
+def _margin_state(row: pd.Series) -> str:
+    if bool(row.get("margin_crowding_risk", False)):
+        return "融資壅擠風險，跌破支撐不宜亂接"
+    margin_risk = _float(row.get("margin_risk_score")) or 0.0
+    margin_score = _float(row.get("margin_score")) or 0.0
+    if margin_risk >= 60:
+        return "融資風險偏高，籌碼開始變熱"
+    if margin_score >= 60:
+        return "融資結構較乾淨，屬於加分但不是保證"
+    return "融資券中性，仍以價量與支撐壓力為主"
+
+
+def _summary_state(row: pd.Series) -> str:
+    stage = _text(row.get("signal_stage", ""))
+    sell_warning = _text(row.get("sell_warning_type", ""))
+    failure_type = _text(row.get("failure_type", ""))
+    if stage == "FAILED" or sell_warning:
+        return "訊號失效或風險升高觀察"
+    if stage == "CONFIRMED":
+        return "多方轉強觀察，不是追價名單"
+    if stage == "TRIGGER":
+        return "出現轉強訊號，仍要等價量確認"
+    if stage == "SETUP":
+        return "條件準備中，尚未觸發"
+    if failure_type:
+        return "有失敗型態，先控風險"
+    return "無明確訊號，先觀察"
 
 
 def _data_quality_report(quality: DataQualityReport, result: ZhuWalklineResult) -> str:
@@ -746,6 +853,11 @@ def _format_cell(value: Any) -> str:
 
 
 def _format_price(value: Any) -> str:
+    number = _float(value)
+    return "" if number is None else f"{number:.2f}"
+
+
+def _format_number(value: Any) -> str:
     number = _float(value)
     return "" if number is None else f"{number:.2f}"
 

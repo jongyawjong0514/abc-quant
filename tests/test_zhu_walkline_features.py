@@ -436,7 +436,42 @@ def test_reports_use_observation_language_not_trade_commands() -> None:
 
     assert "不是買進名單，不是賣出指令，僅為支撐壓力觀察價與訊號失效價。" in report
     assert "NEXT_CONFIRMATION_PRICE" in report or "TRIGGERED_PRICE" in report or "EMPTY" in report
-    banned_phrases = ["續" + "抱條件", "減" + "碼條件", "停" + "損條件", "降低" + "部位"]
+    assert "同學，這張圖現在不要先問會不會漲。" in report
+    assert "## 一、先講結論" in report
+    assert "## 七、大戶／主力 proxy" in report
+    assert "## 九、支撐與壓力" in report
+    assert "## 十、明日劇本" in report
+    assert "## 十一、未持有者" in report
+    assert "## 十二、已持有者" in report
+    assert "## 十三、一句話" in report
+    assert "## 十四、網路補充資料" not in report
+    assert "## 十五、一句話" not in report
+    assert "### 劇本A：轉強" in report
+    assert report.index("### 劇本A：轉強") < report.index("### 劇本B：整理")
+    assert report.index("### 劇本B：整理") < report.index("### 劇本C：續弱")
+    assert "轉強觀察型態" in report
+    assert "防守觀察價" in report
+    banned_phrases = [
+        "續" + "抱條件",
+        "減" + "碼條件",
+        "停" + "損條件",
+        "降低" + "部位",
+        "朱家泓老師推薦",
+        "本人看好",
+        "明天必漲",
+        "一定噴出",
+        "保證上漲",
+        "無腦買",
+        "歐印",
+        "穩賺",
+        "必勝",
+        "內線",
+        "主力一定會拉",
+        "一定會拉",
+        "這裡一定是底",
+        "跌深必彈",
+        "買點",
+    ]
     for banned in banned_phrases:
         assert banned not in report
     assert payload["mode"] == "shadow_observation_only"
