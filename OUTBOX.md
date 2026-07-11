@@ -1,5 +1,63 @@
 # OUTBOX
 
+## 2026-07-11 Direct Follow-Up - Forward Return Bucket Research
+
+## 修改檔案
+- `scripts/analyze_zhu_walkline_forward_return_buckets.py`: added a shadow/evaluator-only analysis sidecar that buckets 20-trading-day forward returns and quantifies feature differences, category lift, and reason drivers.
+- `tests/test_zhu_walkline_forward_return_bucket_analysis.py`: added bucket-boundary and reason-driver regression tests.
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: recorded the research output, validation, and hard boundaries.
+
+## 實作摘要
+- Input: `reports/zhu_walkline_early_observation_labels_2026_01_06_fwd20p/zhu_walkline_early_observation_candidates.csv`.
+- Buckets:
+  - `GAIN_21_30`: `20.0 <= forward_return_pct < 31.0`, label shown as `21%-30%`.
+  - `GAIN_31_40`: `31.0 <= forward_return_pct < 41.0`.
+  - `GAIN_41_50`: `41.0 <= forward_return_pct < 51.0`.
+  - `GAIN_GT_50`: `forward_return_pct >= 51.0`.
+- The first bucket starts at 20.0 because the prior filter kept rows with `>=20%`; the display label follows the user's 21%-30% wording.
+- Daily OHLCV features are joined as-of by `asof_date` and `stock_id`; future return remains evaluator-only.
+
+## 產出檔案
+- `reports/zhu_walkline_forward_return_bucket_research_2026_01_06/zhu_walkline_forward_return_bucket_rows.csv`
+- `reports/zhu_walkline_forward_return_bucket_research_2026_01_06/zhu_walkline_forward_return_bucket_summary.csv`
+- `reports/zhu_walkline_forward_return_bucket_research_2026_01_06/zhu_walkline_forward_return_numeric_features.csv`
+- `reports/zhu_walkline_forward_return_bucket_research_2026_01_06/zhu_walkline_forward_return_category_lift.csv`
+- `reports/zhu_walkline_forward_return_bucket_research_2026_01_06/zhu_walkline_forward_return_reason_drivers.csv`
+- `reports/zhu_walkline_forward_return_bucket_research_2026_01_06/zhu_walkline_forward_return_bucket_summary.json`
+- `reports/zhu_walkline_forward_return_bucket_research_2026_01_06/zhu_walkline_forward_return_bucket_summary.md`
+
+## 量化摘要
+- Total bucketed rows: 2,632
+- Unique stocks: 523
+- Date count: 76
+- `21%-30%`: 988 rows, avg forward return 25.0671%, median 24.8540%
+- `31%-40%`: 560 rows, avg forward return 35.4777%, median 35.1351%
+- `41%-50%`: 366 rows, avg forward return 45.5872%, median 45.3901%
+- `>50%`: 718 rows, avg forward return 74.6827%, median 67.1007%
+
+## 初步大漲原因歸因
+- `>50%` bucket 的主要類別驅動是 `sector=電子零組件`: 288 rows, bucket share 40.11%, all share 29.41%, lift 1.364。
+- `>50%` bucket 的數值驅動較分散，偏向較高短均乖離、較強當日紅K與較高量比：`open_to_close_pct` 平均 4.48% vs all 4.13%，`vol_ratio_20` 1.874 vs all 1.774，`attack_volume_share` 60.86% vs all 58.13%。
+- `41%-50%` bucket 類股 lift 偏向 `光電`: bucket share 12.57%, all share 8.62%, lift 1.457。
+- `31%-40%` bucket 類股 lift 偏向 `電機機械`、`電子通路`、`通信網路`。
+- `21%-30%` bucket 較常見 `金融保險` 與風險警示/供給壓力標籤；平均 fall risk score 1.579，高於其他三桶。
+
+## 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+
+## 目前驗證
+- Focused Ruff: `.\.venv\Scripts\ruff.exe check scripts\analyze_zhu_walkline_forward_return_buckets.py tests\test_zhu_walkline_forward_return_bucket_analysis.py`，All checks passed。
+- Focused tests: `python -m pytest tests\test_zhu_walkline_forward_return_bucket_analysis.py -q`，2 passed。
+- Analysis command: `python scripts\analyze_zhu_walkline_forward_return_buckets.py --output-dir reports\zhu_walkline_forward_return_bucket_research_2026_01_06 --min-category-count 8` completed.
+- Output audit: no `NaN`/`nan`/`None`/`<NA>` output strings.
+
 ## 2026-07-11 Direct Follow-Up - Forward 20 Trading Day Return Filter
 
 ## 修改檔案
