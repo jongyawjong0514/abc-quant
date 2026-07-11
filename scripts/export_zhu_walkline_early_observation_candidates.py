@@ -60,6 +60,9 @@ EARLY_OUTPUT_COLUMNS = [
     "ma20",
     "ma20_slope",
     "ma120",
+    "forward_close_date",
+    "forward_close",
+    "forward_return_pct",
     "trend_state",
     "kline_state",
     "volume_state",
@@ -80,6 +83,9 @@ LABEL_TODO_COLUMNS = [
     "early_observation_rule",
     "review_bucket",
     "label_user",
+    "forward_close_date",
+    "forward_close",
+    "forward_return_pct",
     "support_zone_1_label",
     "resistance_zone_1_label",
 ]
@@ -111,6 +117,7 @@ def main(argv: list[str] | None = None) -> int:
         full, daily = _run_fast_precomputed_engine(config, args, trading_dates)
         return _write_outputs(
             output_dir=output_dir,
+            sqlite_path=sqlite_path,
             start_date=args.start_date,
             end_date=args.end_date,
             trading_dates=trading_dates,
@@ -168,6 +175,7 @@ def main(argv: list[str] | None = None) -> int:
     daily = pd.DataFrame(daily_rows)
     return _write_outputs(
         output_dir=output_dir,
+        sqlite_path=sqlite_path,
         start_date=args.start_date,
         end_date=args.end_date,
         trading_dates=trading_dates,
@@ -181,6 +189,7 @@ def main(argv: list[str] | None = None) -> int:
 def _write_outputs(
     *,
     output_dir: Path,
+    sqlite_path: Path,
     start_date: str,
     end_date: str,
     trading_dates: list[str],
@@ -189,6 +198,16 @@ def _write_outputs(
     elapsed_seconds: float,
     args: argparse.Namespace,
 ) -> int:
+    full, forward_filter_audit = _maybe_apply_forward_return_controls(
+        full,
+        sqlite_path=sqlite_path,
+        args=args,
+    )
+    for column in EARLY_OUTPUT_COLUMNS:
+        if column not in full.columns:
+            full[column] = ""
+    full = full[EARLY_OUTPUT_COLUMNS].map(_clean_output_value)
+    daily = _daily_after_forward_return_filter(daily, full, forward_filter_audit)
     label_todo = full[LABEL_TODO_COLUMNS].copy() if not full.empty else pd.DataFrame(columns=LABEL_TODO_COLUMNS)
     date_stock_codes = (
         full[DATE_STOCK_COLUMNS].copy() if not full.empty else pd.DataFrame(columns=DATE_STOCK_COLUMNS)
@@ -201,6 +220,7 @@ def _write_outputs(
         daily=daily,
         elapsed_seconds=elapsed_seconds,
         args=args,
+        forward_filter_audit=forward_filter_audit,
     )
 
     full_path = output_dir / "zhu_walkline_early_observation_candidates.csv"
@@ -295,6 +315,138 @@ def _run_fast_precomputed_engine(
         daily["elapsed_seconds"] = daily["elapsed_seconds"].astype(float)
         daily.loc[daily.index[-1], "elapsed_seconds"] += round(time.perf_counter() - started_at, 3)
     return full, daily
+
+
+def _maybe_apply_forward_return_controls(
+    full: pd.DataFrame,
+    *,
+    sqlite_path: Path,
+    args: argparse.Namespace,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    audit: dict[str, Any] = {
+        "forward_return_filter_enabled": bool(args.min_forward_return_pct is not None),
+        "forward_return_labels_included": bool(
+            args.include_forward_return_labels or args.min_forward_return_pct is not None
+        ),
+        "forward_return_trading_days": int(args.forward_return_trading_days),
+        "min_forward_return_pct": args.min_forward_return_pct,
+        "candidate_rows_before_forward_return_filter": int(len(full)),
+        "candidate_rows_removed_by_forward_return_filter": 0,
+        "candidate_rows_missing_forward_return": 0,
+    }
+    if full.empty:
+        return _ensure_forward_return_columns(full), audit
+    if not audit["forward_return_labels_included"]:
+        return _ensure_forward_return_columns(full), audit
+
+    price_rows = _load_forward_price_rows(
+        sqlite_path,
+        start_date=str(full["asof_date"].min()),
+        end_date=str(full["asof_date"].max()),
+        horizon_trading_days=int(args.forward_return_trading_days),
+    )
+    labeled = attach_forward_return_labels(
+        full,
+        price_rows=price_rows,
+        horizon_trading_days=int(args.forward_return_trading_days),
+    )
+    return_filter = pd.to_numeric(labeled["forward_return_pct"], errors="coerce")
+    missing_count = int(return_filter.isna().sum())
+    audit["candidate_rows_missing_forward_return"] = missing_count
+    if args.min_forward_return_pct is None:
+        return labeled.map(_clean_output_value), audit
+
+    kept = labeled[return_filter >= float(args.min_forward_return_pct)].copy()
+    audit["candidate_rows_removed_by_forward_return_filter"] = int(len(labeled) - len(kept))
+    return kept.map(_clean_output_value), audit
+
+
+def _ensure_forward_return_columns(frame: pd.DataFrame) -> pd.DataFrame:
+    output = frame.copy()
+    for column in ["forward_close_date", "forward_close", "forward_return_pct"]:
+        if column not in output.columns:
+            output[column] = ""
+    return output
+
+
+def _load_forward_price_rows(
+    sqlite_path: Path,
+    *,
+    start_date: str,
+    end_date: str,
+    horizon_trading_days: int,
+) -> pd.DataFrame:
+    calendar_buffer_days = max(45, horizon_trading_days * 4)
+    query = """
+        select date, stock_id, close
+        from daily_ohlcv_features
+        where date >= ?
+          and date <= date(?, ?)
+          and length(stock_id) = 4
+        order by stock_id, date
+    """
+    with sqlite3.connect(sqlite_path) as connection:
+        return pd.read_sql_query(
+            query,
+            connection,
+            params=[start_date, end_date, f"+{calendar_buffer_days} day"],
+            parse_dates=["date"],
+        )
+
+
+def attach_forward_return_labels(
+    candidates: pd.DataFrame,
+    *,
+    price_rows: pd.DataFrame,
+    horizon_trading_days: int = 20,
+) -> pd.DataFrame:
+    """Attach evaluator-only future return labels to already-selected rows."""
+    output = _ensure_forward_return_columns(candidates)
+    if output.empty or price_rows.empty:
+        return output.map(_clean_output_value)
+
+    prices = price_rows[["date", "stock_id", "close"]].copy()
+    prices["date"] = pd.to_datetime(prices["date"])
+    prices["stock_id"] = prices["stock_id"].astype(str).str.zfill(4)
+    prices["close"] = pd.to_numeric(prices["close"], errors="coerce")
+    prices = prices.dropna(subset=["date", "stock_id", "close"]).sort_values(["stock_id", "date"])
+    grouped = prices.groupby("stock_id", group_keys=False)
+    prices["forward_close_date"] = grouped["date"].shift(-horizon_trading_days)
+    prices["forward_close"] = grouped["close"].shift(-horizon_trading_days)
+    label_rows = prices[["date", "stock_id", "forward_close_date", "forward_close"]].rename(
+        columns={"date": "asof_date"}
+    )
+
+    output = output.copy()
+    output["asof_date"] = pd.to_datetime(output["asof_date"])
+    output["stock_id"] = output["stock_id"].astype(str).str.zfill(4)
+    output = output.drop(columns=["forward_close_date", "forward_close", "forward_return_pct"], errors="ignore")
+    output = output.merge(label_rows, on=["asof_date", "stock_id"], how="left")
+    close = pd.to_numeric(output["close"], errors="coerce")
+    forward_close = pd.to_numeric(output["forward_close"], errors="coerce")
+    output["forward_return_pct"] = ((forward_close / close) - 1.0) * 100.0
+    output["forward_return_pct"] = output["forward_return_pct"].round(4)
+    output["forward_close"] = forward_close.round(4)
+    output["asof_date"] = output["asof_date"].dt.strftime("%Y-%m-%d")
+    output["forward_close_date"] = pd.to_datetime(output["forward_close_date"]).dt.strftime("%Y-%m-%d")
+    return output.map(_clean_output_value)
+
+
+def _daily_after_forward_return_filter(
+    daily: pd.DataFrame,
+    full: pd.DataFrame,
+    audit: dict[str, Any],
+) -> pd.DataFrame:
+    if daily.empty or not audit.get("forward_return_filter_enabled"):
+        return daily
+    output = daily.copy()
+    output["candidate_count_before_forward_return_filter"] = output["candidate_count"]
+    if full.empty:
+        final_counts: dict[str, int] = {}
+    else:
+        final_counts = full["asof_date"].value_counts().to_dict()
+    output["candidate_count"] = output["asof_date"].map(final_counts).fillna(0).astype(int)
+    return output
 
 
 def build_fast_precomputed_feature_matrix(
@@ -959,6 +1111,26 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     )
     parser.add_argument("--fast-lookback-days", type=int, default=260)
     parser.add_argument(
+        "--forward-return-trading-days",
+        type=int,
+        default=20,
+        help="Evaluator-only horizon for one-month forward close labels.",
+    )
+    parser.add_argument(
+        "--include-forward-return-labels",
+        action="store_true",
+        help="Attach evaluator-only forward close/return labels without filtering candidates.",
+    )
+    parser.add_argument(
+        "--min-forward-return-pct",
+        type=float,
+        default=None,
+        help=(
+            "Evaluator-only threshold. When set, rows without a future close or with "
+            "forward return below this percent are removed from the label sidecar."
+        ),
+    )
+    parser.add_argument(
         "--include-etf-like",
         action="store_true",
         help="Include 00xx ETF-like tickers in the fast manual-label export.",
@@ -997,6 +1169,7 @@ def _summary_payload(
     daily: pd.DataFrame,
     elapsed_seconds: float,
     args: argparse.Namespace,
+    forward_filter_audit: dict[str, Any],
 ) -> dict[str, Any]:
     rule_counts = (
         candidates["early_observation_rule"].value_counts().sort_index().to_dict()
@@ -1023,6 +1196,7 @@ def _summary_payload(
         "review_fall_risk": float(args.review_fall_risk),
         "fast_lookback_days": int(args.fast_lookback_days),
         "include_etf_like": bool(args.include_etf_like),
+        **forward_filter_audit,
         "rule_counts": {str(key): int(value) for key, value in rule_counts.items()},
         "elapsed_seconds": round(elapsed_seconds, 3),
         "no_formal_strategy_modified": True,
@@ -1045,6 +1219,12 @@ def _summary_markdown(summary: dict[str, Any], label_todo: pd.DataFrame) -> str:
         f"- non-empty days: {summary['non_empty_days']}",
         f"- rule counts: `{summary['rule_counts']}`",
         f"- source engine: `{summary['source_engine']}`",
+        f"- evaluator-only forward horizon: `{summary['forward_return_trading_days']}` trading days",
+        f"- min forward return filter: `{summary['min_forward_return_pct']}`",
+        f"- rows before forward filter: {summary['candidate_rows_before_forward_return_filter']}",
+        f"- rows removed by forward filter: {summary['candidate_rows_removed_by_forward_return_filter']}",
+        f"- rows missing forward return: {summary['candidate_rows_missing_forward_return']}",
+        "- forward return labels are hindsight evaluator fields, not live selection features.",
         "",
         "## Label Preview",
         "",

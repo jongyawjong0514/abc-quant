@@ -1,5 +1,45 @@
 # OUTBOX
 
+## 2026-07-11 Direct Follow-Up - Forward 20 Trading Day Return Filter
+
+## 修改檔案
+- `scripts/export_zhu_walkline_early_observation_candidates.py`: added evaluator-only `forward_close_date`, `forward_close`, and `forward_return_pct` labels plus `--min-forward-return-pct`, `--forward-return-trading-days`, and `--include-forward-return-labels`.
+- `tests/test_zhu_walkline_early_observation_export.py`: added coverage that candidates below the forward-return threshold or missing the future close are removed from the filtered sidecar.
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: recorded the filter, output path, validation, and formal-boundary guarantees.
+
+## 實作摘要
+- This filter is a manual-label/backtest sidecar only. It uses future close data after candidate selection and must not be treated as an as-of selection rule.
+- User-requested rule: keep only rows where the close 20 trading days later is at least 20% above the as-of close.
+- Rows without enough future price history are removed from the filtered output because the one-month outcome cannot be confirmed.
+- Daily counts now preserve `candidate_count_before_forward_return_filter` and replace `candidate_count` with the final filtered count.
+
+## 區間輸出
+- Command: `python scripts/export_zhu_walkline_early_observation_candidates.py --engine fast --start-date 2026-01-01 --end-date 2026-06-30 --max-per-day 0 --min-forward-return-pct 20 --forward-return-trading-days 20 --output-dir reports/zhu_walkline_early_observation_labels_2026_01_06_fwd20p --verbose`
+- Output directory: `reports/zhu_walkline_early_observation_labels_2026_01_06_fwd20p/`
+- Candidate rows before filter: 13,116
+- Missing forward-return rows: 1,056
+- Rows removed by forward-return filter: 10,484
+- Final candidate rows: 2,632
+- Unique stocks: 523
+- Non-empty days: 76
+- `forward_return_pct < 20`: 0
+- Missing final forward return: 0
+
+## 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+
+## 目前驗證
+- Focused Ruff: `.\.venv\Scripts\ruff.exe check scripts\export_zhu_walkline_early_observation_candidates.py tests\test_zhu_walkline_early_observation_export.py`，All checks passed。
+- Focused tests: `python -m pytest tests\test_zhu_walkline_early_observation_export.py -q`，6 passed。
+- Output audit: filtered CSV has zero below-threshold rows, zero missing forward returns, and no `NaN`/`nan`/`None`/`<NA>` output strings.
+
 ## 2026-07-11 Direct Follow-Up - Zhu Walkline Early Observation Manual Labels
 
 ## 修改檔案

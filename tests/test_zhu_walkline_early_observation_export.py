@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import sqlite3
+from types import SimpleNamespace
+
+import pandas as pd
+
 from scripts.export_zhu_walkline_early_observation_candidates import (
     LABEL_TODO_COLUMNS,
+    _maybe_apply_forward_return_controls,
     build_fast_precomputed_feature_matrix,
     select_early_observation_candidates,
 )
-
-import pandas as pd
 
 
 def test_select_early_observation_candidates_keeps_strict_and_review_rows() -> None:
@@ -92,6 +96,44 @@ def test_select_early_observation_candidates_requires_close_above_ma120() -> Non
     selected = select_early_observation_candidates(frame, max_per_day=None)
 
     assert selected["stock_id"].tolist() == ["2330"]
+
+
+def test_forward_return_filter_keeps_only_one_month_20pct_winners(tmp_path) -> None:
+    sqlite_path = tmp_path / "tw.sqlite"
+    rows = [
+        ("2026-05-22", "2330", 100.0),
+        ("2026-05-25", "2330", 110.0),
+        ("2026-05-26", "2330", 125.0),
+        ("2026-05-22", "2317", 100.0),
+        ("2026-05-25", "2317", 112.0),
+        ("2026-05-26", "2317", 119.0),
+        ("2026-05-22", "2454", 100.0),
+        ("2026-05-25", "2454", 130.0),
+    ]
+    with sqlite3.connect(sqlite_path) as connection:
+        connection.execute("create table daily_ohlcv_features(date text, stock_id text, close real)")
+        connection.executemany("insert into daily_ohlcv_features values (?, ?, ?)", rows)
+
+    candidates = pd.DataFrame([_row("2330"), _row("2317"), _row("2454")])
+    args = SimpleNamespace(
+        include_forward_return_labels=False,
+        min_forward_return_pct=20.0,
+        forward_return_trading_days=2,
+    )
+
+    filtered, audit = _maybe_apply_forward_return_controls(
+        candidates,
+        sqlite_path=sqlite_path,
+        args=args,
+    )
+
+    assert filtered["stock_id"].tolist() == ["2330"]
+    assert filtered.iloc[0]["forward_close_date"] == "2026-05-26"
+    assert filtered.iloc[0]["forward_close"] == 125.0
+    assert filtered.iloc[0]["forward_return_pct"] == 25.0
+    assert audit["candidate_rows_before_forward_return_filter"] == 3
+    assert audit["candidate_rows_removed_by_forward_return_filter"] == 2
+    assert audit["candidate_rows_missing_forward_return"] == 1
 
 
 def test_fast_precomputed_engine_ignores_future_rows_after_end_date() -> None:
