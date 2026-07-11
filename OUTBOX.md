@@ -1,5 +1,73 @@
 # OUTBOX
 
+## 2026-07-11 Direct Follow-Up - Driver Screen Overlay And Rolling Backtest
+
+## 修改檔案
+- `scripts/backtest_zhu_walkline_driver_screen.py`: added a shadow-only as-of driver screen and rolling backtest sidecar.
+- `tests/test_zhu_walkline_driver_screen_backtest.py`: added coverage for no-forward-label scoring, same-count baseline alignment, and shadow summary boundaries.
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: recorded the overlay, run outputs, validation, and hard boundaries.
+
+## 篩選規則
+Default threshold: `driver_score >= 11`.
+
+Score rules:
+- `sector == 電子零組件`: +3
+- `sector in 光電, 其他電子`: +1
+- `early_observation_rule == STRICT_BREAKOUT`: +2
+- `volume_state == ATTACK_VOLUME` or `vol_ratio_20/day_volume_ratio_20 >= 1.8`: +2
+- `kline_state == ATTACK_RED_K`: +1
+- `open_to_close_pct >= 4%` and `close_location_in_bar >= 0.8`: +1
+- `close_to_sma5_pct >= 7%`: +1
+- `sector_state == SECTOR_LEADING`: +1
+- `signal_stage == CONFIRMED` and `fall_risk_score <= 3`: +1
+- no sell/failure warning and `review_bucket == CLEAN_REVIEW`: +1
+
+These rules use only as-of fields. Forward returns are evaluator-only labels.
+
+## 回測指令
+```powershell
+python scripts\backtest_zhu_walkline_driver_screen.py --output-dir reports\zhu_walkline_driver_screen_backtest_2026_01_06 --min-driver-score 11 --horizon-trading-days 20 --rolling-window-days 20
+```
+
+## 產出檔案
+- `reports/zhu_walkline_driver_screen_backtest_2026_01_06/zhu_walkline_driver_screen_rows.csv`
+- `reports/zhu_walkline_driver_screen_backtest_2026_01_06/zhu_walkline_driver_screen_scored_universe.csv`
+- `reports/zhu_walkline_driver_screen_backtest_2026_01_06/zhu_walkline_driver_screen_same_count_top_rise.csv`
+- `reports/zhu_walkline_driver_screen_backtest_2026_01_06/zhu_walkline_driver_screen_same_count_random.csv`
+- `reports/zhu_walkline_driver_screen_backtest_2026_01_06/zhu_walkline_driver_screen_daily_metrics.csv`
+- `reports/zhu_walkline_driver_screen_backtest_2026_01_06/zhu_walkline_driver_screen_monthly_metrics.csv`
+- `reports/zhu_walkline_driver_screen_backtest_2026_01_06/zhu_walkline_driver_screen_rolling_metrics.csv`
+- `reports/zhu_walkline_driver_screen_backtest_2026_01_06/zhu_walkline_driver_screen_summary.json`
+- `reports/zhu_walkline_driver_screen_backtest_2026_01_06/zhu_walkline_driver_screen_summary.md`
+
+## 回測摘要
+| cohort | rows | avg 20d return | median | hit >=20% | hit >=50% | downside <0 | tail <=-10% |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| driver_screen | 1,084 | 14.518% | 6.460% | 30.258% | 13.007% | 37.362% | 17.343% |
+| all_candidates | 12,060 | 8.209% | 1.852% | 21.824% | 6.219% | 43.897% | 16.625% |
+| same_count_top_rise | 1,084 | 8.944% | 2.872% | 20.019% | 6.827% | 40.683% | 13.469% |
+| same_count_random | 1,084 | 9.152% | 2.480% | 23.432% | 7.565% | 42.343% | 17.159% |
+
+## 研究結論
+- Driver screen 相對 same-count top-rise baseline：平均 20d return +5.574 pct、hit20 +10.240 pct、hit50 +6.181 pct、downside<0 -3.321 pct。
+- 主要 blocker：tail-loss<=-10% 為 17.343%，高於 top-rise baseline 13.469%。因此不能 promotion，只能保留為 shadow research overlay。
+- 最新 20 交易日 rolling window (`2026-05-07`~`2026-06-10`)：driver_screen 平均 22.478%、hit20 44.095%、hit50 21.654%，仍高於 same-count baselines。
+
+## 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+
+## 目前驗證
+- Focused Ruff: `.\.venv\Scripts\ruff.exe check scripts\backtest_zhu_walkline_driver_screen.py tests\test_zhu_walkline_driver_screen_backtest.py`，All checks passed。
+- Focused tests: `python -m pytest tests\test_zhu_walkline_driver_screen_backtest.py -q`，3 passed。
+- Script smoke/backtest completed and wrote all output artifacts.
+
 ## 2026-07-11 Direct Follow-Up - Forward Return Bucket Research
 
 ## 修改檔案
