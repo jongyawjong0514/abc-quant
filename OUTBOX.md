@@ -1,5 +1,51 @@
 # OUTBOX
 
+## 2026-07-11 Direct Follow-Up - Zhu Walkline Early Observation Manual Labels
+
+## 修改檔案
+- `scripts/export_zhu_walkline_early_observation_candidates.py`: added a shadow-only early-observation label export sidecar with exact scanner mode and fast precomputed daily-OHLCV mode.
+- `tests/test_zhu_walkline_early_observation_export.py`: added selector coverage plus a no-lookahead regression that mutating future rows after `end_date` does not affect fast observation fields.
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: recorded the sidecar, run outputs, validation, and hard boundaries.
+
+## 實作摘要
+- The sidecar exports early observation rows for manual labeling only; it does not create orders, positions, holdings, portfolio weights, or formal strategy state.
+- Rule layers are `STRICT_BREAKOUT`, `STRICT_SUPPORT_TURN`, `AGGRESSIVE_MA_RECLAIM_REVIEW`, `AGGRESSIVE_BREAKOUT_REVIEW`, and `AGGRESSIVE_SUPPORT_REVIEW`.
+- Fast mode uses only local `daily_ohlcv_features` rows up to the requested end date plus rolling historical highs/lows, moving averages, volume ratio, market breadth, and sector rank approximations.
+- Fast mode defaults to excluding `00xx` ETF-like tickers; use `--include-etf-like` to include them.
+- Output includes `zhu_walkline_early_observation_date_stock_codes.csv` for direct user relabeling.
+
+## 區間輸出
+- Command: `python scripts/export_zhu_walkline_early_observation_candidates.py --engine fast --start-date 2026-01-01 --end-date 2026-06-30 --max-per-day 0 --output-dir reports/zhu_walkline_early_observation_labels_2026_01_06 --verbose`
+- Output directory: `reports/zhu_walkline_early_observation_labels_2026_01_06/`
+- Resolved dates: `2026-01-02`~`2026-06-30`
+- Trading days: 116
+- Candidate rows: 22,327
+- Unique stocks: 1,873
+- Non-empty days: 90
+- `include_etf_like=false`
+- Prior user-labeled examples all appeared in the candidate CSV: 6548, 2357, 2883, 3706, 3607, 8105, 8112, 8088, and 3515.
+
+## 測試方式
+- `.\.venv\Scripts\ruff.exe check scripts\export_zhu_walkline_early_observation_candidates.py tests\test_zhu_walkline_early_observation_export.py`
+- `python -m pytest tests\test_zhu_walkline_early_observation_export.py -q`
+- `python scripts\export_zhu_walkline_early_observation_candidates.py --engine fast --start-date 2026-01-01 --end-date 2026-06-30 --max-per-day 0 --output-dir reports\zhu_walkline_early_observation_labels_2026_01_06 --verbose`
+- `rg -n "NaN|nan|None|<NA>" reports\zhu_walkline_early_observation_labels_2026_01_06`
+
+## 測試結果
+- Focused `ruff check`: passed.
+- Focused pytest: 3 passed.
+- Jan-Jun fast export completed and wrote candidate, label todo, date/stock code, daily-count, summary JSON, and summary Markdown outputs.
+- Output grep found no `NaN`/`nan`/`None`/`<NA>` strings.
+
+## 邊界
+- `mode=shadow_observation_only`.
+- `formal_champion_changed=False`.
+- `formal_trade_effect=False`.
+- no formal strategy modified.
+- no formal champion modified.
+- no formal trade effect.
+- No trade instructions, orders, holdings, weights, or formal promotion.
+
 ## 2026-07-10 Direct Follow-Up - Zhu Walkline Report Tone Spec
 
 ## 修改檔案
