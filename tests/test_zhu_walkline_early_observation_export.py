@@ -33,6 +33,7 @@ def test_select_early_observation_candidates_keeps_strict_and_review_rows() -> N
             _row("2408", market_state="MARKET_DOWNTREND", rise_score=90),
             _row("2412", sector_rotation_rank=20, rise_score=90),
             _row("2454", close_above_ma20=False, rise_score=95),
+            _row("6505", close_above_ma120=False, rise_score=98),
         ]
     )
 
@@ -78,6 +79,19 @@ def test_select_early_observation_candidates_requires_positive_ma20_slope() -> N
 
     assert selected["stock_id"].tolist() == ["2330"]
     assert selected.iloc[0]["ma20_slope"] == 0.4
+
+
+def test_select_early_observation_candidates_requires_close_above_ma120() -> None:
+    frame = pd.DataFrame(
+        [
+            _row("2330", rise_score=80, close_above_ma120=True),
+            _row("2317", rise_score=90, close_above_ma120=False),
+        ]
+    )
+
+    selected = select_early_observation_candidates(frame, max_per_day=None)
+
+    assert selected["stock_id"].tolist() == ["2330"]
 
 
 def test_fast_precomputed_engine_ignores_future_rows_after_end_date() -> None:
@@ -132,6 +146,7 @@ def _row(
     ma_state: str = "BULL_ALIGNMENT",
     ma20_slope: float = 0.25,
     close_above_ma20: bool = True,
+    close_above_ma120: bool = True,
     resistance_breakout: bool = True,
     signal_stage: str = "CONFIRMED",
     sell_warning_type: str = "",
@@ -164,6 +179,7 @@ def _row(
         "vol_ratio_20": 1.6,
         "close_above_ma5": True,
         "close_above_ma20": close_above_ma20,
+        "close_above_ma120": close_above_ma120,
         "support_zone_holding_today": False,
         "resistance_zone_breakout_today": resistance_breakout,
         "sector": "fixture-sector",
@@ -178,13 +194,16 @@ def _row(
 
 def _fast_rows(*, future_high: float, future_volume: float) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
-    closes = [99.0, 100.0, 101.0, 100.5, 102.0, 103.0, 106.0, 108.0, 109.0]
-    dates = pd.date_range("2026-05-15", periods=len(closes), freq="D")
-    for index, (date, close) in enumerate(zip(dates, closes, strict=True)):
-        high = max(close + 1.0, future_high) if date.strftime("%Y-%m-%d") == "2026-05-23" else close + 1.0
+    dates = pd.date_range("2026-01-10", "2026-05-23", freq="D")
+    closes = [90.0 + index * 0.18 for index in range(len(dates))]
+    for index, (date, base_close) in enumerate(zip(dates, closes, strict=True)):
+        date_text = date.strftime("%Y-%m-%d")
+        close = 150.0 if date_text == "2026-05-22" else base_close
+        previous_close = closes[index - 1] if index else close - 1.0
+        high = max(close + 1.0, future_high) if date_text == "2026-05-23" else close + 1.0
         volume = future_volume if date.strftime("%Y-%m-%d") == "2026-05-23" else 1_000_000.0
-        if date.strftime("%Y-%m-%d") == "2026-05-22":
-            high = 107.0
+        if date_text == "2026-05-22":
+            high = 151.0
             volume = 1_500_000.0
         rows.append(
             {
@@ -195,7 +214,7 @@ def _fast_rows(*, future_high: float, future_volume: float) -> pd.DataFrame:
                 "low": close - 2.0,
                 "close": close,
                 "volume": volume,
-                "previous_close": closes[index - 1] if index else close - 1.0,
+                "previous_close": previous_close,
                 "open_to_close_pct": 0.03,
                 "close_location_in_bar": 0.85,
                 "range_pos_20": 0.8,

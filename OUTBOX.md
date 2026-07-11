@@ -10,7 +10,8 @@
 ## 實作摘要
 - The sidecar exports early observation rows for manual labeling only; it does not create orders, positions, holdings, portfolio weights, or formal strategy state.
 - Rule layers are `STRICT_BREAKOUT`, `STRICT_SUPPORT_TURN`, `AGGRESSIVE_MA_RECLAIM_REVIEW`, `AGGRESSIVE_BREAKOUT_REVIEW`, and `AGGRESSIVE_SUPPORT_REVIEW`.
-- Candidate rows must satisfy `close > ma20` and `ma20_slope > 0`; rows below the monthly line or with a non-positive monthly-line slope are removed.
+- Candidate rows must satisfy `close > ma20`, `ma20_slope > 0`, and `close > ma120`; rows below the monthly line, below the half-year line, or with a non-positive monthly-line slope are removed.
+- Fast mode default lookback is 260 calendar days so the 120-day moving average can be computed for early-2026 labels.
 - Fast mode uses only local `daily_ohlcv_features` rows up to the requested end date plus rolling historical highs/lows, moving averages, volume ratio, market breadth, and sector rank approximations.
 - Fast mode defaults to excluding `00xx` ETF-like tickers; use `--include-etf-like` to include them.
 - Output includes `zhu_walkline_early_observation_date_stock_codes.csv` for direct user relabeling.
@@ -20,11 +21,11 @@
 - Output directory: `reports/zhu_walkline_early_observation_labels_2026_01_06/`
 - Resolved dates: `2026-01-02`~`2026-06-30`
 - Trading days: 116
-- Candidate rows: 15,797
-- Unique stocks: 1,714
+- Candidate rows: 13,116
+- Unique stocks: 1,433
 - Non-empty days: 90
 - `include_etf_like=false`
-- Output audit: no `close<=ma20` rows, no `ma20_slope<=0` rows, and no missing `ma20/ma20_slope`.
+- Output audit: no `close<=ma20` rows, no `ma20_slope<=0` rows, no `close<=ma120` rows, and no missing `ma20/ma20_slope/ma120`.
 
 ## 測試方式
 - `.\.venv\Scripts\ruff.exe check scripts\export_zhu_walkline_early_observation_candidates.py tests\test_zhu_walkline_early_observation_export.py`
@@ -34,7 +35,7 @@
 
 ## 測試結果
 - Focused `ruff check`: passed.
-- Focused pytest: 4 passed.
+- Focused pytest: 5 passed.
 - Jan-Jun fast export completed and wrote candidate, label todo, date/stock code, daily-count, summary JSON, and summary Markdown outputs.
 - Output grep found no `NaN`/`nan`/`None`/`<NA>` strings.
 

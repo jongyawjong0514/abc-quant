@@ -59,6 +59,7 @@ EARLY_OUTPUT_COLUMNS = [
     "ma_state",
     "ma20",
     "ma20_slope",
+    "ma120",
     "trend_state",
     "kline_state",
     "volume_state",
@@ -86,6 +87,7 @@ DATE_STOCK_COLUMNS = ["asof_date", "stock_id", "stock_name", "label_user"]
 _FAST_SELECTION_SUPPORT_COLUMNS = [
     "close_above_ma5",
     "close_above_ma20",
+    "close_above_ma120",
     "support_zone_1_low",
     "support_zone_holding_today",
     "resistance_zone_breakout_today",
@@ -320,6 +322,9 @@ def build_fast_precomputed_feature_matrix(
     data["prev_sma10"] = grouped["sma10"].shift(1)
     data["prev_sma20"] = grouped["sma20"].shift(1)
     data["ma20_slope"] = data["sma20"] - data["prev_sma20"]
+    data["ma120"] = grouped["close"].transform(
+        lambda series: series.rolling(120, min_periods=120).mean()
+    )
     data["high_20_prev"] = grouped["high"].transform(
         lambda series: series.rolling(20, min_periods=5).max().shift(1)
     )
@@ -476,6 +481,7 @@ def _attach_fast_market_context(data: pd.DataFrame) -> pd.DataFrame:
     frame = data.copy()
     frame["close_above_ma5"] = frame["close"] > frame["sma5"]
     frame["close_above_ma20"] = frame["close"] > frame["sma20"]
+    frame["close_above_ma120"] = frame["close"] > frame["ma120"]
     frame["_sector_score"] = (
         frame["intraday_return_rankpct"].fillna(0.5) * 0.30
         + frame["sma20_gap_rankpct"].fillna(0.5) * 0.35
@@ -877,6 +883,8 @@ def _early_rule_for_row(
         return "", ""
     if not _to_bool(row.get("close_above_ma20")):
         return "", ""
+    if not _to_bool(row.get("close_above_ma120")):
+        return "", ""
     if _to_float(row.get("support_zone_1_low")) is None and _to_float(row.get("invalidation_price")) is None:
         return "", ""
     ma20_slope = _to_float(row.get("ma20_slope"))
@@ -949,7 +957,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         default="exact",
         help="exact uses the full Zhu scanner; fast uses precomputed daily OHLCV for manual labels.",
     )
-    parser.add_argument("--fast-lookback-days", type=int, default=90)
+    parser.add_argument("--fast-lookback-days", type=int, default=260)
     parser.add_argument(
         "--include-etf-like",
         action="store_true",
