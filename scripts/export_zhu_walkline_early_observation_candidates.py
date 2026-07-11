@@ -57,6 +57,8 @@ EARLY_OUTPUT_COLUMNS = [
     "support_zone_1_label",
     "resistance_zone_1_label",
     "ma_state",
+    "ma20",
+    "ma20_slope",
     "trend_state",
     "kline_state",
     "volume_state",
@@ -316,6 +318,8 @@ def build_fast_precomputed_feature_matrix(
     data["prev_close_fast"] = grouped["close"].shift(1)
     data["prev_sma5"] = grouped["sma5"].shift(1)
     data["prev_sma10"] = grouped["sma10"].shift(1)
+    data["prev_sma20"] = grouped["sma20"].shift(1)
+    data["ma20_slope"] = data["sma20"] - data["prev_sma20"]
     data["high_20_prev"] = grouped["high"].transform(
         lambda series: series.rolling(20, min_periods=5).max().shift(1)
     )
@@ -339,6 +343,7 @@ def build_fast_precomputed_feature_matrix(
     data = _attach_fast_stock_context(data, stock_info)
     data = _attach_fast_market_context(data)
     data = _attach_fast_signal_fields(data)
+    data["ma20"] = data["sma20"]
     data["asof_date"] = data["date"].dt.strftime("%Y-%m-%d")
     for column in EARLY_OUTPUT_COLUMNS:
         if column not in data.columns:
@@ -870,7 +875,12 @@ def _early_rule_for_row(
         return "", ""
     if not _to_bool(row.get("close_above_ma5")):
         return "", ""
+    if not _to_bool(row.get("close_above_ma20")):
+        return "", ""
     if _to_float(row.get("support_zone_1_low")) is None and _to_float(row.get("invalidation_price")) is None:
+        return "", ""
+    ma20_slope = _to_float(row.get("ma20_slope"))
+    if ma20_slope is None or ma20_slope <= 0:
         return "", ""
     fall_risk = _to_float(row.get("fall_risk_score")) or 0.0
     if fall_risk >= review_fall_risk:

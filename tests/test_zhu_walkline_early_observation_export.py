@@ -26,13 +26,13 @@ def test_select_early_observation_candidates_keeps_strict_and_review_rows() -> N
                 fall_risk_score=40,
                 trigger_type="MA_RECLAIM",
                 ma_state="MA_RECLAIM",
-                close_above_ma20=False,
                 signal_stage="FAILED",
                 sell_warning_type="SUPPORT_BREAKDOWN",
                 failure_type="NO_VOLUME_FOLLOW|SUPPORT_BREAK",
             ),
             _row("2408", market_state="MARKET_DOWNTREND", rise_score=90),
             _row("2412", sector_rotation_rank=20, rise_score=90),
+            _row("2454", close_above_ma20=False, rise_score=95),
         ]
     )
 
@@ -63,6 +63,21 @@ def test_select_early_observation_candidates_respects_max_per_day() -> None:
 
     assert len(selected) == 1
     assert selected.iloc[0]["stock_id"] == "2330"
+
+
+def test_select_early_observation_candidates_requires_positive_ma20_slope() -> None:
+    frame = pd.DataFrame(
+        [
+            _row("2330", rise_score=80, ma20_slope=0.4),
+            _row("2317", rise_score=90, ma20_slope=0.0),
+            _row("2454", rise_score=95, ma20_slope=-0.1),
+        ]
+    )
+
+    selected = select_early_observation_candidates(frame, max_per_day=None)
+
+    assert selected["stock_id"].tolist() == ["2330"]
+    assert selected.iloc[0]["ma20_slope"] == 0.4
 
 
 def test_fast_precomputed_engine_ignores_future_rows_after_end_date() -> None:
@@ -115,6 +130,7 @@ def _row(
     buy_detail: str = "RESISTANCE_BREAKOUT",
     trigger_type: str = "RANGE_BREAKOUT",
     ma_state: str = "BULL_ALIGNMENT",
+    ma20_slope: float = 0.25,
     close_above_ma20: bool = True,
     resistance_breakout: bool = True,
     signal_stage: str = "CONFIRMED",
@@ -141,6 +157,7 @@ def _row(
         "support_zone_1_label": "95.00",
         "resistance_zone_1_label": "101.00",
         "ma_state": ma_state,
+        "ma20_slope": ma20_slope,
         "trend_state": "UPTREND",
         "kline_state": "ATTACK_RED_K",
         "volume_state": "ATTACK_VOLUME",
