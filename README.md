@@ -422,7 +422,10 @@ signal-date fields, then evaluates next-trading-day adjusted open to D+20
 adjusted close after brokerage fees, stock transaction tax, and slippage. The
 primary review applies a 20-trading-day same-stock cooldown, reports a separate
 corporate-action robustness scope, and keeps the 2026 holdout out of variant
-selection.
+selection. Next-day one-price limit-up rows are flagged with evaluator-only
+adjusted OHLCV fields and excluded only in a separate
+`cooldown_20d_buyable_entry` robustness scope; they never alter signal
+membership.
 
 The yearly replication run can combine non-overlapping candidate exports:
 
@@ -431,6 +434,21 @@ The yearly replication run can combine non-overlapping candidate exports:
   --additional-candidates-csv reports\zhu_walkline_early_observation_labels_2022_2023\zhu_walkline_early_observation_candidates.csv `
   --run-yearly-walk-forward `
   --output-dir reports\zhu_walkline_strategy_experiment_2022_2026_06_10
+```
+
+Rules declared before a backward-OOS run can be reviewed explicitly across
+both the primary and buyable-entry scopes. This example uses 2019 for
+development, 2020 for validation, and 2021 as locked holdout:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\experiment_zhu_walkline_strategy.py `
+  --candidates-csv reports\zhu_walkline_early_observation_labels_2019_2021\zhu_walkline_early_observation_candidates.csv `
+  --development-end 2019-12-31 `
+  --validation-end 2020-12-31 `
+  --holdout-end 2021-12-30 `
+  --prespecified-replication-variant BASELINE_MA5_GAP_CAP_12 `
+  --prespecified-replication-variant BASELINE_EXCLUDE_STRONG_UPTREND `
+  --output-dir reports\zhu_walkline_strategy_backward_oos_2019_2021
 ```
 
 This sidecar never changes formal strategy rules, champion state, portfolio

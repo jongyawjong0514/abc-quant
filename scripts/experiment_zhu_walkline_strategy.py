@@ -86,6 +86,11 @@ VARIANT_SPECS = [
         "rule": "driver_score >= 11 and close_to_sma5_pct <= 12",
     },
     {
+        "variant": "BASELINE_EXCLUDE_STRONG_UPTREND",
+        "cohort_type": "mutation",
+        "rule": "driver_score >= 11 and market_state != MARKET_STRONG_UPTREND",
+    },
+    {
         "variant": "BASELINE_LIQUIDITY_20M",
         "cohort_type": "mutation",
         "rule": "driver_score >= 11 and avg_turnover_20_ntd >= 20,000,000",
@@ -129,6 +134,11 @@ YEARLY_WALK_FORWARD_FOLDS = [
 EVALUATOR_ONLY_COLUMNS = {
     "entry_date",
     "entry_adj_open",
+    "entry_adj_high",
+    "entry_adj_low",
+    "entry_adj_previous_close",
+    "entry_return_vs_previous_close_pct",
+    "entry_locked_limit_up",
     "exit_date",
     "exit_adj_close",
     "gross_return_pct",
@@ -190,6 +200,13 @@ def main(argv: list[str] | None = None) -> int:
         "adjusted_price_table": "tw_adjusted_ohlcv_daily",
         "adjusted_price_asof": _latest_adjusted_asof(adjusted_prices),
     }
+    if args.prespecified_replication_variant:
+        result["summary"]["prespecified_replication_review"] = (
+            review_prespecified_replications(
+                result["metrics"],
+                variants=args.prespecified_replication_variant,
+            )
+        )
     if args.run_yearly_walk_forward:
         walk_forward = run_yearly_walk_forward_review(
             labeled,
@@ -264,6 +281,7 @@ def build_variant_masks(frame: pd.DataFrame) -> dict[str, pd.Series]:
             "close_to_sma5_pct",
             "avg_turnover_20_ntd",
             "sector_neutral_driver_score",
+            "market_state",
         }
     )
     if forbidden:
@@ -273,6 +291,11 @@ def build_variant_masks(frame: pd.DataFrame) -> dict[str, pd.Series]:
     liquidity = pd.to_numeric(frame.get("avg_turnover_20_ntd"), errors="coerce")
     sector_neutral_score = pd.to_numeric(
         frame.get("sector_neutral_driver_score"), errors="coerce"
+    )
+    market_state = (
+        frame.get("market_state", pd.Series("", index=frame.index))
+        .fillna("")
+        .astype(str)
     )
     no_late_chase = _clean_flag(frame, "late_chase_risk_flag")
     no_upper_tail = _clean_flag(frame, "upper_tail_flag")
@@ -285,6 +308,11 @@ def build_variant_masks(frame: pd.DataFrame) -> dict[str, pd.Series]:
         "BASELINE_NO_UPPER_TAIL": baseline & no_upper_tail,
         "BASELINE_NO_VOLUME_EXHAUSTION": baseline & no_volume_exhaustion,
         "BASELINE_MA5_GAP_CAP_12": baseline & ma5_gap.le(12.0) & ma5_gap.notna(),
+        "BASELINE_EXCLUDE_STRONG_UPTREND": (
+            baseline
+            & market_state.ne("MARKET_STRONG_UPTREND")
+            & market_state.ne("")
+        ),
         "BASELINE_LIQUIDITY_20M": baseline & liquidity.ge(20_000_000.0),
         "BALANCED_RISK_GUARD": (
             baseline
@@ -324,11 +352,16 @@ def attach_execution_labels(
     )
     numeric_columns = [
         "adj_open",
+        "adj_high",
+        "adj_low",
         "adj_close",
+        "adj_previous_close",
         "adjustment_factor",
         "factor_event_count",
     ]
     for column in numeric_columns:
+        if column not in prices:
+            prices[column] = pd.NA
         prices[column] = pd.to_numeric(prices[column], errors="coerce")
     grouped = prices.groupby("stock_id", group_keys=False)
     label_rows = prices[["date", "stock_id", "adj_close", "adjustment_factor"]].copy()
@@ -341,6 +374,9 @@ def attach_execution_labels(
     )
     label_rows["entry_date"] = grouped["date"].shift(-1)
     label_rows["entry_adj_open"] = grouped["adj_open"].shift(-1)
+    label_rows["entry_adj_high"] = grouped["adj_high"].shift(-1)
+    label_rows["entry_adj_low"] = grouped["adj_low"].shift(-1)
+    label_rows["entry_adj_previous_close"] = grouped["adj_previous_close"].shift(-1)
     label_rows["exit_date"] = grouped["date"].shift(-horizon_trading_days)
     label_rows["exit_adj_close"] = grouped["adj_close"].shift(-horizon_trading_days)
     label_rows["exit_adjustment_factor"] = grouped["adjustment_factor"].shift(
@@ -354,6 +390,11 @@ def attach_execution_labels(
     entry = pd.to_numeric(merged["entry_adj_open"], errors="coerce")
     exit_close = pd.to_numeric(merged["exit_adj_close"], errors="coerce")
     signal_close = pd.to_numeric(merged["signal_adj_close"], errors="coerce")
+    entry_high = pd.to_numeric(merged["entry_adj_high"], errors="coerce")
+    entry_low = pd.to_numeric(merged["entry_adj_low"], errors="coerce")
+    entry_previous_close = pd.to_numeric(
+        merged["entry_adj_previous_close"], errors="coerce"
+    )
     merged["gross_return_pct"] = ((exit_close / entry) - 1.0) * 100.0
     buy_multiplier = 1.0 + brokerage_fee_rate + one_way_slippage_rate
     sell_multiplier = 1.0 - brokerage_fee_rate - sell_tax_rate - one_way_slippage_rate
@@ -361,6 +402,18 @@ def attach_execution_labels(
         ((exit_close * sell_multiplier) / (entry * buy_multiplier)) - 1.0
     ) * 100.0
     merged["entry_gap_pct"] = ((entry / signal_close) - 1.0) * 100.0
+    merged["entry_return_vs_previous_close_pct"] = (
+        (entry / entry_previous_close) - 1.0
+    ) * 100.0
+    entry_range_pct = ((entry_high - entry_low).abs() / entry_previous_close) * 100.0
+    merged["entry_locked_limit_up"] = (
+        entry.notna()
+        & entry_high.notna()
+        & entry_low.notna()
+        & entry_previous_close.gt(0.0)
+        & merged["entry_return_vs_previous_close_pct"].ge(9.5)
+        & entry_range_pct.le(0.1)
+    )
     signal_factor = pd.to_numeric(merged["signal_adjustment_factor"], errors="coerce")
     exit_factor = pd.to_numeric(merged["exit_adjustment_factor"], errors="coerce")
     merged["corporate_action_event_in_horizon"] = (
@@ -484,6 +537,10 @@ def run_strategy_experiment(
         "liquidity_treatment": (
             "as-of 20-day average traded value reported; explicit 20M gate variants"
         ),
+        "buyability_treatment": (
+            "next-day one-price limit-up heuristic is evaluator-only; a separate "
+            "cooldown_20d_buyable_entry robustness scope excludes those rows"
+        ),
         "overlap_treatment": (
             "primary review uses a 20-trading-day same-stock signal cooldown"
         ),
@@ -507,6 +564,7 @@ def run_strategy_experiment(
             "variant_membership_uses_asof_fields_only": True,
             "adjusted_entry_exit_are_evaluator_only": True,
             "corporate_action_horizon_flag_is_evaluator_only": True,
+            "next_day_locked_limit_up_flag_is_evaluator_only": True,
         },
         "max_drawdown_note": (
             "not reported because this sidecar does not simulate capital allocation or a portfolio NAV"
@@ -649,6 +707,119 @@ def derive_post_holdout_research_recommendations(
         "risk_candidate_reviews": risk_candidates,
         "signal_date_no_effect_variants": no_effect_variants,
         "reason": reason,
+    }
+
+
+def review_prespecified_replications(
+    metrics: pd.DataFrame,
+    *,
+    variants: list[str],
+) -> dict[str, Any]:
+    """Review rules declared before this run across validation and holdout."""
+    known_variants = {spec["variant"] for spec in VARIANT_SPECS}
+    requested = list(dict.fromkeys(variants))
+    unknown = sorted(set(requested) - known_variants)
+    if unknown:
+        raise ValueError(f"unknown prespecified replication variants: {unknown}")
+    scopes = [EVALUATION_SCOPE, "cooldown_20d_buyable_entry"]
+    reviews: list[dict[str, Any]] = []
+    comparison_rows: list[dict[str, Any]] = []
+    for variant in requested:
+        scope_passes: dict[str, bool] = {}
+        for scope in scopes:
+            split_passes: list[bool] = []
+            for split in ["validation", "holdout"]:
+                scoped = metrics[
+                    metrics["evaluation_scope"].eq(scope)
+                    & metrics["split"].eq(split)
+                ]
+                baseline_rows = scoped[scoped["variant"].eq(BASELINE_VARIANT)]
+                variant_rows = scoped[scoped["variant"].eq(variant)]
+                if baseline_rows.empty or variant_rows.empty:
+                    comparison_rows.append(
+                        {
+                            "variant": variant,
+                            "evaluation_scope": scope,
+                            "split": split,
+                            "split_passed": False,
+                            "reason": "missing baseline or variant metrics",
+                        }
+                    )
+                    split_passes.append(False)
+                    continue
+                baseline = baseline_rows.iloc[0]
+                candidate = variant_rows.iloc[0]
+                baseline_count = int(baseline["rows"])
+                candidate_count = int(candidate["rows"])
+                coverage = candidate_count / baseline_count if baseline_count else 0.0
+                avg_delta = _float_or(candidate["avg_net_return_pct"], 0.0) - _float_or(
+                    baseline["avg_net_return_pct"], 0.0
+                )
+                median_delta = _float_or(
+                    candidate["median_net_return_pct"], 0.0
+                ) - _float_or(baseline["median_net_return_pct"], 0.0)
+                tail_delta = _float_or(
+                    candidate["tail_loss_rate_net_le_neg10"], 1.0
+                ) - _float_or(baseline["tail_loss_rate_net_le_neg10"], 1.0)
+                downside_delta = _float_or(
+                    candidate["downside_rate_net_lt_0"], 1.0
+                ) - _float_or(baseline["downside_rate_net_lt_0"], 1.0)
+                split_passed = bool(
+                    candidate_count >= 50
+                    and coverage >= 0.50
+                    and avg_delta >= -0.25
+                    and median_delta >= 0.0
+                    and tail_delta <= 0.0
+                    and downside_delta <= 0.0
+                )
+                split_passes.append(split_passed)
+                comparison_rows.append(
+                    {
+                        "variant": variant,
+                        "evaluation_scope": scope,
+                        "split": split,
+                        "rows": candidate_count,
+                        "coverage_vs_baseline": coverage,
+                        "avg_net_return_delta_pct": avg_delta,
+                        "median_net_return_delta_pct": median_delta,
+                        "tail_loss_rate_delta": tail_delta,
+                        "downside_rate_delta": downside_delta,
+                        "split_passed": split_passed,
+                        "reason": (
+                            "minimum rows/coverage; average delta >= -0.25 pct; "
+                            "median, tail, and downside no worse than baseline"
+                        ),
+                    }
+                )
+            scope_passes[scope] = bool(split_passes) and all(split_passes)
+        supported = all(scope_passes.values())
+        reviews.append(
+            {
+                "variant": variant,
+                "primary_scope_passed": scope_passes[EVALUATION_SCOPE],
+                "buyable_scope_passed": scope_passes[
+                    "cooldown_20d_buyable_entry"
+                ],
+                "replication_supported": supported,
+                "decision": (
+                    "shadow_replication_supported"
+                    if supported
+                    else "blocked_before_promotion_review"
+                ),
+            }
+        )
+    return {
+        "declared_before_current_data_review": True,
+        "required_splits": ["validation", "holdout"],
+        "required_scopes": scopes,
+        "gate": (
+            "each split requires >=50 rows, >=50% baseline coverage, average return "
+            "delta >= -0.25 percentage points, and no worse median/downside/tail risk"
+        ),
+        "variant_reviews": reviews,
+        "comparisons": _records_for_json(_round_numeric(pd.DataFrame(comparison_rows))),
+        "formal_promotion_eligible": False,
+        "mode": MODE,
     }
 
 
@@ -1006,6 +1177,7 @@ def return_metrics(frame: pd.DataFrame) -> dict[str, Any]:
             "tail_loss_rate_net_le_neg10": None,
             "avg_entry_gap_pct": None,
             "corporate_action_event_rate": None,
+            "locked_limit_up_entry_rate": None,
             "avg_turnover_20_ntd": None,
         }
     gross = pd.to_numeric(frame["gross_return_pct"], errors="coerce")
@@ -1015,6 +1187,9 @@ def return_metrics(frame: pd.DataFrame) -> dict[str, Any]:
     net = pd.to_numeric(valid["net_return_pct"], errors="coerce")
     daily_returns = valid.assign(_net=net).groupby("asof_date")["_net"].mean()
     corporate = valid["corporate_action_event_in_horizon"].fillna(False).astype(bool)
+    locked_limit_up = valid.get(
+        "entry_locked_limit_up", pd.Series(False, index=valid.index)
+    ).fillna(False).astype(bool)
     return {
         "rows": int(len(valid)),
         "unique_stocks": int(valid["stock_id"].nunique()),
@@ -1031,6 +1206,7 @@ def return_metrics(frame: pd.DataFrame) -> dict[str, Any]:
             valid["entry_gap_pct"], errors="coerce"
         ).mean(),
         "corporate_action_event_rate": corporate.mean(),
+        "locked_limit_up_entry_rate": locked_limit_up.mean(),
         "avg_turnover_20_ntd": pd.to_numeric(
             valid["avg_turnover_20_ntd"], errors="coerce"
         ).mean(),
@@ -1203,10 +1379,19 @@ def _evaluation_scopes(
     no_actions = cooldown[
         ~cooldown["corporate_action_event_in_horizon"].fillna(False).astype(bool)
     ].copy()
+    locked_limit_up = cooldown.get(
+        "entry_locked_limit_up", pd.Series(False, index=cooldown.index)
+    ).fillna(False).astype(bool)
+    buyable_entry = cooldown[~locked_limit_up].copy()
+    buyable_no_actions = buyable_entry[
+        ~buyable_entry["corporate_action_event_in_horizon"].fillna(False).astype(bool)
+    ].copy()
     return {
         "all_signals": frame,
         EVALUATION_SCOPE: cooldown,
+        "cooldown_20d_buyable_entry": buyable_entry,
         "cooldown_20d_no_corporate_action": no_actions,
+        "cooldown_20d_buyable_no_corporate_action": buyable_no_actions,
     }
 
 
@@ -1281,7 +1466,8 @@ def load_adjusted_prices(
     placeholders = ",".join("?" for _ in stock_ids)
     calendar_buffer_days = max(60, horizon_trading_days * 4)
     query = f"""
-        select date, stock_id, adj_open, adj_close, adjustment_factor,
+        select date, stock_id, adj_open, adj_high, adj_low, adj_close,
+               adj_previous_close, adjustment_factor,
                factor_event_count, asof_date as adjusted_data_asof
         from tw_adjusted_ohlcv_daily
         where date >= ?
@@ -1380,6 +1566,13 @@ def summary_markdown(
         & quarterly["evaluation_scope"].eq(EVALUATION_SCOPE)
     ]
     failure_table = pd.DataFrame(summary.get("top_failure_buckets", []))
+    buyability = metrics[
+        metrics["split"].eq("holdout")
+        & metrics["evaluation_scope"].isin(
+            [EVALUATION_SCOPE, "cooldown_20d_buyable_entry"]
+        )
+        & metrics["variant"].isin([BASELINE_VARIANT, selected])
+    ].drop_duplicates(["variant", "evaluation_scope"])
     walk_forward_lines: list[str] = []
     if "walk_forward_review" in summary:
         walk_forward = summary["walk_forward_review"]
@@ -1403,6 +1596,42 @@ def summary_markdown(
             f"- replicated_variant: `{walk_forward['replicated_variant']}`",
             f"- replication_decision: `{walk_forward['replication_decision']}`",
         ]
+    prespecified_lines: list[str] = []
+    if "prespecified_replication_review" in summary:
+        replication = summary["prespecified_replication_review"]
+        prespecified_lines = [
+            "",
+            "## Prespecified Backward-OOS Replication",
+            "",
+            _markdown_table(
+                pd.DataFrame(replication["comparisons"]),
+                [
+                    "variant",
+                    "evaluation_scope",
+                    "split",
+                    "rows",
+                    "coverage_vs_baseline",
+                    "avg_net_return_delta_pct",
+                    "median_net_return_delta_pct",
+                    "tail_loss_rate_delta",
+                    "downside_rate_delta",
+                    "split_passed",
+                ],
+            ),
+            "",
+            _markdown_table(
+                pd.DataFrame(replication["variant_reviews"]),
+                [
+                    "variant",
+                    "primary_scope_passed",
+                    "buyable_scope_passed",
+                    "replication_supported",
+                    "decision",
+                ],
+            ),
+            "",
+            "- 這是事前指定規則的 backward-OOS 複驗；即使通過也只保留 shadow。",
+        ]
     lines = [
         "# Zhu Walkline Full Strategy Experiment",
         "",
@@ -1415,8 +1644,12 @@ def summary_markdown(
         "- entry: next trading day adjusted open",
         "- exit: as-of plus 20 trading days adjusted close",
         "- primary scope: same-stock 20-trading-day cooldown",
-        "- selection: 2025 validation only; 2026 holdout not used for selection",
+        "- selection: through "
+        f"{summary['temporal_split']['validation_end']}; holdout through "
+        f"{summary['temporal_split']['holdout_end']} was not used for selection",
         "- adjusted OHLCV handles corporate actions; a no-event robustness scope is also exported",
+        "- next-day one-price limit-up is a heuristic evaluator-only diagnostic; "
+        "the buyable-entry scope excludes it without changing signal membership",
         "",
         "## Validation Comparison",
         "",
@@ -1425,6 +1658,13 @@ def summary_markdown(
         "## Locked Holdout Comparison",
         "",
         _markdown_table(holdout, _metric_columns()),
+        "",
+        "## Next-Day Buyability Robustness",
+        "",
+        _markdown_table(
+            buyability,
+            ["variant", "evaluation_scope", *_metric_columns()[1:]],
+        ),
         "",
         "## Selected Variant Quarterly Stability",
         "",
@@ -1459,6 +1699,7 @@ def summary_markdown(
             ],
         ),
         *walk_forward_lines,
+        *prespecified_lines,
         "",
         "## Research Recommendation",
         "",
@@ -1496,6 +1737,7 @@ def _metric_columns() -> list[str]:
         "downside_rate_net_lt_0",
         "tail_loss_rate_net_le_neg10",
         "avg_entry_gap_pct",
+        "locked_limit_up_entry_rate",
     ]
 
 
@@ -1522,6 +1764,15 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--run-yearly-walk-forward",
         action="store_true",
         help="Run fixed yearly validation-to-holdout replication folds.",
+    )
+    parser.add_argument(
+        "--prespecified-replication-variant",
+        action="append",
+        default=[],
+        help=(
+            "Review a variant declared before this run across validation, holdout, "
+            "and buyable-entry scopes; may be repeated."
+        ),
     )
     parser.add_argument("--config", default="config/zhu_walkline_shadow.yaml")
     parser.add_argument("--horizon-trading-days", type=int, default=20)

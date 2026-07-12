@@ -6,6 +6,7 @@ import pytest
 from scripts.experiment_zhu_walkline_strategy import (
     BASELINE_VARIANT,
     EVALUATION_SCOPE,
+    _evaluation_scopes,
     apply_signal_cooldown,
     assign_temporal_split,
     attach_execution_labels,
@@ -13,6 +14,7 @@ from scripts.experiment_zhu_walkline_strategy import (
     compute_failure_attribution,
     derive_post_holdout_research_recommendations,
     load_candidate_files,
+    review_prespecified_replications,
     select_variant_from_validation,
 )
 
@@ -57,7 +59,67 @@ def test_execution_labels_use_next_open_d20_close_costs_and_adjustment_flag() ->
     assert row["gross_return_pct"] == pytest.approx((110.0 / 102.0 - 1.0) * 100.0)
     assert row["net_return_pct"] == pytest.approx(expected_net)
     assert bool(row["corporate_action_event_in_horizon"]) is True
+    assert bool(row["entry_locked_limit_up"]) is False
     assert bool(row["label_mature"]) is True
+
+
+@pytest.mark.parametrize(
+    ("entry_high", "entry_low", "expected_locked"),
+    [(110.0, 110.0, True), (111.0, 109.0, False)],
+)
+def test_entry_locked_limit_up_requires_limit_return_and_one_price_range(
+    entry_high: float,
+    entry_low: float,
+    expected_locked: bool,
+) -> None:
+    frame = pd.DataFrame({"asof_date": ["2025-01-02"], "stock_id": ["1234"]})
+    prices = pd.DataFrame(
+        {
+            "date": pd.to_datetime(["2025-01-02", "2025-01-03", "2025-01-06"]),
+            "stock_id": ["1234", "1234", "1234"],
+            "adj_open": [100.0, 110.0, 112.0],
+            "adj_high": [101.0, entry_high, 113.0],
+            "adj_low": [99.0, entry_low, 111.0],
+            "adj_close": [100.0, 110.0, 112.0],
+            "adj_previous_close": [99.0, 100.0, 110.0],
+            "adjustment_factor": [1.0, 1.0, 1.0],
+            "factor_event_count": [0, 0, 0],
+        }
+    )
+
+    row = attach_execution_labels(
+        frame,
+        adjusted_prices=prices,
+        horizon_trading_days=2,
+        brokerage_fee_rate=0.001425,
+        sell_tax_rate=0.003,
+        one_way_slippage_rate=0.001,
+    ).iloc[0]
+
+    assert row["entry_return_vs_previous_close_pct"] == pytest.approx(10.0)
+    assert bool(row["entry_locked_limit_up"]) is expected_locked
+
+
+def test_buyable_scope_excludes_locked_limit_up_without_changing_primary_scope() -> None:
+    trading_dates = pd.bdate_range("2025-01-02", periods=3).strftime("%Y-%m-%d").tolist()
+    frame = pd.DataFrame(
+        {
+            "asof_date": [trading_dates[0], trading_dates[0]],
+            "stock_id": ["1234", "5678"],
+            "driver_score": [11.0, 11.0],
+            "corporate_action_event_in_horizon": [False, False],
+            "entry_locked_limit_up": [True, False],
+        }
+    )
+
+    scopes = _evaluation_scopes(
+        frame,
+        trading_dates=trading_dates,
+        horizon_trading_days=20,
+    )
+
+    assert len(scopes[EVALUATION_SCOPE]) == 2
+    assert scopes["cooldown_20d_buyable_entry"]["stock_id"].tolist() == ["5678"]
 
 
 def test_future_evaluator_values_do_not_change_variant_membership() -> None:
@@ -72,11 +134,19 @@ def test_future_evaluator_values_do_not_change_variant_membership() -> None:
             "sector_neutral_driver_score": [8.0],
             "net_return_pct": [25.0],
             "exit_adj_close": [125.0],
+            "entry_adj_high": [110.0],
+            "entry_adj_low": [110.0],
+            "entry_adj_previous_close": [100.0],
+            "entry_locked_limit_up": [True],
         }
     )
     changed_future = base.copy()
     changed_future["net_return_pct"] = -50.0
     changed_future["exit_adj_close"] = 50.0
+    changed_future["entry_adj_high"] = 95.0
+    changed_future["entry_adj_low"] = 90.0
+    changed_future["entry_adj_previous_close"] = 120.0
+    changed_future["entry_locked_limit_up"] = False
 
     before = build_variant_masks(base)
     after = build_variant_masks(changed_future)
@@ -84,6 +154,25 @@ def test_future_evaluator_values_do_not_change_variant_membership() -> None:
     assert before.keys() == after.keys()
     for variant in before:
         assert before[variant].tolist() == after[variant].tolist()
+
+
+def test_market_regime_variant_excludes_strong_uptrend_and_requires_known_state() -> None:
+    frame = pd.DataFrame(
+        {
+            "driver_score": [11.0, 11.0, 11.0],
+            "late_chase_risk_flag": [0, 0, 0],
+            "upper_tail_flag": [0, 0, 0],
+            "volume_exhaustion_flag": [0, 0, 0],
+            "close_to_sma5_pct": [8.0, 8.0, 8.0],
+            "avg_turnover_20_ntd": [30_000_000.0] * 3,
+            "sector_neutral_driver_score": [8.0, 8.0, 8.0],
+            "market_state": ["MARKET_STRONG_UPTREND", "MARKET_RANGE_BOUND", pd.NA],
+        }
+    )
+
+    masks = build_variant_masks(frame)
+
+    assert masks["BASELINE_EXCLUDE_STRONG_UPTREND"].tolist() == [False, True, False]
 
 
 def test_missing_risk_flags_fail_clean_guard_without_nan_strings() -> None:
@@ -183,6 +272,62 @@ def test_post_holdout_risk_candidate_is_labeled_as_research_only() -> None:
     assert recommendation["risk_control_candidate"] == "BASELINE_MA5_GAP_CAP_12"
     assert recommendation["post_holdout_only"] is True
     assert recommendation["not_eligible_for_current_selection"] is True
+
+
+def test_prespecified_replication_requires_both_splits_and_buyable_scope() -> None:
+    rows: list[dict[str, object]] = []
+    for scope in [EVALUATION_SCOPE, "cooldown_20d_buyable_entry"]:
+        for split in ["validation", "holdout"]:
+            rows.extend(
+                [
+                    {
+                        "variant": BASELINE_VARIANT,
+                        "evaluation_scope": scope,
+                        "split": split,
+                        "rows": 100,
+                        "avg_net_return_pct": 2.0,
+                        "median_net_return_pct": -2.0,
+                        "tail_loss_rate_net_le_neg10": 0.20,
+                        "downside_rate_net_lt_0": 0.55,
+                    },
+                    {
+                        "variant": "BASELINE_MA5_GAP_CAP_12",
+                        "evaluation_scope": scope,
+                        "split": split,
+                        "rows": 90,
+                        "avg_net_return_pct": 1.8,
+                        "median_net_return_pct": -1.5,
+                        "tail_loss_rate_net_le_neg10": 0.18,
+                        "downside_rate_net_lt_0": 0.53,
+                    },
+                    {
+                        "variant": "BASELINE_EXCLUDE_STRONG_UPTREND",
+                        "evaluation_scope": scope,
+                        "split": split,
+                        "rows": 40,
+                        "avg_net_return_pct": 3.0,
+                        "median_net_return_pct": -1.0,
+                        "tail_loss_rate_net_le_neg10": 0.15,
+                        "downside_rate_net_lt_0": 0.50,
+                    },
+                ]
+            )
+
+    review = review_prespecified_replications(
+        pd.DataFrame(rows),
+        variants=[
+            "BASELINE_MA5_GAP_CAP_12",
+            "BASELINE_EXCLUDE_STRONG_UPTREND",
+        ],
+    )
+
+    by_variant = {row["variant"]: row for row in review["variant_reviews"]}
+    assert by_variant["BASELINE_MA5_GAP_CAP_12"]["replication_supported"] is True
+    assert (
+        by_variant["BASELINE_EXCLUDE_STRONG_UPTREND"]["replication_supported"]
+        is False
+    )
+    assert review["formal_promotion_eligible"] is False
 
 
 def test_signal_cooldown_removes_overlapping_same_stock_signals() -> None:

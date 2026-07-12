@@ -1,5 +1,47 @@
 # OUTBOX
 
+## 2026-07-12 Recommended Follow-Up - Buyability + Backward-OOS
+
+### 修改與執行
+- `scripts/experiment_zhu_walkline_strategy.py`: added next-day one-price limit-up evaluator fields, buyable-entry scopes, `BASELINE_EXCLUDE_STRONG_UPTREND`, and prespecified replication reviews.
+- `tests/test_zhu_walkline_strategy_experiment.py`: expanded to 15 focused tests covering limit-up positive/negative cases, buyable scope isolation, future evaluator isolation, market-state membership, and four-way replication gates.
+- Exported `reports/zhu_walkline_early_observation_labels_2019_2021/`: 56,098 candidates, 1,736 stocks, 731 trading days, 541 non-empty days.
+- Wrote `reports/zhu_walkline_strategy_backward_oos_2019_2021/` using 2019 development, 2020 validation, and 2021 locked holdout.
+
+### Backward-OOS 結果
+| variant | 2020 primary avg/median/tail delta | 2021 primary avg/median/tail delta | decision |
+|---|---|---|---|
+| `BASELINE_MA5_GAP_CAP_12` | -0.153 / +0.298 / -0.628 pct | +0.085 / +0.514 / -0.603 pct | `shadow_replication_supported` |
+| `BASELINE_EXCLUDE_STRONG_UPTREND` | +0.501 / -0.757 / +0.090 pct | -2.934 / -2.905 / +7.691 pct | `blocked_before_promotion_review` |
+
+- MA5 cap also passed both years after removing next-day one-price limit-up rows. It is a risk-control shadow candidate, not a formal rule or an absolute return enhancer.
+- The market-state exclusion did not generalize backward. Its 2025/2026 improvement is regime-dependent and must not become a fixed gate.
+- Next-day one-price limit-up rate in the baseline cooldown scope was 1.813% in 2020 and 0.745% in 2021; the separate buyable scope removes those rows without changing signals.
+- Current 2022-2026 rerun remains `selected_by_validation=BASELINE_LIQUIDITY_20M`, yearly holdout pass count `0/3`, and `blocked_before_promotion_review`.
+
+### 產出
+- `reports/zhu_walkline_strategy_backward_oos_2019_2021/zhu_walkline_strategy_experiment_summary.md`
+- `reports/zhu_walkline_strategy_backward_oos_2019_2021/zhu_walkline_strategy_experiment_summary.json`
+- `reports/zhu_walkline_strategy_backward_oos_2019_2021/zhu_walkline_strategy_experiment_metrics.csv`
+- `reports/zhu_walkline_strategy_experiment_2022_2026_06_10/zhu_walkline_strategy_experiment_summary.md`
+
+### 驗證
+- `.\.venv\Scripts\ruff.exe check .`: passed.
+- `.\.venv\Scripts\python.exe -m pytest -q`: 473 passed.
+- `git diff --check`: passed.
+- Latest no-web scanner: passed; asof `2026-07-09`.
+- Backward-OOS and current report audits: no `NaN` / `nan` / `None` / `<NA>` output strings; hard-boundary assertions passed.
+
+### 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+
 ## 2026-07-12 Direct Follow-Up - Full Zhu Walkline Strategy Experiment
 
 ## 修改檔案
