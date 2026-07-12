@@ -1,6 +1,46 @@
 # OUTBOX
 
-## 2026-07-12 Window Run - 2026-06-01 to 2026-07-09
+## 2026-07-12 Canonical Restore - 2026-07-01 to 2026-07-09
+
+### 恢復口徑
+- Upstream engine: `fast_precomputed_daily_ohlcv`.
+- Upstream cap: `max_per_day=30`，先保留每日前 30 個 observation candidates。
+- Driver screen: `driver_score >= 11`。
+- Forward returns are not attached; this is an as-of-only observation list.
+
+### 結果
+| 日期 | 代號 | 股票 | 收盤 | 分數 | 型態 | 類股 | 訊號階段 | 訊號失效觀察價 |
+|---|---|---|---:|---:|---|---|---|---:|
+| 2026-07-02 | 5488 | 松普 | 14.05 | 12.0 | 區間突破確認 | 電子零組件 | CONFIRMED | 13.05 |
+
+- `vol_ratio_20=4.7852`、`close_location_in_bar=1.0`、下一確認壓力 `14.3`。
+- Source rows: 180；canonical candidate rows: 1。
+- `max_per_day=0` 的較寬母體結果只保留為研究存檔，不再作為本策略 canonical 日期清單。
+
+### 產出
+- `reports/zhu_walkline_driver_screen_candidates_2026_07_01_09/zhu_walkline_driver_screen_candidates.csv`
+- `reports/zhu_walkline_driver_screen_candidates_2026_07_01_09/zhu_walkline_driver_screen_summary.json`
+- `reports/zhu_walkline_driver_screen_candidates_2026_07_01_09/zhu_walkline_driver_screen_summary.md`
+- `reports/zhu_walkline_driver_screen_candidates_2026_07_01_09/zhu_walkline_driver_screen_teaching_report.md`
+
+### 驗證
+- Full `.venv` pytest: 474 passed.
+- `ruff check .`: passed.
+- `git diff --check`: passed.
+- Canonical assertion: exactly one row, stock `5488`, invalidation `13.05`, confirmation `14.3`.
+- Output audit: no `NaN` / `None` / `<NA>` strings.
+
+### 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+
+## 2026-07-12 Window Run - 2026-06-01 to 2026-07-09 (Non-Canonical Research Archive)
 
 ### 資料與規則
 - Local adjusted/features max date: `2026-07-09`; range contains 28 trading days.
