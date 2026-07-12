@@ -6,6 +6,7 @@ project:
 
 data:
   sqlite_path: "C:/Users/User/Desktop/新增資料夾 (4)/state/tw_data_mirror.sqlite"
+  yahoo_concept_sqlite_path: "E:/abc/state/yahoo_concept_membership.sqlite"
   finlab_items_root: "C:/Users/User/Desktop/finlab_ml_course/history/history/items"
   output_dir: "reports/zhu_walkline_shadow"
   web_cache_dir: "data/web_cache"
@@ -31,3 +32,11 @@ report:
   avoid_impersonation: true
   include_non_holder_section: true
   include_holder_section: true
+
+concept_context:
+  source: "Yahoo Taiwan concept stock classes"
+  source_url: "https://tw.stock.yahoo.com/class#CONCEPT_STOCK"
+  snapshot_importance: "IMPORTANT_BASELINE"
+  allow_static_current_backfill: true
+  min_available_members: 3
+  hierarchy_gate_default: "required"

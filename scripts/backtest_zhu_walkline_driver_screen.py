@@ -9,6 +9,7 @@ holdings, portfolio weights, formal strategy state, or formal champion state.
 from __future__ import annotations
 
 import argparse
+from datetime import timedelta
 import hashlib
 import json
 from pathlib import Path
@@ -26,6 +27,15 @@ if str(REPO_ROOT) not in sys.path:
 from scripts.export_zhu_walkline_early_observation_candidates import (  # noqa: E402
     _load_forward_price_rows,
     attach_forward_return_labels,
+)
+from abc_quant.data.yahoo_concepts import (  # noqa: E402
+    load_important_yahoo_concept_snapshot,
+)
+from abc_quant.features.yahoo_concept_rotation import (  # noqa: E402
+    apply_hierarchical_context_gate,
+    attach_best_yahoo_concept_context,
+    compute_yahoo_concept_rotation,
+    write_yahoo_concept_rotation,
 )
 
 
@@ -59,6 +69,7 @@ SCREEN_OUTPUT_COLUMNS = [
     "sector",
     "sector_state",
     "market_state",
+    "market_gate_pass",
     "volume_state",
     "kline_state",
     "signal_stage",
@@ -68,6 +79,25 @@ SCREEN_OUTPUT_COLUMNS = [
     "open_to_close_pct",
     "close_location_in_bar",
     "close_to_sma5_pct",
+    "sector_gate_pass",
+    "concept_memberships",
+    "best_concept_name",
+    "concept_state",
+    "concept_strength_score",
+    "concept_above_sma20_ratio",
+    "concept_sma20_slope_positive_ratio",
+    "concept_positive_return_5d_ratio",
+    "concept_median_return_5d_pct",
+    "concept_membership_mode",
+    "concept_snapshot_id",
+    "concept_snapshot_date",
+    "concept_gate_pass",
+    "context_alignment_pass",
+    "individual_score_gate_pass",
+    "hierarchy_gate_order",
+    "hierarchy_gate_stage",
+    "hierarchy_observation_pass",
+    "context_failure_reason",
     "stop_reference",
 ]
 
@@ -87,6 +117,49 @@ def main(argv: list[str] | None = None) -> int:
     output_dir = REPO_ROOT / args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    hierarchy_gate = args.hierarchy_gate or str(
+        config.get("concept_context", {}).get("hierarchy_gate_default", "required")
+    )
+    if hierarchy_gate not in {"required", "diagnostic", "off"}:
+        raise ValueError(f"unsupported hierarchy gate mode: {hierarchy_gate}")
+    allow_static_backfill = args.allow_static_current_backfill
+    if allow_static_backfill is None:
+        allow_static_backfill = bool(
+            config.get("concept_context", {}).get("allow_static_current_backfill", False)
+        )
+    concept_manifest: dict[str, Any] = {}
+    concept_membership = pd.DataFrame()
+    concept_rotation = pd.DataFrame()
+    if hierarchy_gate != "off":
+        concept_sqlite_path = Path(config["data"]["yahoo_concept_sqlite_path"])
+        concept_manifest, concept_membership = load_important_yahoo_concept_snapshot(
+            concept_sqlite_path,
+            snapshot_id=args.concept_snapshot_id,
+        )
+        concept_membership["snapshot_date"] = str(concept_manifest["snapshot_date"])
+        rotation_end_date = max(
+            str(candidates["asof_date"].max())[:10],
+            str(concept_manifest["snapshot_date"]),
+        )
+        concept_price_features = _load_concept_price_features(
+            candidates,
+            membership=concept_membership,
+            sqlite_path=sqlite_path,
+            end_date=rotation_end_date,
+        )
+        concept_rotation = compute_yahoo_concept_rotation(
+            concept_price_features,
+            concept_membership,
+            snapshot_date=str(concept_manifest["snapshot_date"]),
+            allow_static_current_backfill=bool(allow_static_backfill),
+            min_available_members=int(
+                config.get("concept_context", {}).get("min_available_members", 3)
+            ),
+            date_from=str(candidates["asof_date"].min())[:10],
+            date_to=rotation_end_date,
+        )
+        write_yahoo_concept_rotation(concept_rotation, sqlite_path=concept_sqlite_path)
+
     result = run_driver_screen_backtest(
         candidates,
         daily_features=daily_features,
@@ -94,6 +167,11 @@ def main(argv: list[str] | None = None) -> int:
         min_driver_score=args.min_driver_score,
         horizon_trading_days=args.horizon_trading_days,
         rolling_window_days=args.rolling_window_days,
+        concept_membership=concept_membership,
+        concept_rotation=concept_rotation,
+        concept_snapshot_date=str(concept_manifest.get("snapshot_date", "")),
+        concept_snapshot_manifest=concept_manifest,
+        hierarchy_gate=hierarchy_gate,
     )
     _write_outputs(result, output_dir=output_dir, args=args)
     print("mode=shadow_observation_only")
@@ -116,6 +194,11 @@ def run_driver_screen_backtest(
     min_driver_score: int = 11,
     horizon_trading_days: int = 20,
     rolling_window_days: int = 20,
+    concept_membership: pd.DataFrame | None = None,
+    concept_rotation: pd.DataFrame | None = None,
+    concept_snapshot_date: str = "",
+    concept_snapshot_manifest: dict[str, Any] | None = None,
+    hierarchy_gate: str = "off",
 ) -> dict[str, Any]:
     labeled = attach_forward_return_labels(
         candidates,
@@ -123,26 +206,58 @@ def run_driver_screen_backtest(
         horizon_trading_days=horizon_trading_days,
     )
     scored = score_driver_screen(labeled, daily_features=daily_features)
-    selected = scored[scored["driver_score"] >= float(min_driver_score)].copy()
-    selected = selected[pd.to_numeric(selected["forward_return_pct"], errors="coerce").notna()].copy()
+    if hierarchy_gate != "off":
+        scored = attach_best_yahoo_concept_context(
+            scored,
+            membership=concept_membership if concept_membership is not None else pd.DataFrame(),
+            rotation=concept_rotation if concept_rotation is not None else pd.DataFrame(),
+            snapshot_date=concept_snapshot_date,
+        )
+        scored = apply_hierarchical_context_gate(
+            scored,
+            min_driver_score=min_driver_score,
+        )
+    driver_score_only = scored[scored["driver_score"] >= float(min_driver_score)].copy()
+    selected = driver_score_only.copy()
+    if hierarchy_gate == "required":
+        selected = selected[selected["hierarchy_observation_pass"]].copy()
+    selected_mature = selected[
+        pd.to_numeric(selected["forward_return_pct"], errors="coerce").notna()
+    ].copy()
     valid_scored = scored[pd.to_numeric(scored["forward_return_pct"], errors="coerce").notna()].copy()
-    baselines = build_same_count_baselines(selected, valid_scored)
+    mature_driver_score_only = driver_score_only[
+        pd.to_numeric(driver_score_only["forward_return_pct"], errors="coerce").notna()
+    ].copy()
+    baselines = build_same_count_baselines(selected_mature, valid_scored)
+    driver_controls = build_same_count_driver_controls(
+        selected_mature,
+        mature_driver_score_only,
+    )
     all_frames = {
-        "driver_screen": selected,
+        "driver_screen": selected_mature,
+        "driver_score_only": mature_driver_score_only,
         "all_candidates": valid_scored,
         **baselines,
+        **driver_controls,
     }
     summary = build_summary_payload(
         frames=all_frames,
         min_driver_score=min_driver_score,
         horizon_trading_days=horizon_trading_days,
         rolling_window_days=rolling_window_days,
+        hierarchy_gate=hierarchy_gate,
+        selected_observation_rows=len(selected),
+        scored_rows=scored,
+        concept_snapshot_manifest=concept_snapshot_manifest or {},
     )
     return {
         "scored_rows": scored,
         "screened_rows": selected,
+        "driver_score_only_rows": driver_score_only,
         "baseline_top_rise": baselines["same_count_top_rise"],
         "baseline_random": baselines["same_count_random"],
+        "driver_control_top": driver_controls["same_count_driver_score"],
+        "driver_control_random": driver_controls["same_count_driver_random"],
         "daily_metrics": compute_period_metrics(all_frames, period="asof_date"),
         "monthly_metrics": compute_period_metrics(all_frames, period="month"),
         "rolling_metrics": compute_rolling_window_metrics(
@@ -261,6 +376,50 @@ def build_same_count_baselines(
     }
 
 
+def build_same_count_driver_controls(
+    selected: pd.DataFrame,
+    driver_universe: pd.DataFrame,
+) -> dict[str, pd.DataFrame]:
+    """Build fair same-date controls from rows that already pass driver_score."""
+
+    if selected.empty:
+        empty = pd.DataFrame(columns=driver_universe.columns)
+        return {"same_count_driver_score": empty, "same_count_driver_random": empty}
+    top_frames: list[pd.DataFrame] = []
+    random_frames: list[pd.DataFrame] = []
+    counts = selected.groupby("asof_date").size().to_dict()
+    for asof_date, count in counts.items():
+        day = driver_universe[driver_universe["asof_date"].eq(asof_date)].copy()
+        if day.empty:
+            continue
+        top_frames.append(
+            day.sort_values(
+                ["driver_score", "rise_score", "fall_risk_score", "stock_id"],
+                ascending=[False, False, True, True],
+            ).head(int(count))
+        )
+        day["_stable_random_key"] = day["stock_id"].map(
+            lambda stock_id: _stable_hash(f"driver-{asof_date}-{stock_id}")
+        )
+        random_frames.append(
+            day.sort_values("_stable_random_key")
+            .head(int(count))
+            .drop(columns=["_stable_random_key"])
+        )
+    return {
+        "same_count_driver_score": (
+            pd.concat(top_frames, ignore_index=True)
+            if top_frames
+            else pd.DataFrame(columns=driver_universe.columns)
+        ),
+        "same_count_driver_random": (
+            pd.concat(random_frames, ignore_index=True)
+            if random_frames
+            else pd.DataFrame(columns=driver_universe.columns)
+        ),
+    }
+
+
 def compute_period_metrics(frames: dict[str, pd.DataFrame], *, period: str) -> pd.DataFrame:
     records: list[dict[str, Any]] = []
     for cohort, frame in frames.items():
@@ -322,6 +481,10 @@ def build_summary_payload(
     min_driver_score: int,
     horizon_trading_days: int,
     rolling_window_days: int,
+    hierarchy_gate: str,
+    selected_observation_rows: int,
+    scored_rows: pd.DataFrame,
+    concept_snapshot_manifest: dict[str, Any],
 ) -> dict[str, Any]:
     summary_rows = []
     for cohort, frame in frames.items():
@@ -331,6 +494,38 @@ def build_summary_payload(
     driver = _cohort_row(summary_frame, "driver_screen")
     top_rise = _cohort_row(summary_frame, "same_count_top_rise")
     random = _cohort_row(summary_frame, "same_count_random")
+    driver_control = _cohort_row(summary_frame, "same_count_driver_score")
+    driver_random_control = _cohort_row(summary_frame, "same_count_driver_random")
+    hierarchy_stage_counts: list[dict[str, Any]] = []
+    if "hierarchy_gate_stage" in scored_rows.columns:
+        hierarchy_stage_counts = [
+            {"hierarchy_gate_stage": str(stage), "rows": int(count)}
+            for stage, count in scored_rows["hierarchy_gate_stage"].value_counts().items()
+        ]
+    concept_snapshot = {
+        key: concept_snapshot_manifest.get(key)
+        for key in [
+            "snapshot_id",
+            "snapshot_date",
+            "fetched_at",
+            "category_count",
+            "membership_count",
+            "unique_stock_count",
+            "content_sha256",
+            "importance",
+            "is_important",
+        ]
+        if key in concept_snapshot_manifest
+    }
+    if "concept_membership_mode" in scored_rows.columns:
+        modes = sorted(
+            {
+                str(value)
+                for value in scored_rows["concept_membership_mode"].dropna().unique()
+                if str(value)
+            }
+        )
+        concept_snapshot["backtest_membership_mode"] = "|".join(modes)
     return {
         "mode": "shadow_observation_only",
         "formal_champion_changed": False,
@@ -339,10 +534,18 @@ def build_summary_payload(
         "min_driver_score": int(min_driver_score),
         "horizon_trading_days": int(horizon_trading_days),
         "rolling_window_days": int(rolling_window_days),
+        "hierarchy_gate": hierarchy_gate,
+        "selected_observation_rows": int(selected_observation_rows),
+        "hierarchy_stage_counts": hierarchy_stage_counts,
+        "concept_snapshot": concept_snapshot,
         "screen_rules": _screen_rules_payload(),
         "cohort_summary": _records_for_json(summary_frame),
         "driver_minus_same_count_top_rise": _metric_delta(driver, top_rise),
         "driver_minus_same_count_random": _metric_delta(driver, random),
+        "driver_minus_same_count_driver_score": _metric_delta(driver, driver_control),
+        "driver_minus_same_count_driver_random": _metric_delta(
+            driver, driver_random_control
+        ),
         "forward_returns_are_evaluator_only": True,
         "no_formal_strategy_modified": True,
         "no_formal_champion_modified": True,
@@ -406,6 +609,35 @@ def _load_daily_features_for_candidates(candidates: pd.DataFrame, *, sqlite_path
         )
 
 
+def _load_concept_price_features(
+    candidates: pd.DataFrame,
+    *,
+    membership: pd.DataFrame,
+    sqlite_path: Path,
+    end_date: str | None = None,
+) -> pd.DataFrame:
+    if candidates.empty or membership.empty:
+        return pd.DataFrame(columns=["date", "stock_id", "close", "sma20"])
+    start = pd.Timestamp(str(candidates["asof_date"].min())[:10]) - timedelta(days=45)
+    end = pd.Timestamp(end_date or str(candidates["asof_date"].max())[:10])
+    with sqlite3.connect(sqlite_path) as connection:
+        prices = pd.read_sql_query(
+            """
+            select date, stock_id, close, sma20
+            from daily_ohlcv_features
+            where date between ? and ?
+            order by stock_id, date
+            """,
+            connection,
+            params=[start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")],
+            parse_dates=["date"],
+            dtype={"stock_id": str},
+        )
+    member_ids = set(membership["stock_id"].astype(str).str.zfill(4))
+    prices["stock_id"] = prices["stock_id"].astype(str).str.zfill(4)
+    return prices[prices["stock_id"].isin(member_ids)].copy()
+
+
 def _attach_daily_features(frame: pd.DataFrame, daily_features: pd.DataFrame) -> pd.DataFrame:
     if daily_features.empty:
         for column in DAILY_JOIN_COLUMNS:
@@ -427,17 +659,35 @@ def _attach_daily_features(frame: pd.DataFrame, daily_features: pd.DataFrame) ->
 
 def _write_outputs(result: dict[str, Any], *, output_dir: Path, args: argparse.Namespace) -> None:
     screened = _screen_output_frame(result["screened_rows"])
+    driver_score_only = _screen_output_frame(result["driver_score_only_rows"])
     scored = _clean_frame(result["scored_rows"])
     top_rise = _screen_output_frame(result["baseline_top_rise"])
     random = _screen_output_frame(result["baseline_random"])
+    driver_control_top = _screen_output_frame(result["driver_control_top"])
+    driver_control_random = _screen_output_frame(result["driver_control_random"])
     daily = _clean_frame(result["daily_metrics"])
     monthly = _clean_frame(result["monthly_metrics"])
     rolling = _clean_frame(result["rolling_metrics"])
     summary = result["summary"]
     screened.to_csv(output_dir / "zhu_walkline_driver_screen_rows.csv", index=False, encoding="utf-8-sig")
+    driver_score_only.to_csv(
+        output_dir / "zhu_walkline_driver_score_only_rows.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
     scored.to_csv(output_dir / "zhu_walkline_driver_screen_scored_universe.csv", index=False, encoding="utf-8-sig")
     top_rise.to_csv(output_dir / "zhu_walkline_driver_screen_same_count_top_rise.csv", index=False, encoding="utf-8-sig")
     random.to_csv(output_dir / "zhu_walkline_driver_screen_same_count_random.csv", index=False, encoding="utf-8-sig")
+    driver_control_top.to_csv(
+        output_dir / "zhu_walkline_same_count_driver_score.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    driver_control_random.to_csv(
+        output_dir / "zhu_walkline_same_count_driver_random.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
     daily.to_csv(output_dir / "zhu_walkline_driver_screen_daily_metrics.csv", index=False, encoding="utf-8-sig")
     monthly.to_csv(output_dir / "zhu_walkline_driver_screen_monthly_metrics.csv", index=False, encoding="utf-8-sig")
     rolling.to_csv(output_dir / "zhu_walkline_driver_screen_rolling_metrics.csv", index=False, encoding="utf-8-sig")
@@ -471,6 +721,20 @@ def _summary_markdown(summary: dict[str, Any], monthly: pd.DataFrame, rolling: p
         f"- min_driver_score: {summary['min_driver_score']}",
         f"- horizon trading days: {summary['horizon_trading_days']}",
         f"- rolling window days: {summary['rolling_window_days']}",
+        f"- hierarchy gate: {summary['hierarchy_gate']}",
+        f"- selected observation rows (mature + immature): {summary['selected_observation_rows']}",
+        f"- Yahoo concept snapshot: `{summary.get('concept_snapshot', {}).get('snapshot_id', '')}`",
+        f"- concept membership mode: `{summary.get('concept_snapshot', {}).get('backtest_membership_mode', '')}`",
+        "",
+        "## Hierarchy Gate",
+        "",
+        "固定順序：大盤 -> 類股 -> 概念股 -> 個股 driver_score。前一層未通過，後一層不構成候選。",
+        "Yahoo 重要快照倒灌僅屬使用者授權的 shadow 實驗，不冒充歷史 point-in-time 成分。",
+        "",
+        _markdown_table(
+            pd.DataFrame(summary.get("hierarchy_stage_counts", [])),
+            ["hierarchy_gate_stage", "rows"],
+        ),
         "",
         "## Cohort Summary",
         "",
@@ -494,7 +758,18 @@ def _summary_markdown(summary: dict[str, Any], monthly: pd.DataFrame, rolling: p
         "## Monthly Metrics",
         "",
         _markdown_table(
-            monthly[monthly["cohort"].isin(["driver_screen", "same_count_top_rise", "same_count_random"])],
+            monthly[
+                monthly["cohort"].isin(
+                    [
+                        "driver_screen",
+                        "driver_score_only",
+                        "same_count_driver_score",
+                        "same_count_driver_random",
+                        "same_count_top_rise",
+                        "same_count_random",
+                    ]
+                )
+            ],
             [
                 "cohort",
                 "month",
@@ -537,6 +812,11 @@ def _summary_markdown(summary: dict[str, Any], monthly: pd.DataFrame, rolling: p
 
 def _screen_rules_payload() -> list[dict[str, Any]]:
     return [
+        {
+            "rule": "hierarchy_gate_order",
+            "points": 0,
+            "condition": "market -> sector -> Yahoo concept breadth -> individual driver_score",
+        },
         {"rule": "sector_electronic_components", "points": 3, "condition": "sector == 電子零組件"},
         {"rule": "supporting_sector", "points": 1, "condition": "sector in 光電,其他電子"},
         {"rule": "strict_breakout", "points": 2, "condition": "early_observation_rule == STRICT_BREAKOUT"},
@@ -591,6 +871,17 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--min-driver-score", type=int, default=11)
     parser.add_argument("--horizon-trading-days", type=int, default=20)
     parser.add_argument("--rolling-window-days", type=int, default=20)
+    parser.add_argument(
+        "--hierarchy-gate",
+        choices=["required", "diagnostic", "off"],
+        default=None,
+    )
+    parser.add_argument("--concept-snapshot-id")
+    parser.add_argument(
+        "--allow-static-current-backfill",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+    )
     return parser.parse_args(argv)
 
 

@@ -1,5 +1,60 @@
 # OUTBOX
 
+## 2026-07-12 Yahoo Concept Important Snapshot + Hierarchical Shadow Gate
+
+### 重要快照
+- Source: `https://tw.stock.yahoo.com/class#CONCEPT_STOCK` and its Yahoo class-quotes pagination API.
+- Snapshot ID: `yahoo_concept_2026-07-09_b17edf05cd17`.
+- Yahoo data date: `2026-07-09`; fetched at: `2026-07-12T17:53:28+08:00`.
+- 101 concepts, 2,724 concept-stock memberships, 1,063 unique stocks.
+- Content SHA-256: `b17edf05cd17a225b590428953da2bd73e1e3dc9e22ed66c9d5e452ec56aad63`.
+- Importance: `IMPORTANT_BASELINE`; SQLite: `state/yahoo_concept_membership.sqlite`.
+- Historical projection is user-authorized and labeled `static_current_backfill_user_authorized`; it is exploratory and is not represented as historical point-in-time membership.
+
+### 固定篩選順序
+1. 大盤：只讓 `MARKET_STRONG_UPTREND`、`MARKET_PULLBACK_IN_UPTREND`、`MARKET_RANGE_BOUND` 往下評估。
+2. 類股：只讓 `SECTOR_LEADING`、`SECTOR_ROTATING_IN` 往下評估。
+3. 概念股：由同日成分股站上20日線比率、20日線正斜率比率、5日正報酬比率計算，只讓 `CONCEPT_LEADING`、`CONCEPT_ROTATING_IN` 通過。
+4. 個股：最後才檢查 `driver_score >= 11`。
+
+### 2026-06-01 至 2026-07-09 結果
+- Canonical upstream: 778 rows；driver-score-only: 39 observations；hierarchy: 15 observations。
+- 通過名單：`2308 台達電`、`2460 建通`、`2484 希華`、`3236 千如`、`1471 首利`、`3092 鴻碩`、`3484 崧騰`、`3624 光頡`、`2478 大毅`、`2327 國巨*`、`2420 新巨`、`2457 飛宏`、`2492 華新科`、`3321 同泰`、`5227 立凱-KY`。
+- `5488 松普`：Yahoo membership=`華為`，2026-07-02 concept score `42.298068`、state=`CONCEPT_WEAK`，因此 `hierarchy_gate_stage=CONCEPT_NOT_LEADING`，不再列入分層候選。
+- 本短區間僅 1 筆具完整 D+20 標籤，不足以獨立判定效果。
+
+### 延伸成熟樣本比較
+- Canonical `2026-01-01`~`2026-07-09`: 2,875 source rows；driver-only 286 observations；hierarchy 154 observations。
+- Mature D+20: hierarchy 140 rows；avg `21.293754%`、median `9.53055%`、hit>=20% `35.0%`、hit>=50% `18.5714%`、downside `30.0%`、tail<=-10% `13.5714%`。
+- Same-date/same-count driver-score control 140 rows: avg `20.935121%`、median `9.1462%`、hit>=20% `34.2857%`、hit>=50% `18.5714%`、downside `31.4286%`、tail<=-10% `17.1429%`。
+- Hierarchy minus fair control: avg `+0.358633` pct、median `+0.38435` pct、hit>=20% `+0.007143`、hit>=50% `0`、downside `-0.014286`、tail loss `-0.035715`。
+- Decision: keep as shadow risk-filter research; blocked before formal promotion because static-current membership backfill and limited independent OOS evidence remain.
+
+### 產出
+- `reports/yahoo_concept_membership/yahoo_concept_2026-07-09_b17edf05cd17/`
+- `reports/zhu_walkline_driver_screen_hierarchy_2026_06_01_07_09/`
+- `reports/zhu_walkline_early_observation_labels_2026_01_07_09_canonical/`
+- `reports/zhu_walkline_driver_screen_hierarchy_2026_01_07_09_canonical/`
+
+### 驗證
+- `ruff check .`: passed.
+- `python -m pytest -q`: 486 passed.
+- `git diff --check`: passed.
+- Latest scanner smoke: `2026-07-09`, `--no-web`, passed.
+- Snapshot audit: category/member counts match, all pagination counts match, tracked membership CSV reproduces manifest SHA-256.
+- Output audit: no `NaN` / `None` / `<NA>` string leakage.
+- No-lookahead tests: future OHLC/SMA mutation and future concept state cannot change an earlier observation.
+
+### 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+
 ## 2026-07-12 Canonical Window - 2026-06-01 to 2026-07-09
 
 ### 契約

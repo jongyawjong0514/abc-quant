@@ -1,5 +1,6 @@
 # STATUS
 
+- 2026-07-12: Added append-only Yahoo concept membership snapshot `yahoo_concept_2026-07-09_b17edf05cd17` (101 concepts, 2,724 memberships, 1,063 stocks) plus as-of concept breadth and required `market -> sector -> concept -> individual` Zhu shadow hierarchy gate. User-authorized historical projection is explicitly tagged `static_current_backfill_user_authorized`. Canonical 2026-06-01~2026-07-09 observations fell from 39 to 15; 5488 was rejected because its Yahoo `華為` concept state was `CONCEPT_WEAK`. Canonical 2026-01-01~2026-07-09 mature D+20 hierarchy rows were 140 versus 261 driver-only rows; fair same-date/same-count driver-score control deltas were avg +0.359 pct, hit>=20% +0.714 pct, and tail<=-10% -3.572 pct. Shadow retention only; formal strategy/champion/trade effect unchanged.
 - 2026-07-03: Handoff folder initialized by Codex. Waiting for a concrete task in `INBOX.md` or a direct user instruction.
 - 2026-07-03: Technical-lead operating model recorded. ChatGPT Pro may own specs, next tasks, and review notes for `E:\abc`; Codex remains implementation engineer. Override of system/safety/direct-user rules was not accepted.
 - 2026-07-03: Completed `RUN_CODEX_NEXT.md` first implementation round. Editable install succeeded as `abc-quant==0.0.2` and `pytest` passed: 13 passed, 1 pytest cache warning from `E:\abc\.pytest_cache` access denied.
