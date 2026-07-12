@@ -1,5 +1,49 @@
 # OUTBOX
 
+## 2026-07-12 Canonical Window - 2026-06-01 to 2026-07-09
+
+### 契約
+- Upstream: `fast_precomputed_daily_ohlcv`, `max_per_day=30`。
+- Screen: `driver_score >= 11`。
+- No MA5 cap, cooldown, forward-return label, or hindsight outcome filter。
+- Source rows: 778；selected rows: 39；unique stocks: 34；signal dates: 9。
+
+### 日期與股票
+| 日期 | 檔數 | 股票 |
+|---|---:|---|
+| 2026-06-08 | 11 | 2483百容、3520華盈、4939亞電、5381光譜、8043蜜望實、5228鈺鎧、7788松川精密、4542科嶠、6153嘉聯益、5227立凱-KY、6175立敦 |
+| 2026-06-09 | 3 | 2308台達電、2457飛宏、2462良得電 |
+| 2026-06-15 | 5 | 2460建通、2484希華、3236千如、6156松上、6259百徽 |
+| 2026-06-17 | 6 | 3092鴻碩、3296勝德、3484崧騰、2478大毅、1471首利、3624光頡 |
+| 2026-06-18 | 3 | 2327國巨*、2483百容、8121越峰 |
+| 2026-06-22 | 6 | 3321同泰、5227立凱-KY、2420新巨、2457飛宏、2492華新科、3288點晶 |
+| 2026-06-24 | 2 | 2483百容、6672騰輝電子-KY |
+| 2026-06-30 | 2 | 6156松上、1815富喬 |
+| 2026-07-02 | 1 | 5488松普 |
+
+### 產出
+- `reports/zhu_walkline_driver_screen_candidates_2026_06_01_07_09/zhu_walkline_driver_screen_candidates.csv`
+- `reports/zhu_walkline_driver_screen_candidates_2026_06_01_07_09/zhu_walkline_driver_screen_date_stock_codes.csv`
+- `reports/zhu_walkline_driver_screen_candidates_2026_06_01_07_09/zhu_walkline_driver_screen_daily_counts.csv`
+- `reports/zhu_walkline_driver_screen_candidates_2026_06_01_07_09/zhu_walkline_driver_screen_summary.json`
+- `reports/zhu_walkline_driver_screen_candidates_2026_06_01_07_09/zhu_walkline_driver_screen_summary.md`
+
+### 驗證
+- `ruff check .`: passed.
+- `git diff --check`: passed.
+- Assertions: 39 rows, 34 unique stocks, 9 signal dates, and July contains only `5488`.
+- Output audit: no `NaN` / `None` / `<NA>` strings.
+
+### 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+
 ## 2026-07-12 Canonical Restore - 2026-07-01 to 2026-07-09
 
 ### 恢復口徑
