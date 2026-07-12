@@ -1,5 +1,64 @@
 # OUTBOX
 
+## 2026-07-12 Direct Follow-Up - Full Zhu Walkline Strategy Experiment
+
+## 修改檔案
+- `scripts/experiment_zhu_walkline_strategy.py`: added execution-aware finite-variant comparison, same-stock cooldown, adjusted-price/company-action labels, validation-only selection, yearly walk-forward replication, no-op rejection, and failure attribution.
+- `tests/test_zhu_walkline_strategy_experiment.py`: added 10 tests for next-open cost labels, future-label isolation, holdout isolation, no-op rejection, missing fields, cooldown, timing attribution, temporal splits, and multi-file loading.
+- `scripts/analyze_zhu_walkline_forward_return_buckets.py`: replaced SciPy-dependent Spearman with mathematically equivalent rank-then-Pearson calculation.
+- `README.md`, `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: documented the command, evidence, blockers, and hard boundaries.
+
+## 實驗契約
+- Market/currency/timezone: Taiwan TWSE/TPEx common stocks, TWD, Asia/Taipei.
+- Candidate period: `2022-01-03`~`2026-06-10`, 79,969 as-of candidate rows.
+- Signal time: after as-of close.
+- Evaluator entry: next trading day adjusted open.
+- Evaluator exit: as-of plus 20 trading days adjusted close.
+- Costs: brokerage 0.1425% each side, sell tax 0.3%, slippage 0.1% each side.
+- Primary evaluation: 20-trading-day same-stock cooldown.
+- Company actions: `tw_adjusted_ohlcv_daily`, plus no-event robustness scope.
+- Variant selection: validation only; holdout cannot affect selection.
+
+## 主結果
+| period | baseline rows | avg net | median net | hit >=20% | downside <0 | tail <=-10% |
+|---|---:|---:|---:|---:|---:|---:|
+| 2022~2024 development | 1,169 | -1.390% | -2.945% | 6.587% | 61.335% | 25.064% |
+| 2025 validation | 471 | 4.955% | 0.868% | 17.410% | 47.771% | 20.595% |
+| 2026H1 holdout | 501 | 10.086% | 3.280% | 24.950% | 42.914% | 20.359% |
+
+- 2025 validation selected `BASELINE_LIQUIDITY_20M`.
+- 2026H1 holdout: avg 10.475%, median 4.185%, but tail loss rose to 23.472%; holdout failed.
+- Yearly folds: 2023 select -> 2024 test selected unchanged baseline; 2024 select -> 2025 test sector-neutral failed; 2025 select -> 2026H1 liquidity failed. Final pass count `0/3`.
+- `BASELINE_MA5_GAP_CAP_12` is post-holdout research only: holdout avg delta -0.1225 pct, median delta +0.4499 pct, tail delta -1.2349 pct, coverage 86.63%. It is not eligible for current selection and needs new replication.
+- Signal-date `late_chase_risk_flag`, `upper_tail_flag`, and `volume_exhaustion_flag` removed zero baseline rows. These belong in a later peak/holding lifecycle monitor, not the initial screen.
+- Highest failure windows include 2024Q4 tail 65.823%, 2024Q3 tail 50.000%, 2022Q1 tail 45.946%, and 2022Q2 tail 44.118%.
+
+## 產出
+- `reports/zhu_walkline_strategy_experiment_2022_2026_06_10/zhu_walkline_strategy_experiment_summary.md`
+- `reports/zhu_walkline_strategy_experiment_2022_2026_06_10/zhu_walkline_strategy_experiment_summary.json`
+- `reports/zhu_walkline_strategy_experiment_2022_2026_06_10/zhu_walkline_strategy_experiment_metrics.csv`
+- `reports/zhu_walkline_strategy_experiment_2022_2026_06_10/zhu_walkline_strategy_experiment_quarterly.csv`
+- `reports/zhu_walkline_strategy_experiment_2022_2026_06_10/zhu_walkline_strategy_walk_forward_reviews.csv`
+- `reports/zhu_walkline_strategy_experiment_2022_2026_06_10/zhu_walkline_strategy_walk_forward_metrics.csv`
+- `reports/zhu_walkline_strategy_experiment_2022_2026_06_10/zhu_walkline_strategy_failure_attribution.csv`
+
+## 驗證
+- `.\.venv\Scripts\ruff.exe check .`: passed.
+- `.\.venv\Scripts\python.exe -m pytest -q`: 468 passed.
+- `git diff --check`: passed.
+- `python scripts\run_zhu_walkline_shadow.py --asof latest --top-n 30 --no-web --verbose`: passed; latest asof `2026-07-09`.
+- Output audit: no `NaN` / `nan` / `None` / `<NA>` strings.
+
+## 結論與邊界
+- `promotion_decision=blocked_before_promotion_review`
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令，不輸出絕對買賣建議。
+
 ## 2026-07-11 Direct Follow-Up - Driver Screen Overlay And Rolling Backtest
 
 ## 修改檔案

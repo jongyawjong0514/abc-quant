@@ -414,6 +414,30 @@ The summary shape is centralized in `src/abc_quant/pipeline/contracts.py`.
 train/validation/test evaluation split names, `baseline_method`, and per-split
 metric keys before the pipeline returns the summary.
 
+## Zhu Walkline Shadow Strategy Experiment
+
+`scripts/experiment_zhu_walkline_strategy.py` compares the existing Zhu
+driver screen with finite shadow-only mutations. It forms every variant from
+signal-date fields, then evaluates next-trading-day adjusted open to D+20
+adjusted close after brokerage fees, stock transaction tax, and slippage. The
+primary review applies a 20-trading-day same-stock cooldown, reports a separate
+corporate-action robustness scope, and keeps the 2026 holdout out of variant
+selection.
+
+The yearly replication run can combine non-overlapping candidate exports:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\experiment_zhu_walkline_strategy.py `
+  --additional-candidates-csv reports\zhu_walkline_early_observation_labels_2022_2023\zhu_walkline_early_observation_candidates.csv `
+  --run-yearly-walk-forward `
+  --output-dir reports\zhu_walkline_strategy_experiment_2022_2026_06_10
+```
+
+This sidecar never changes formal strategy rules, champion state, portfolio
+weights, positions, or orders. Its fixed runtime boundary is
+`mode=shadow_observation_only`, `formal_champion_changed=False`, and
+`formal_trade_effect=False`.
+
 ## 快速開始
 
 在 Windows PowerShell：

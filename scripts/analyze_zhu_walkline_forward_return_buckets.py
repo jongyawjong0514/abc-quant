@@ -315,7 +315,10 @@ def compute_numeric_feature_stats(rows: pd.DataFrame) -> pd.DataFrame:
         if values.nunique(dropna=True) < 2 or bucket_order.nunique(dropna=True) < 2:
             spearman = 0.0
         else:
-            spearman = values.corr(bucket_order, method="spearman")
+            spearman = values.rank(method="average").corr(
+                bucket_order.rank(method="average"),
+                method="pearson",
+            )
         for bucket_order, bucket, label, bucket_rows in _iter_bucket_rows(rows):
             bucket_values = pd.to_numeric(bucket_rows[feature], errors="coerce")
             mean = bucket_values.mean()
