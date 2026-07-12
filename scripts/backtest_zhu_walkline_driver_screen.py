@@ -278,6 +278,13 @@ def compute_rolling_window_metrics(
     *,
     rolling_window_days: int,
 ) -> pd.DataFrame:
+    empty_columns = [
+        "cohort",
+        "window_start_date",
+        "window_end_date",
+        "window_trading_days",
+        *_metrics(pd.DataFrame()).keys(),
+    ]
     all_dates = sorted(
         {
             str(date)
@@ -287,8 +294,8 @@ def compute_rolling_window_metrics(
         }
     )
     records: list[dict[str, Any]] = []
-    if rolling_window_days <= 0:
-        return pd.DataFrame()
+    if rolling_window_days <= 0 or len(all_dates) < rolling_window_days:
+        return pd.DataFrame(columns=empty_columns)
     for end_index in range(rolling_window_days - 1, len(all_dates)):
         window_dates = set(all_dates[end_index - rolling_window_days + 1 : end_index + 1])
         for cohort, frame in frames.items():
@@ -304,6 +311,8 @@ def compute_rolling_window_metrics(
                     **_metrics(window),
                 }
             )
+    if not records:
+        return pd.DataFrame(columns=empty_columns)
     return _round_numeric(pd.DataFrame(records))
 
 

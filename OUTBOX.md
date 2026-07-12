@@ -1,5 +1,51 @@
 # OUTBOX
 
+## 2026-07-12 Window Run - 2026-06-01 to 2026-07-09
+
+### 資料與規則
+- Local adjusted/features max date: `2026-07-09`; range contains 28 trading days.
+- Observation rule: `driver_score >= 11` plus replicated risk-control cap `close_to_sma5_pct <= 12`.
+- Signal time: after as-of close; D+20 evaluator uses next-day adjusted open, D+20 adjusted close, fees, tax, and slippage.
+- Same-stock 20-day cooldown is an evaluator de-overlap scope, not a trade command.
+
+### 結果
+- Source candidates: 2,031.
+- `driver_score >= 11`: 117 rows.
+- MA5-gap-capped observations: 76 rows, 60 stocks, 9 dates.
+- Latest qualifying observation date: `2026-07-02`; 7/3~7/9 had no full-threshold observation.
+- Window-local cooldown: 60 rows; mature D+20: 23 rows over only 2 signal dates; one mature row was next-day locked-limit-up.
+- Mature 23-row net avg/median: 4.231% / -6.216%; positive mean is driven by a small number of large winners while the median remains negative.
+- `maturity_status=insufficient_mature_horizon`; `action=watch_only`; `promotion_decision=blocked_before_promotion_review`.
+
+### 產出
+- `reports/zhu_walkline_strategy_window_2026_06_01_07_09/zhu_walkline_window_summary.md`
+- `reports/zhu_walkline_strategy_window_2026_06_01_07_09/zhu_walkline_window_summary.json`
+- `reports/zhu_walkline_strategy_window_2026_06_01_07_09/zhu_walkline_window_observations.csv`
+- `reports/zhu_walkline_strategy_window_2026_06_01_07_09/zhu_walkline_window_date_stock_codes.csv`
+- `reports/zhu_walkline_strategy_window_2026_06_01_07_09/zhu_walkline_window_daily_counts.csv`
+
+### 程式修正
+- `scripts/backtest_zhu_walkline_driver_screen.py`: empty/short rolling windows now return a stable empty schema instead of failing report rendering.
+- `tests/test_zhu_walkline_driver_screen_backtest.py`: added empty rolling schema regression coverage.
+
+### 驗證
+- Focused pytest: 4 passed.
+- Full `.venv` pytest: 474 passed.
+- `ruff check .`: passed.
+- `git diff --check`: passed.
+- Latest no-web scanner: passed; asof `2026-07-09`.
+- Three output directories passed missing-string audit and summary hard-boundary/count assertions.
+
+### 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+
 ## 2026-07-12 Recommended Follow-Up - Buyability + Backward-OOS
 
 ### 修改與執行

@@ -4,6 +4,7 @@ import pandas as pd
 
 from scripts.backtest_zhu_walkline_driver_screen import (
     build_same_count_baselines,
+    compute_rolling_window_metrics,
     run_driver_screen_backtest,
     score_driver_screen,
 )
@@ -76,6 +77,19 @@ def test_run_driver_screen_backtest_outputs_shadow_summary() -> None:
     cohort_summary = pd.DataFrame(result["summary"]["cohort_summary"])
     selected = cohort_summary[cohort_summary["cohort"].eq("driver_screen")].iloc[0]
     assert selected["hit_rate_20pct"] == 1.0
+
+
+def test_rolling_metrics_empty_output_keeps_report_schema() -> None:
+    frame = pd.DataFrame([_candidate("2330")])
+
+    rolling = compute_rolling_window_metrics(
+        {"driver_screen": frame},
+        rolling_window_days=20,
+    )
+
+    assert rolling.empty
+    assert "window_end_date" in rolling.columns
+    assert "avg_forward_return_pct" in rolling.columns
 
 
 def _candidate(
