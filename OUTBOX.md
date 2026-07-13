@@ -1,5 +1,21 @@
 # OUTBOX
 
+## 2026-07-13 KD D+5 三組特徵分析
+
+- Window: `2026-01-01` through `2026-06-30`; D+5 是訊號日後第 5 個個股交易日。
+- Label: 以還原收盤為主；raw return、還原因子變動與公司行動旗標另行保留。
+- 909 筆 fresh KD confirmation；907 筆成熟標籤；2 筆缺少第 5 個後續交易日。
+- `D5_LOSS`: 466 rows / 338 unique stocks，平均 `-5.650872%`，中位數 `-4.460145%`。
+- `D5_GAIN_10_20`: 88 rows / 74 unique stocks，平均 `14.842829%`，中位數 `14.842214%`。
+- `D5_GAIN_GE_20`: 87 rows / 55 unique stocks，平均 `30.894779%`，中位數 `28.676471%`。
+- 另有 266 筆成熟訊號位於 0% 至未滿 10%，不強塞進三組。
+- 20% 以上組相較虧損組：股價相對月線乖離 `11.73% vs 6.52%`、20 日報酬 `20.00% vs 13.41%`、月線斜率 `1.86 vs 1.21`、K 值 `58.69 vs 53.82`、日量比 `2.17 vs 1.86`。
+- 類別特徵：20% 以上組 `UPTREND` 比率 `25.29% vs 9.44%`，月線上方至少 10% 比率 `49.43% vs 22.10%`，量能擴張 `31.03% vs 19.74%`。
+- 結論：大漲組較像已在多頭趨勢中的強勢再確認，不是單純超賣反彈；但乖離與追價風險也更高，不可直接轉成買進規則。
+- Output: `reports/zhu_walkline_kd_d5_groups_2026_01_06/`。
+- Validation: focused pytest 6 passed、full pytest 501 passed、`ruff check .`、`git diff --check`、strict JSON／missing-literal audit、latest no-web scanner 全部通過。
+- `mode=shadow_observation_only`; `formal_champion_changed=False`; `formal_trade_effect=False`; no formal strategy/champion/trade effect modified。
+
 ## 2026-07-12 Yahoo Concept Important Snapshot + Hierarchical Shadow Gate
 
 ### 重要快照

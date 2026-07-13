@@ -456,6 +456,28 @@ weights, positions, or orders. Its fixed runtime boundary is
 `mode=shadow_observation_only`, `formal_champion_changed=False`, and
 `formal_trade_effect=False`.
 
+## Zhu Walkline KD D+5 Group Analysis
+
+The KD D+5 research sidecar labels each fresh KD confirmation by the fifth
+subsequent stock trading day's adjusted close. It exports three mutually
+exclusive requested groups: loss, gain from 10% to below 20%, and gain of 20%
+or more. Mature returns from 0% to below 10% remain in a separate ungrouped
+file so they do not distort the three-group comparison. Adjusted prices are
+the primary label, corporate-action rows are flagged, and a same-stock
+five-trading-day cooldown is exported as sensitivity.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\backtest_zhu_walkline_shadow_range.py `
+  --start-date 2026-01-01 --end-date 2026-06-30 `
+  --kd-observations-only `
+  --output-dir reports\zhu_walkline_kd_observations_2026_01_06
+
+.\.venv\Scripts\python.exe scripts\analyze_zhu_walkline_kd_d5_groups.py
+```
+
+This is descriptive, evaluator-only research. It does not simulate an entry,
+apply costs, issue an order, or modify the formal strategy.
+
 ## 快速開始
 
 在 Windows PowerShell：
