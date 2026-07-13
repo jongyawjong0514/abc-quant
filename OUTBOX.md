@@ -3192,3 +3192,39 @@ python scripts/backtest_zhu_walkline_shadow_range.py --start-date 2026-01-01 --e
 - 不產生交易指令
 - 不輸出絕對買賣建議
 - 本回測是 observation-only gross forward outcome，不是交易 PnL；未套用交易成本/滑價，因為沒有模擬成交、部位或持倉。
+
+## 2026-07-13 KD 超賣後轉強 Shadow 規則
+
+## 修改檔案
+- `src/abc_quant/features/walkline_features.py`: 新增無前視 KD(9,3,3)、超賣狀態、K/D 轉折與多頭／強勢股 gate。
+- `src/abc_quant/signals/zhu_walkline_shadow.py`: 新增 `KD_OVERSOLD_TREND_RECOVERY` shadow observation lifecycle。
+- `src/abc_quant/reports/zhu_walkline_report.py`: CSV、JSON、shadow log 與個股報告輸出 KD 數值、確認階段及各 gate。
+- `tests/test_zhu_walkline_features.py`, `tests/test_zhu_walkline_no_lookahead.py`: 新增正反例、報告文字與未來列 mutation 測試。
+
+## 規則
+- `K < 20` 只輸出 `OVERSOLD_ONLY`，不等於止跌。
+- 確認需同時符合：近 5 日曾超賣、K 向上、近 5 日曾實際向上突破 D 且目前 K 在 D 上方、價格站回壓力、多頭趨勢 gate、強勢股 gate、無放量上影供給。
+- 多頭趨勢 gate：20 日與 60 日均線斜率大於 0、股價高於 60 日線，且非空頭／破底／弱反彈狀態。
+- 強勢股 gate：股價高於 20 日與 120 日均線，且 20 日報酬大於 0。
+
+## 2464 點時驗證
+- `2026-06-11`: K=17.9923、D=30.9754，`OVERSOLD_ONLY`，未確認。
+- `2026-06-12`: K=19.1744、D=27.0417，`OVERSOLD_ONLY`，未確認。
+- `2026-06-15`: K=29.7472、D=27.9436，K 上彎且 K>D、價格站回壓力、多頭／強勢 gate 通過，`CONFIRMED`。
+
+## 驗證
+- Focused pytest：31 passed。
+- Full pytest：490 passed。
+- `ruff check .`：passed。
+- `git diff --check`：passed。
+- Latest no-web scanner：passed；本機全市場資料最新日期為 `2026-07-09`。
+
+## 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議

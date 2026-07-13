@@ -28,6 +28,7 @@ BUY_OBSERVATION_PRIORITY = (
     "RESISTANCE_TURN_SUPPORT",
     "FAILED_BREAKDOWN_RECLAIM",
     "SUPPORT_REBOUND",
+    "KD_OVERSOLD_TREND_RECOVERY",
 )
 SELL_WARNING_PRIORITY = (
     "SUPPORT_BREAKDOWN",
@@ -472,6 +473,10 @@ def _rise_reasons(row: pd.Series) -> list[str]:
         reasons.append(f"訊號階段={row['signal_stage']}")
     if row.get("trigger_type"):
         reasons.append(f"觸發={row['trigger_type']}")
+    if bool(row.get("kd_recovery_confirmation", False)):
+        reasons.append("KD超賣後確認：K上彎突破D、價格站回壓力且通過多頭強勢閘門")
+    elif bool(row.get("kd_oversold_marker", False)):
+        reasons.append("KD短線超賣僅為標記，尚未止跌")
     if not reasons:
         reasons.append("訊號不足，僅列觀察")
     return reasons
@@ -574,6 +579,8 @@ def _add_signal_stage_and_failure_fields(features: pd.DataFrame, *, market_state
 
 
 def _reversal_state(row: pd.Series) -> str:
+    if bool(row.get("kd_recovery_confirmation", False)):
+        return "confirmed_reversal"
     if bool(row.get("close_above_prev_high", False)) and bool(row.get("close_above_ma5", False)) and bool(row.get("volume_expansion", False)):
         return "confirmed_reversal"
     if bool(row.get("hammer_like", False)) or bool(row.get("red_k", False)) or bool(row.get("failed_breakdown", False)):
@@ -584,6 +591,8 @@ def _reversal_state(row: pd.Series) -> str:
 
 
 def _trigger_type(row: pd.Series) -> str:
+    if bool(row.get("kd_recovery_confirmation", False)):
+        return "KD_OVERSOLD_RECOVERY"
     if bool(row.get("close_above_prev_high", False)) and bool(row.get("close_above_ma5", False)) and bool(row.get("volume_expansion", False)):
         return "RANGE_BREAKOUT"
     if bool(row.get("ma_reclaim_20", False)) or bool(row.get("ma_reclaim_10", False)) or bool(row.get("ma_reclaim_5", False)):
@@ -630,6 +639,8 @@ def _buy_observation_types(row: pd.Series) -> list[str]:
         observations.append("FAILED_BREAKDOWN_RECLAIM")
     if _support_rebound_observation(row):
         observations.append("SUPPORT_REBOUND")
+    if _kd_oversold_recovery_observation(row):
+        observations.append("KD_OVERSOLD_TREND_RECOVERY")
     return [signal for signal in BUY_OBSERVATION_PRIORITY if signal in set(observations)]
 
 
@@ -644,6 +655,10 @@ def _buy_trigger_price(row: pd.Series) -> float | None:
         triggered_prices.append(_first_price(row, ("prev_low", "broken_support_zone_high")) or np.nan)
     if "SUPPORT_REBOUND" in detail_types:
         triggered_prices.append(_first_price(row, ("prev_high", "resistance_zone_1_high")) or np.nan)
+    if "KD_OVERSOLD_TREND_RECOVERY" in detail_types:
+        triggered_prices.append(
+            _first_price(row, ("kd_reclaim_price", "prev_high", "ma20")) or np.nan
+        )
     valid_triggered = [price for price in triggered_prices if _is_finite_price(price)]
     if valid_triggered:
         return float(max(valid_triggered))
@@ -749,6 +764,16 @@ def _support_rebound_observation(row: pd.Series) -> bool:
         row.get("close_above_prev_high", False)
     )
     return support_turn and _effective_buy_observation(row, trigger)
+
+
+def _kd_oversold_recovery_observation(row: pd.Series) -> bool:
+    if not bool(row.get("kd_recovery_confirmation", False)):
+        return False
+    if bool(row.get("high_level_supply_pressure", False)) or bool(
+        row.get("high_volume_upper_shadow", False)
+    ):
+        return False
+    return _has_clear_stop_reference(row)
 
 
 def _effective_buy_observation(row: pd.Series, trigger_price: float | None) -> bool:
@@ -886,6 +911,8 @@ def _signal_stage(row: pd.Series) -> str:
     hard_failed = hard_failed or bool(row.get("high_level_supply_pressure", False))
     if hard_failed:
         return "FAILED"
+    if bool(row.get("kd_recovery_confirmation", False)):
+        return "CONFIRMED"
     if row.get("trigger_type") and bool(row.get("volume_expansion", False)) and bool(row.get("close_above_ma5", False)):
         return "CONFIRMED"
     if row.get("trigger_type"):

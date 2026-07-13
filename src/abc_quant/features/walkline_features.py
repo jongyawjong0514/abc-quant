@@ -12,6 +12,10 @@ MOVING_AVERAGE_WINDOWS = (5, 10, 20, 60, 120, 240)
 RETURN_WINDOWS = (1, 3, 5, 10, 20)
 ZONE_MERGE_PCT = 0.015
 MAX_PRICE_ZONES = 3
+KD_LOOKBACK = 9
+KD_SMOOTHING = 3
+KD_OVERSOLD_LEVEL = 20.0
+KD_RECENT_OVERSOLD_WINDOW = 5
 
 
 def compute_walkline_features(price_history: pd.DataFrame, *, asof_date: str) -> pd.DataFrame:
@@ -116,6 +120,8 @@ def compute_walkline_features(price_history: pd.DataFrame, *, asof_date: str) ->
     data = data.copy()
     _add_volume_state_features(data)
     data = data.copy()
+    _add_kd_features(data)
+    data = data.copy()
     _add_price_zone_source_features(data)
     data = data.copy()
     _add_state_labels(data)
@@ -124,6 +130,7 @@ def compute_walkline_features(price_history: pd.DataFrame, *, asof_date: str) ->
     latest = grouped.tail(1).copy().reset_index(drop=True)
     latest["asof_date"] = asof_date
     _add_support_resistance(latest)
+    _add_kd_observation_features(latest)
     return latest
 
 
@@ -208,6 +215,72 @@ def _add_volume_state_features(data: pd.DataFrame) -> None:
     data["low_volume_pullback"] = (data["return_1d"] < 0) & data["volume_contraction"] & (
         data["close"] >= data["ma20"]
     )
+
+
+def _add_kd_features(data: pd.DataFrame) -> None:
+    """Add point-in-time KD(9, 3, 3) and post-oversold transition fields."""
+    grouped = data.groupby("stock_id", group_keys=False, sort=False)
+    rolling_low = grouped["low"].transform(
+        lambda series: series.rolling(KD_LOOKBACK, min_periods=1).min()
+    )
+    rolling_high = grouped["high"].transform(
+        lambda series: series.rolling(KD_LOOKBACK, min_periods=1).max()
+    )
+    price_span = rolling_high - rolling_low
+    data["kd_rsv9"] = (
+        _safe_div((data["close"] - rolling_low) * 100.0, price_span)
+        .fillna(50.0)
+        .clip(0.0, 100.0)
+    )
+
+    kd_parts = [
+        _smoothed_kd(group["kd_rsv9"])
+        for _, group in data.groupby("stock_id", sort=False)
+    ]
+    kd = pd.concat(kd_parts).sort_index()
+    data["kd_k9"] = kd["kd_k9"]
+    data["kd_d9"] = kd["kd_d9"]
+    data["kd_prev_k9"] = grouped["kd_k9"].shift(1)
+    data["kd_prev_d9"] = grouped["kd_d9"].shift(1)
+    data["kd_oversold_marker"] = data["kd_k9"] < KD_OVERSOLD_LEVEL
+    data["kd_recent_oversold"] = grouped["kd_oversold_marker"].transform(
+        lambda series: (
+            series.shift(1)
+            .rolling(KD_RECENT_OVERSOLD_WINDOW, min_periods=1)
+            .max()
+            .fillna(False)
+            .astype(bool)
+        )
+    )
+    data["kd_k_rising"] = data["kd_k9"] > data["kd_prev_k9"]
+    data["kd_above_d"] = data["kd_k9"] > data["kd_d9"]
+    data["kd_bull_cross"] = (
+        data["kd_above_d"]
+        & (data["kd_prev_k9"] <= data["kd_prev_d9"])
+    )
+    data["kd_recent_bull_cross"] = grouped["kd_bull_cross"].transform(
+        lambda series: (
+            series.rolling(KD_RECENT_OVERSOLD_WINDOW, min_periods=1)
+            .max()
+            .fillna(False)
+            .astype(bool)
+        )
+    )
+
+
+def _smoothed_kd(rsv: pd.Series) -> pd.DataFrame:
+    k_previous = 50.0
+    d_previous = 50.0
+    k_values: list[float] = []
+    d_values: list[float] = []
+    for value in pd.to_numeric(rsv, errors="coerce").fillna(50.0):
+        k_current = ((KD_SMOOTHING - 1) * k_previous + float(value)) / KD_SMOOTHING
+        d_current = ((KD_SMOOTHING - 1) * d_previous + k_current) / KD_SMOOTHING
+        k_values.append(k_current)
+        d_values.append(d_current)
+        k_previous = k_current
+        d_previous = d_current
+    return pd.DataFrame({"kd_k9": k_values, "kd_d9": d_values}, index=rsv.index)
 
 
 def _add_price_zone_source_features(data: pd.DataFrame) -> None:
@@ -428,6 +501,88 @@ def _add_support_resistance(latest: pd.DataFrame) -> None:
         axis=1,
     )
     latest["entry_observation"] = latest.apply(_entry_observation, axis=1)
+
+
+def _add_kd_observation_features(latest: pd.DataFrame) -> None:
+    """Confirm KD recovery only after price, trend, and strength gates pass."""
+    close = pd.to_numeric(latest["close"], errors="coerce")
+    ma20 = pd.to_numeric(latest["ma20"], errors="coerce")
+    ma60 = pd.to_numeric(latest["ma60"], errors="coerce")
+    ma120 = pd.to_numeric(latest["ma120"], errors="coerce")
+    ma20_slope = pd.to_numeric(latest["ma20_slope"], errors="coerce")
+    ma60_slope = pd.to_numeric(latest["ma60_slope"], errors="coerce")
+    return_20d = pd.to_numeric(latest["return_20d"], errors="coerce")
+
+    latest["kd_price_reclaim"] = latest["resistance_reclaimed_today"].fillna(False).astype(bool)
+    latest["bull_trend_gate"] = (
+        ~latest["trend_state"].isin({"DOWNTREND", "BREAKDOWN", "WEAK_REBOUND"})
+        & (ma20_slope > 0)
+        & (ma60_slope > 0)
+        & (close > ma60)
+    ).fillna(False)
+    latest["strong_stock_gate"] = (
+        (close > ma20)
+        & (close > ma120)
+        & (return_20d > 0)
+    ).fillna(False)
+    latest["kd_reclaim_price"] = latest.apply(_kd_reclaim_price, axis=1)
+    supply_clear = ~latest["high_volume_upper_shadow"].fillna(False).astype(bool)
+    latest["kd_recovery_confirmation"] = (
+        latest["kd_recent_oversold"].fillna(False).astype(bool)
+        & latest["kd_k_rising"].fillna(False).astype(bool)
+        & latest["kd_above_d"].fillna(False).astype(bool)
+        & latest["kd_recent_bull_cross"].fillna(False).astype(bool)
+        & latest["kd_price_reclaim"]
+        & latest["bull_trend_gate"]
+        & latest["strong_stock_gate"]
+        & supply_clear
+    )
+    latest["kd_observation_stage"] = np.select(
+        [
+            latest["kd_recovery_confirmation"],
+            latest["kd_oversold_marker"].fillna(False),
+            latest["kd_recent_oversold"].fillna(False) & ~latest["kd_k_rising"].fillna(False),
+            latest["kd_recent_oversold"].fillna(False)
+            & (
+                ~latest["kd_above_d"].fillna(False)
+                | ~latest["kd_recent_bull_cross"].fillna(False)
+            ),
+            latest["kd_recent_oversold"].fillna(False) & ~latest["kd_price_reclaim"],
+            latest["kd_recent_oversold"].fillna(False)
+            & latest["kd_price_reclaim"]
+            & ~(latest["bull_trend_gate"] & latest["strong_stock_gate"]),
+            latest["kd_recent_oversold"].fillna(False) & ~supply_clear,
+        ],
+        [
+            "CONFIRMED",
+            "OVERSOLD_ONLY",
+            "WAIT_K_TURN",
+            "WAIT_KD_CROSS",
+            "WAIT_PRICE_RECLAIM",
+            "WAIT_TREND_STRENGTH",
+            "WAIT_SUPPLY_CLEAR",
+        ],
+        default="EMPTY",
+    )
+    latest["kd_observation_type"] = np.where(
+        latest["kd_recovery_confirmation"],
+        "KD_OVERSOLD_TREND_RECOVERY",
+        "",
+    )
+
+
+def _kd_reclaim_price(row: pd.Series) -> float:
+    candidates: tuple[str, ...]
+    if bool(row.get("resistance_zone_breakout_today", False)):
+        candidates = ("breakout_zone_high", "prev_high", "ma20")
+    elif bool(row.get("close_above_prev_high", False)):
+        candidates = ("prev_high", "ma20")
+    elif bool(row.get("ma_reclaim_20", False)):
+        candidates = ("ma20",)
+    else:
+        return np.nan
+    values = _finite_values(row.get(column) for column in candidates)
+    return float(values[0]) if values else np.nan
 
 
 def _entry_observation(row: pd.Series) -> str:

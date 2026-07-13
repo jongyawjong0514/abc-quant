@@ -83,6 +83,18 @@ def test_walkline_features_compute_core_fields() -> None:
     assert row["upper_shadow_pct"] == pytest.approx(1.0 / 82.0)
     assert row["lower_shadow_pct"] == pytest.approx(1.0 / 82.0)
     assert row["vol_ratio_5"] > 0
+    assert 0 <= row["kd_k9"] <= 100
+    assert 0 <= row["kd_d9"] <= 100
+    assert row["kd_observation_stage"] in {
+        "EMPTY",
+        "OVERSOLD_ONLY",
+        "WAIT_K_TURN",
+        "WAIT_KD_CROSS",
+        "WAIT_PRICE_RECLAIM",
+        "WAIT_TREND_STRENGTH",
+        "WAIT_SUPPLY_CLEAR",
+        "CONFIRMED",
+    }
     assert row["support_1"] <= row["close"]
     assert row["resistance_1"] >= row["close"]
     assert row["support_zone_1_low"] <= row["support_zone_1_high"] <= row["close"]
@@ -115,6 +127,74 @@ def test_walkline_features_detect_bearish_alignment() -> None:
     assert bool(row["ma_bear_alignment"])
     assert row["ma_state"] in {"BEAR_ALIGNMENT", "MA_BREAK"}
     assert row["kline_state"] in {"LONG_BLACK_K", "BREAKDOWN_K", "UPPER_SHADOW_SUPPLY"}
+
+
+def test_kd_oversold_alone_is_not_recovery_confirmation() -> None:
+    features = compute_walkline_features(
+        _kd_recovery_price_frame(),
+        asof_date="2026-05-06",
+    )
+    row = features.iloc[0]
+
+    assert bool(row["kd_oversold_marker"])
+    assert row["kd_observation_stage"] == "OVERSOLD_ONLY"
+    assert bool(row["kd_recovery_confirmation"]) is False
+
+
+def test_kd_cross_without_strong_stock_gate_is_not_confirmation() -> None:
+    features = compute_walkline_features(
+        _kd_recovery_price_frame(),
+        asof_date="2026-05-08",
+    )
+    row = features.iloc[0]
+
+    assert bool(row["kd_k_rising"])
+    assert bool(row["kd_bull_cross"])
+    assert bool(row["kd_price_reclaim"])
+    assert bool(row["bull_trend_gate"])
+    assert bool(row["strong_stock_gate"]) is False
+    assert row["kd_observation_stage"] == "WAIT_TREND_STRENGTH"
+    assert bool(row["kd_recovery_confirmation"]) is False
+
+
+def test_kd_recovery_requires_oversold_turn_cross_price_and_bull_strength() -> None:
+    features = compute_walkline_features(
+        _kd_recovery_price_frame(),
+        asof_date="2026-05-09",
+    )
+    row = features.iloc[0]
+
+    assert bool(row["kd_recent_oversold"])
+    assert bool(row["kd_k_rising"])
+    assert bool(row["kd_above_d"])
+    assert bool(row["kd_recent_bull_cross"])
+    assert bool(row["kd_price_reclaim"])
+    assert bool(row["bull_trend_gate"])
+    assert bool(row["strong_stock_gate"])
+    assert bool(row["kd_recovery_confirmation"])
+    assert row["kd_observation_stage"] == "CONFIRMED"
+    assert row["kd_observation_type"] == "KD_OVERSOLD_TREND_RECOVERY"
+
+
+def test_kd_recovery_confirmation_enters_shadow_observation_lifecycle() -> None:
+    price = _kd_recovery_price_frame()
+    bundle = _mock_bundle(price)
+    result = build_zhu_walkline_shadow_result(
+        bundle,
+        concept_map={"SEMICONDUCTOR": ["2330"]},
+        web_records=[],
+        top_n=10,
+        web_research_used=False,
+        config={"scoring": {"web_score_cap": 5}},
+    )
+    row = result.feature_matrix.iloc[0]
+
+    assert result.mode == "shadow_observation_only"
+    assert result.formal_champion_changed is False
+    assert result.formal_trade_effect is False
+    assert row["trigger_type"] == "KD_OVERSOLD_RECOVERY"
+    assert row["signal_stage"] == "CONFIRMED"
+    assert "KD_OVERSOLD_TREND_RECOVERY" in row["buy_observation_detail_types"]
 
 
 def test_market_state_falls_back_to_proxy_when_official_history_lacks_volume() -> None:
@@ -451,6 +531,11 @@ def test_reports_use_observation_language_not_trade_commands() -> None:
     assert report.index("### 劇本B：整理") < report.index("### 劇本C：續弱")
     assert "轉強觀察型態" in report
     assert "防守觀察價" in report
+    assert "短線進入超賣區，不等於止跌" in report
+    assert "K在D上方" in report
+    assert "近5日曾向上突破D" in report
+    assert "多頭趨勢閘門" in report
+    assert "強勢股閘門" in report
     banned_phrases = [
         "續" + "抱條件",
         "減" + "碼條件",
@@ -532,6 +617,24 @@ def _score_one_market_state(market_state: str) -> pd.DataFrame:
         config={"scoring": {"rise_min_a": 80, "rise_min_b": 70, "rise_min_c": 60, "web_score_cap": 5}},
     )
     return frame
+
+
+def _kd_recovery_price_frame() -> pd.DataFrame:
+    closes = [50.0 + index * 1.5 for index in range(120)]
+    prior_close = closes[-1]
+    closes.extend(prior_close - 4.0 * index for index in range(1, 7))
+    closes.extend(prior_close - 24.0 + 6.0 * index for index in range(1, 7))
+    return pd.DataFrame(
+        {
+            "date": pd.date_range("2026-01-01", periods=len(closes), freq="D"),
+            "stock_id": ["2330"] * len(closes),
+            "open": [close - 0.5 for close in closes],
+            "high": [close + 1.0 for close in closes],
+            "low": [close - 1.0 for close in closes],
+            "close": closes,
+            "volume": [1000.0] * len(closes),
+        }
+    )
 
 
 def _scoring_frame() -> pd.DataFrame:
