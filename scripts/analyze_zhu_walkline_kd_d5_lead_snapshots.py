@@ -313,6 +313,118 @@ def build_trajectories(rows: pd.DataFrame) -> pd.DataFrame:
     return _round_numeric(pd.DataFrame(records))
 
 
+def build_early_stage_rows(rows: pd.DataFrame) -> pd.DataFrame:
+    """Build prespecified early-stage flags without using D+5 outcomes."""
+    keys = [
+        "asof_date",
+        "stock_id",
+        "stock_name",
+        "d5_group",
+        "d5_group_label",
+        "d5_adjusted_return_pct",
+        "same_stock_cooldown",
+        "corporate_action_event_in_horizon",
+    ]
+    records: list[dict[str, Any]] = []
+    for key, group in rows.groupby(keys, dropna=False, sort=False):
+        indexed = group.set_index("lead_offset")
+        if not all(offset in indexed.index for offset in LEAD_OFFSETS):
+            continue
+        t5 = indexed.loc[5]
+        t3 = indexed.loc[3]
+        t1 = indexed.loc[1]
+        record = dict(zip(keys, key, strict=True))
+        record.update(
+            {
+                "t5_quiet_setup": _number(t5["day_volume_ratio_20"]) <= 0.75,
+                "t3_price_turn": _number(t3["daily_return_pct"]) > 0.0,
+                "t1_price_confirm": _number(t1["daily_return_pct"]) > 0.0,
+                "t1_volume_confirm": _number(t1["day_volume_ratio_20"]) >= 0.70,
+                "t5_volume_ratio": t5["day_volume_ratio_20"],
+                "t3_daily_return_pct": t3["daily_return_pct"],
+                "t1_daily_return_pct": t1["daily_return_pct"],
+                "t1_volume_ratio": t1["day_volume_ratio_20"],
+            }
+        )
+        record["early_stage_score"] = 25 * sum(
+            bool(record[column])
+            for column in [
+                "t5_quiet_setup",
+                "t3_price_turn",
+                "t1_price_confirm",
+                "t1_volume_confirm",
+            ]
+        )
+        record["early_stage"] = _early_stage(record)
+        records.append(record)
+    return pd.DataFrame(records)
+
+
+def evaluate_early_stage_rules(
+    rows: pd.DataFrame,
+    *,
+    holdout_start: str = "2026-04-01",
+) -> pd.DataFrame:
+    """Evaluate prespecified stages on the de-overlapped Apr-Jun sample."""
+    data = rows.copy()
+    data["asof_date"] = pd.to_datetime(data["asof_date"], errors="coerce")
+    holdout = data[
+        data["asof_date"].ge(pd.Timestamp(holdout_start))
+        & data["same_stock_cooldown"].astype(bool)
+        & (~data["corporate_action_event_in_horizon"].astype(bool))
+    ].copy()
+    masks = {
+        "BASELINE_ALL": pd.Series(True, index=holdout.index),
+        "T5_SETUP": holdout["t5_quiet_setup"],
+        "T3_EARLY_TURN": holdout["t5_quiet_setup"] & holdout["t3_price_turn"],
+        "T1_PRICE_CONFIRM": (
+            holdout["t5_quiet_setup"]
+            & holdout["t3_price_turn"]
+            & holdout["t1_price_confirm"]
+        ),
+        "T1_PRICE_VOLUME_CONFIRM": (
+            holdout["t5_quiet_setup"]
+            & holdout["t3_price_turn"]
+            & holdout["t1_price_confirm"]
+            & holdout["t1_volume_confirm"]
+        ),
+    }
+    baseline_gain10 = holdout["d5_group"].ne("D5_LOSS").mean()
+    baseline_gain20 = holdout["d5_group"].eq("D5_GAIN_GE_20").mean()
+    records: list[dict[str, Any]] = []
+    for stage, mask in masks.items():
+        selected = holdout[mask.fillna(False)].copy()
+        gain10 = selected["d5_group"].ne("D5_LOSS").mean() if len(selected) else np.nan
+        gain20 = (
+            selected["d5_group"].eq("D5_GAIN_GE_20").mean()
+            if len(selected)
+            else np.nan
+        )
+        returns = pd.to_numeric(selected["d5_adjusted_return_pct"], errors="coerce")
+        records.append(
+            {
+                "holdout_start": holdout_start,
+                "stage": stage,
+                "selected_rows": int(len(selected)),
+                "unique_stocks": int(selected["stock_id"].nunique()),
+                "gain_ge10_rate": gain10,
+                "gain_ge20_rate": gain20,
+                "loss_rate": selected["d5_group"].eq("D5_LOSS").mean()
+                if len(selected)
+                else np.nan,
+                "gain_ge10_lift_vs_baseline": gain10 / baseline_gain10
+                if baseline_gain10
+                else np.nan,
+                "gain_ge20_lift_vs_baseline": gain20 / baseline_gain20
+                if baseline_gain20
+                else np.nan,
+                "avg_d5_adjusted_return_pct": returns.mean(),
+                "median_d5_adjusted_return_pct": returns.median(),
+            }
+        )
+    return _round_numeric(pd.DataFrame(records))
+
+
 def summarize_trajectories(rows: pd.DataFrame, *, scope: str) -> pd.DataFrame:
     features = [
         "t5_to_t1_return_pct",
@@ -424,6 +536,8 @@ def run_analysis(
         ],
         ignore_index=True,
     )
+    early_stage_rows = build_early_stage_rows(snapshots)
+    early_stage_validation = evaluate_early_stage_rules(early_stage_rows)
     result = {
         "snapshots": snapshots,
         "group_stats": group_stats,
@@ -431,6 +545,8 @@ def run_analysis(
         "pairwise": pairwise,
         "trajectories": trajectories,
         "trajectory_stats": trajectory_stats,
+        "early_stage_rows": early_stage_rows,
+        "early_stage_validation": early_stage_validation,
     }
     write_outputs(result, output_dir=output_dir)
     return result
@@ -471,6 +587,10 @@ def write_outputs(result: dict[str, Any], *, output_dir: Path) -> None:
         "zhu_walkline_kd_d5_lead_snapshot_pairwise.csv": result["pairwise"],
         "zhu_walkline_kd_d5_lead_trajectories.csv": result["trajectories"],
         "zhu_walkline_kd_d5_lead_trajectory_stats.csv": result["trajectory_stats"],
+        "zhu_walkline_kd_d5_early_stage_rows.csv": result["early_stage_rows"],
+        "zhu_walkline_kd_d5_early_stage_validation.csv": result[
+            "early_stage_validation"
+        ],
     }
     for name, frame in files.items():
         _clean_output(frame).to_csv(output_dir / name, index=False, encoding="utf-8-sig")
@@ -511,6 +631,7 @@ def render_markdown(result: dict[str, Any], summary: dict[str, Any]) -> str:
     stats = result["group_stats"]
     shares = result["condition_shares"]
     trajectory = result["trajectory_stats"]
+    early_validation = result["early_stage_validation"]
     primary_stats = stats[stats["scope"].eq("all_events")]
     primary_shares = shares[shares["scope"].eq("all_events")]
     selected_numeric = [
@@ -639,6 +760,26 @@ def render_markdown(result: dict[str, Any], summary: dict[str, Any]) -> str:
             "- T-1：價格、月線乖離與量比同步回升，才形成較清楚的轉強確認。",
             "- 去除同股重疊後，KD 上升幅度不再穩定優於 loss；較穩健的是價格修復與量能加速。",
             "",
+            "## Apr-Jun 分段條件驗證",
+            "",
+            "門檻沿用既有走圖定義：T-5量比<=0.75、T-3日報酬>0、T-1日報酬>0、T-1量比>=0.70。",
+            "樣本排除公司行動並套同股5日cooldown；這是條件篩選證據，不是獨立未來OOS。",
+            "",
+            "| stage | rows | >=10% | >=20% | loss | avg D+5 | lift >=10% | lift >=20% |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for row in early_validation.itertuples(index=False):
+        lines.append(
+            f"| {row.stage} | {row.selected_rows} | {_pct(row.gain_ge10_rate)} | "
+            f"{_pct(row.gain_ge20_rate)} | {_pct(row.loss_rate)} | "
+            f"{_fmt(row.avg_d5_adjusted_return_pct)} | "
+            f"{_fmt(row.gain_ge10_lift_vs_baseline)} | "
+            f"{_fmt(row.gain_ge20_lift_vs_baseline)} |"
+        )
+    lines.extend(
+        [
+            "",
             "## 邊界",
             "",
             "- 這是描述性共同特徵，不是因果或可直接執行的規則。",
@@ -674,6 +815,18 @@ def _condition_values(row: pd.Series) -> dict[str, bool]:
             and _number(row.get("sma60_slope_5d_pct")) > 0
         ),
     }
+
+
+def _early_stage(row: dict[str, Any]) -> str:
+    if not bool(row["t5_quiet_setup"]):
+        return "NO_EARLY_SETUP"
+    if not bool(row["t3_price_turn"]):
+        return "T5_SETUP"
+    if not bool(row["t1_price_confirm"]):
+        return "T3_EARLY_TURN"
+    if not bool(row["t1_volume_confirm"]):
+        return "T1_PRICE_CONFIRM"
+    return "T1_PRICE_VOLUME_CONFIRM"
 
 
 def _smoothed_kd(rsv: pd.Series) -> tuple[pd.Series, pd.Series]:

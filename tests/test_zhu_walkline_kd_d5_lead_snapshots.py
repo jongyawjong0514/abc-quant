@@ -3,7 +3,9 @@ import pytest
 
 from scripts.analyze_zhu_walkline_kd_d5_lead_snapshots import (
     assert_no_lookahead,
+    build_early_stage_rows,
     build_lead_snapshots,
+    evaluate_early_stage_rules,
     prepare_adjusted_history,
 )
 
@@ -66,6 +68,63 @@ def test_adjusted_return_uses_adjusted_close() -> None:
     assert result.iloc[-1]["daily_return_pct"] == pytest.approx((199 / 198 - 1) * 100)
 
 
+def test_early_stage_uses_only_presignal_snapshot_fields() -> None:
+    snapshots = pd.DataFrame(
+        [
+            _snapshot_row(5, volume=0.5, daily_return=-1.0),
+            _snapshot_row(3, volume=0.6, daily_return=1.0),
+            _snapshot_row(1, volume=0.8, daily_return=2.0),
+        ]
+    )
+
+    row = build_early_stage_rows(snapshots).iloc[0]
+
+    assert row["early_stage_score"] == 100
+    assert row["early_stage"] == "T1_PRICE_VOLUME_CONFIRM"
+
+
+def test_forward_label_mutation_does_not_change_early_stage() -> None:
+    snapshots = pd.DataFrame(
+        [
+            _snapshot_row(5, volume=0.5, daily_return=-1.0),
+            _snapshot_row(3, volume=0.6, daily_return=1.0),
+            _snapshot_row(1, volume=0.8, daily_return=2.0),
+        ]
+    )
+    baseline = build_early_stage_rows(snapshots)
+    mutated = snapshots.copy()
+    mutated["d5_group"] = "D5_LOSS"
+    mutated["d5_adjusted_return_pct"] = -99.0
+    changed = build_early_stage_rows(mutated)
+
+    columns = [
+        "t5_quiet_setup",
+        "t3_price_turn",
+        "t1_price_confirm",
+        "t1_volume_confirm",
+        "early_stage_score",
+        "early_stage",
+    ]
+    pd.testing.assert_frame_equal(baseline[columns], changed[columns])
+
+
+def test_early_stage_validation_uses_april_holdout_and_cooldown() -> None:
+    rows = pd.DataFrame(
+        [
+            _early_row("2026-03-31", "D5_GAIN_GE_20", True),
+            _early_row("2026-04-01", "D5_GAIN_GE_20", True),
+            _early_row("2026-04-02", "D5_LOSS", False),
+            _early_row("2026-04-03", "D5_LOSS", True, cooldown=False),
+        ]
+    )
+
+    result = evaluate_early_stage_rules(rows).set_index("stage")
+
+    assert result.loc["BASELINE_ALL", "selected_rows"] == 2
+    assert result.loc["T1_PRICE_VOLUME_CONFIRM", "selected_rows"] == 1
+    assert result.loc["T1_PRICE_VOLUME_CONFIRM", "gain_ge20_rate"] == pytest.approx(1.0)
+
+
 def _signals(signal_date: pd.Timestamp) -> pd.DataFrame:
     return pd.DataFrame(
         [
@@ -99,3 +158,40 @@ def _history(dates: pd.DatetimeIndex) -> pd.DataFrame:
             "adjusted_data_asof": ["2026-07-13"] * size,
         }
     )
+
+
+def _snapshot_row(offset: int, *, volume: float, daily_return: float) -> dict:
+    return {
+        "asof_date": "2026-04-10",
+        "stock_id": "2330",
+        "stock_name": "台積電",
+        "d5_group": "D5_GAIN_GE_20",
+        "d5_group_label": "D+5 >=20%",
+        "d5_adjusted_return_pct": 25.0,
+        "same_stock_cooldown": True,
+        "corporate_action_event_in_horizon": False,
+        "lead_offset": offset,
+        "day_volume_ratio_20": volume,
+        "daily_return_pct": daily_return,
+    }
+
+
+def _early_row(
+    date: str,
+    group: str,
+    passes: bool,
+    *,
+    cooldown: bool = True,
+) -> dict:
+    return {
+        "asof_date": date,
+        "stock_id": date[-2:] + "00",
+        "d5_group": group,
+        "d5_adjusted_return_pct": 25.0 if group == "D5_GAIN_GE_20" else -5.0,
+        "same_stock_cooldown": cooldown,
+        "corporate_action_event_in_horizon": False,
+        "t5_quiet_setup": passes,
+        "t3_price_turn": passes,
+        "t1_price_confirm": passes,
+        "t1_volume_confirm": passes,
+    }
