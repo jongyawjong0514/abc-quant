@@ -26,10 +26,49 @@ if str(SRC_ROOT) not in sys.path:
 
 HORIZONS = (1, 3, 5, 10)
 BASELINE_HORIZONS = (1, 3, 5)
+KD_OBSERVATION_COLUMNS = [
+    "asof_date",
+    "price_date",
+    "price_row_fresh",
+    "stock_id",
+    "stock_name",
+    "close",
+    "kd_k9",
+    "kd_d9",
+    "kd_oversold_marker",
+    "kd_recent_oversold",
+    "kd_k_rising",
+    "kd_above_d",
+    "kd_bull_cross",
+    "kd_recent_bull_cross",
+    "kd_price_reclaim",
+    "kd_reclaim_price",
+    "bull_trend_gate",
+    "strong_stock_gate",
+    "kd_recovery_confirmation",
+    "kd_observation_stage",
+    "kd_observation_type",
+    "signal_stage",
+    "trigger_type",
+    "buy_observation_type",
+    "buy_observation_detail_types",
+    "invalid_price",
+    "confirm_price",
+    "market_state",
+    "sector",
+    "trend_state",
+    "ma20",
+    "ma60",
+    "ma120",
+    "ma20_slope",
+    "ma60_slope",
+    "return_20d",
+]
 
 
 def main(argv: list[str] | None = None) -> int:
     from abc_quant.data.local_tw_loader import load_future_price_rows, load_local_tw_bundle
+    from abc_quant.features.walkline_features import compute_kd_observation_history
     from abc_quant.features.market_rotation import load_concept_stock_map
     from abc_quant.signals.zhu_walkline_shadow import (
         build_zhu_walkline_shadow_result,
@@ -45,71 +84,112 @@ def main(argv: list[str] | None = None) -> int:
 
     output_dir = REPO_ROOT / args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
-    concept_map = load_concept_stock_map(REPO_ROOT / "config" / "concept_stock_map.yaml")
 
     all_evaluations: list[pd.DataFrame] = []
     all_baselines: list[dict[str, Any]] = []
+    all_kd_observations: list[pd.DataFrame] = []
     daily_rows: list[dict[str, Any]] = []
     max_future_dates: list[str] = []
     start_time = time.perf_counter()
-    for index, asof_date in enumerate(trading_dates, start=1):
-        day_start = time.perf_counter()
-        bundle = load_local_tw_bundle(config, asof=asof_date)
-        result = build_zhu_walkline_shadow_result(
-            bundle,
-            concept_map=concept_map,
-            web_records=[],
-            top_n=args.top_n,
-            web_research_used=False,
-            config=config,
+    if args.kd_observations_only:
+        bundle = load_local_tw_bundle(config, asof=trading_dates[-1])
+        kd_history = compute_kd_observation_history(
+            bundle.price_history,
+            start_date=trading_dates[0],
+            end_date=trading_dates[-1],
         )
-        stock_ids = sorted(
-            set(result.top_rise_candidates["stock_id"].astype(str))
-            | set(result.top_fall_risks["stock_id"].astype(str))
-        )
-        future_prices = load_future_price_rows(
-            sqlite_path,
-            asof_date=result.asof_date,
-            stock_ids=stock_ids,
-            horizon_calendar_days=args.future_calendar_days,
-        )
-        if not future_prices.empty:
-            max_future_dates.append(str(future_prices["date"].max().date()))
-        evaluation_frame, _evaluation_summary = compute_forward_evaluation(result, future_prices)
-        enriched = _enrich_evaluation(result, evaluation_frame)
-        if not enriched.empty:
-            all_evaluations.append(enriched)
-        universe_future_prices = load_future_price_rows(
-            sqlite_path,
-            asof_date=result.asof_date,
-            stock_ids=sorted(result.feature_matrix["stock_id"].astype(str).unique()),
-            horizon_calendar_days=args.future_calendar_days,
-        )
-        if not universe_future_prices.empty:
-            max_future_dates.append(str(universe_future_prices["date"].max().date()))
-        universe_forward = _compute_universe_forward_returns(result, universe_future_prices)
-        all_baselines.extend(
-            _baseline_metrics_for_day(
-                result,
-                enriched,
-                universe_forward,
-                random_seed=args.random_seed,
+        kd_history = _prepare_kd_history_export(kd_history, bundle.stock_info)
+        kd_observations = _kd_observation_rows_from_frame(kd_history)
+        if not kd_observations.empty:
+            all_kd_observations.append(kd_observations)
+        for index, asof_date in enumerate(trading_dates, start=1):
+            day = kd_observations[kd_observations["asof_date"].eq(asof_date)].copy()
+            daily_row = _kd_only_daily_row(asof_date, day)
+            daily_rows.append(daily_row)
+            if args.verbose:
+                print(
+                    f"[{index}/{len(trading_dates)}] {asof_date} "
+                    f"kd_rows={daily_row['kd_observation_count']} "
+                    f"kd_confirmed={daily_row['kd_confirmed_count']} "
+                    f"kd_events={daily_row['kd_confirmed_event_count']}",
+                    flush=True,
+                )
+    else:
+        concept_map = load_concept_stock_map(REPO_ROOT / "config" / "concept_stock_map.yaml")
+        for index, asof_date in enumerate(trading_dates, start=1):
+            day_start = time.perf_counter()
+            bundle = load_local_tw_bundle(config, asof=asof_date)
+            result = build_zhu_walkline_shadow_result(
+                bundle,
+                concept_map=concept_map,
+                web_records=[],
+                top_n=args.top_n,
+                web_research_used=False,
+                config=config,
             )
-        )
-        daily_row = _daily_metrics(result, enriched)
-        daily_row["elapsed_seconds"] = round(time.perf_counter() - day_start, 3)
-        daily_rows.append(daily_row)
-        if args.verbose:
-            print(
-                f"[{index}/{len(trading_dates)}] {asof_date} "
-                f"rise={daily_row['rise_count']} fall={daily_row['fall_count']} "
-                f"eval={daily_row['evaluation_rows']} "
-                f"d5_hit={daily_row.get('rise_hit_rate_d5', '')} "
-                f"elapsed={daily_row['elapsed_seconds']}s",
-                flush=True,
+            kd_observations = _kd_observation_rows(result)
+            if not kd_observations.empty:
+                all_kd_observations.append(kd_observations)
+            stock_ids = sorted(
+                set(result.top_rise_candidates["stock_id"].astype(str))
+                | set(result.top_fall_risks["stock_id"].astype(str))
             )
+            future_prices = load_future_price_rows(
+                sqlite_path,
+                asof_date=result.asof_date,
+                stock_ids=stock_ids,
+                horizon_calendar_days=args.future_calendar_days,
+            )
+            if not future_prices.empty:
+                max_future_dates.append(str(future_prices["date"].max().date()))
+            evaluation_frame, _evaluation_summary = compute_forward_evaluation(
+                result, future_prices
+            )
+            enriched = _enrich_evaluation(result, evaluation_frame)
+            if not enriched.empty:
+                all_evaluations.append(enriched)
+            universe_future_prices = load_future_price_rows(
+                sqlite_path,
+                asof_date=result.asof_date,
+                stock_ids=sorted(result.feature_matrix["stock_id"].astype(str).unique()),
+                horizon_calendar_days=args.future_calendar_days,
+            )
+            if not universe_future_prices.empty:
+                max_future_dates.append(str(universe_future_prices["date"].max().date()))
+            universe_forward = _compute_universe_forward_returns(result, universe_future_prices)
+            all_baselines.extend(
+                _baseline_metrics_for_day(
+                    result,
+                    enriched,
+                    universe_forward,
+                    random_seed=args.random_seed,
+                )
+            )
+            daily_row = _daily_metrics(result, enriched)
+            daily_row["elapsed_seconds"] = round(time.perf_counter() - day_start, 3)
+            daily_rows.append(daily_row)
+            if args.verbose:
+                print(
+                    f"[{index}/{len(trading_dates)}] {asof_date} "
+                    f"rise={daily_row['rise_count']} fall={daily_row['fall_count']} "
+                    f"eval={daily_row['evaluation_rows']} "
+                    f"d5_hit={daily_row.get('rise_hit_rate_d5', '')} "
+                    f"elapsed={daily_row['elapsed_seconds']}s",
+                    flush=True,
+                )
 
     evaluations = pd.concat(all_evaluations, ignore_index=True) if all_evaluations else pd.DataFrame()
+    kd_observations = (
+        pd.concat(all_kd_observations, ignore_index=True)
+        if all_kd_observations
+        else pd.DataFrame(columns=KD_OBSERVATION_COLUMNS)
+    )
+    kd_confirmed = kd_observations[
+        kd_observations["kd_recovery_confirmation"].eq(True)
+    ].copy()
+    kd_confirmed_events = kd_confirmed[
+        kd_confirmed["price_row_fresh"].fillna(False).astype(bool)
+    ].copy()
     baselines = pd.DataFrame(all_baselines)
     daily = pd.DataFrame(daily_rows)
     monthly = _monthly_metrics(evaluations)
@@ -121,6 +201,7 @@ def main(argv: list[str] | None = None) -> int:
         evaluations=evaluations,
         baselines=baselines,
         monthly=monthly,
+        kd_observations=kd_observations,
         top_n=args.top_n,
         future_calendar_days=args.future_calendar_days,
         max_future_date_used=max(max_future_dates) if max_future_dates else None,
@@ -131,12 +212,24 @@ def main(argv: list[str] | None = None) -> int:
     daily_path = output_dir / "zhu_walkline_range_daily_metrics.csv"
     baseline_path = output_dir / "zhu_walkline_range_baseline_metrics.csv"
     monthly_path = output_dir / "zhu_walkline_range_monthly_metrics.csv"
+    kd_observation_path = output_dir / "zhu_walkline_range_kd_observations.csv"
+    kd_confirmed_path = output_dir / "zhu_walkline_range_kd_confirmed.csv"
+    kd_confirmed_events_path = output_dir / "zhu_walkline_range_kd_confirmed_events.csv"
+    kd_confirmed_events_md_path = output_dir / "zhu_walkline_range_kd_confirmed_events.md"
     summary_json_path = output_dir / "zhu_walkline_range_summary.json"
     summary_md_path = output_dir / "zhu_walkline_range_summary.md"
     evaluations.to_csv(evaluation_path, index=False, encoding="utf-8-sig")
     daily.to_csv(daily_path, index=False, encoding="utf-8-sig")
     baselines.to_csv(baseline_path, index=False, encoding="utf-8-sig")
     monthly.to_csv(monthly_path, index=False, encoding="utf-8-sig")
+    kd_observations.to_csv(kd_observation_path, index=False, encoding="utf-8-sig")
+    kd_confirmed.to_csv(kd_confirmed_path, index=False, encoding="utf-8-sig")
+    kd_confirmed_events.to_csv(
+        kd_confirmed_events_path, index=False, encoding="utf-8-sig"
+    )
+    kd_confirmed_events_md_path.write_text(
+        _kd_confirmed_events_markdown(kd_confirmed_events), encoding="utf-8"
+    )
     summary_json_path.write_text(
         json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True, default=_json_default),
         encoding="utf-8",
@@ -150,6 +243,10 @@ def main(argv: list[str] | None = None) -> int:
     print(f"daily_metrics_csv={daily_path}")
     print(f"baseline_metrics_csv={baseline_path}")
     print(f"monthly_metrics_csv={monthly_path}")
+    print(f"kd_observations_csv={kd_observation_path}")
+    print(f"kd_confirmed_csv={kd_confirmed_path}")
+    print(f"kd_confirmed_events_csv={kd_confirmed_events_path}")
+    print(f"kd_confirmed_events_md={kd_confirmed_events_md_path}")
     print(f"summary_json={summary_json_path}")
     print(f"summary_md={summary_md_path}")
     return 0
@@ -162,6 +259,11 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--top-n", type=int, default=30)
     parser.add_argument("--future-calendar-days", type=int, default=25)
     parser.add_argument("--random-seed", type=int, default=20260710)
+    parser.add_argument(
+        "--kd-observations-only",
+        action="store_true",
+        help="Skip forward evaluators and export point-in-time KD observation stages only.",
+    )
     parser.add_argument("--output-dir", default="reports/zhu_walkline_shadow_backtest")
     parser.add_argument("--config", default="config/zhu_walkline_shadow.yaml")
     parser.add_argument("--verbose", action="store_true")
@@ -230,6 +332,100 @@ def _enrich_evaluation(result: Any, evaluation_frame: pd.DataFrame) -> pd.DataFr
     return enriched
 
 
+def _kd_observation_rows(result: Any) -> pd.DataFrame:
+    return _kd_observation_rows_from_frame(result.feature_matrix)
+
+
+def _prepare_kd_history_export(
+    features: pd.DataFrame,
+    stock_info: pd.DataFrame,
+) -> pd.DataFrame:
+    output = features.copy()
+    if not stock_info.empty:
+        metadata = stock_info[["stock_id", "stock_name", "sector"]].drop_duplicates("stock_id")
+        output = output.merge(metadata, on="stock_id", how="left")
+    output["asof_date"] = pd.to_datetime(output["asof_date"], errors="coerce").dt.strftime(
+        "%Y-%m-%d"
+    )
+    output["price_date"] = pd.to_datetime(output["date"], errors="coerce").dt.strftime(
+        "%Y-%m-%d"
+    )
+    output["price_row_fresh"] = output["price_date"].eq(output["asof_date"])
+    confirmed = output["kd_recovery_confirmation"].fillna(False).astype(bool)
+    output["signal_stage"] = confirmed.map({True: "CONFIRMED", False: "SETUP"})
+    output["trigger_type"] = confirmed.map({True: "KD_OVERSOLD_RECOVERY", False: ""})
+    output["buy_observation_type"] = ""
+    output["buy_observation_detail_types"] = ""
+    output["invalid_price"] = pd.to_numeric(
+        output.get("support_zone_1_low"), errors="coerce"
+    )
+    output["confirm_price"] = pd.to_numeric(
+        output.get("resistance_zone_1_high"), errors="coerce"
+    )
+    output["market_state"] = ""
+    return output
+
+
+def _kd_observation_rows_from_frame(feature_matrix: pd.DataFrame) -> pd.DataFrame:
+    features = feature_matrix.copy()
+    if "price_date" not in features.columns and "date" in features.columns:
+        features["price_date"] = pd.to_datetime(features["date"], errors="coerce").dt.strftime(
+            "%Y-%m-%d"
+        )
+    if "price_row_fresh" not in features.columns:
+        features["price_row_fresh"] = features.get("price_date", "") == features.get(
+            "asof_date", ""
+        )
+    for column in KD_OBSERVATION_COLUMNS:
+        if column not in features.columns:
+            features[column] = ""
+    stage = features["kd_observation_stage"].fillna("").astype(str)
+    output = features.loc[stage.ne("EMPTY") & stage.ne(""), KD_OBSERVATION_COLUMNS].copy()
+    if output.empty:
+        return pd.DataFrame(columns=KD_OBSERVATION_COLUMNS)
+    return output.sort_values(
+        ["kd_recovery_confirmation", "kd_observation_stage", "stock_id"],
+        ascending=[False, True, True],
+    ).reset_index(drop=True)
+
+
+def _kd_only_daily_row(asof_date: str, kd_observations: pd.DataFrame) -> dict[str, Any]:
+    row: dict[str, Any] = {
+        "asof_date": asof_date,
+        "mode": "shadow_observation_only",
+        "formal_champion_changed": False,
+        "formal_trade_effect": False,
+        "market_state": "",
+        "market_source": "",
+        "feature_count": 0,
+        "rise_count": 0,
+        "fall_count": 0,
+        "evaluation_rows": 0,
+    }
+    row.update(_kd_daily_counts(kd_observations))
+    return row
+
+
+def _kd_daily_counts(kd_observations: pd.DataFrame) -> dict[str, int]:
+    if kd_observations.empty:
+        return {
+            "kd_observation_count": 0,
+            "kd_oversold_only_count": 0,
+            "kd_confirmed_count": 0,
+            "kd_confirmed_event_count": 0,
+        }
+    confirmed = kd_observations["kd_recovery_confirmation"].eq(True)
+    fresh = kd_observations["price_row_fresh"].fillna(False).astype(bool)
+    return {
+        "kd_observation_count": int(len(kd_observations)),
+        "kd_oversold_only_count": int(
+            kd_observations["kd_observation_stage"].eq("OVERSOLD_ONLY").sum()
+        ),
+        "kd_confirmed_count": int(confirmed.sum()),
+        "kd_confirmed_event_count": int((confirmed & fresh).sum()),
+    }
+
+
 def _daily_metrics(result: Any, evaluation_frame: pd.DataFrame) -> dict[str, Any]:
     row: dict[str, Any] = {
         "asof_date": result.asof_date,
@@ -276,6 +472,7 @@ def _summary_payload(
     future_calendar_days: int,
     max_future_date_used: str | None,
     elapsed_seconds: float,
+    kd_observations: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     row_weighted_metrics = _side_metrics(evaluations, include_counts=True)
     baseline_metrics = _baseline_summary_metrics(baselines)
@@ -308,11 +505,79 @@ def _summary_payload(
         "excess_vs_baseline": excess_vs_baseline,
         "monthly_preview": _records(monthly),
         "monthly_rows": int(len(monthly)),
+        "kd_observation_summary": _kd_observation_summary(kd_observations),
         "evaluation_rows": int(len(evaluations)),
         "baseline_rows": int(len(baselines)),
         "elapsed_seconds": round(float(elapsed_seconds), 3),
         "promotion_decision": "blocked_before_promotion_review",
     }
+
+
+def _kd_observation_summary(kd_observations: pd.DataFrame | None) -> dict[str, Any]:
+    if kd_observations is None or kd_observations.empty:
+        return {
+            "observation_rows": 0,
+            "confirmed_rows": 0,
+            "confirmed_event_rows": 0,
+            "stale_carried_confirmed_rows": 0,
+            "unique_stocks": 0,
+            "stage_counts": {},
+        }
+    confirmed = kd_observations["kd_recovery_confirmation"].eq(True)
+    fresh = kd_observations["price_row_fresh"].fillna(False).astype(bool)
+    confirmed_events = confirmed & fresh
+    stage_counts = (
+        kd_observations["kd_observation_stage"].fillna("").astype(str).value_counts().sort_index()
+    )
+    return {
+        "observation_rows": int(len(kd_observations)),
+        "confirmed_rows": int(confirmed.sum()),
+        "confirmed_event_rows": int(confirmed_events.sum()),
+        "stale_carried_confirmed_rows": int((confirmed & ~fresh).sum()),
+        "unique_stocks": int(kd_observations["stock_id"].astype(str).nunique()),
+        "stage_counts": {str(stage): int(count) for stage, count in stage_counts.items()},
+    }
+
+
+def _kd_confirmed_events_markdown(events: pd.DataFrame) -> str:
+    lines = [
+        "# KD Oversold Recovery Confirmed Events",
+        "",
+        "本表只列當日有新價格列的 shadow 確認事件，不是買進名單或交易指令。",
+        "K < 20 僅為超賣觀察；確認仍需 K 上彎、近期向上突破 D、價格收復、",
+        "多頭強勢閘門、前五日窄幅縮量，以及供給壓力排除。",
+    ]
+    if events.empty:
+        lines.extend(["", "本區間沒有確認事件。"])
+        return "\n".join(lines) + "\n"
+    for asof_date, group in events.groupby("asof_date", sort=True):
+        lines.extend(
+            [
+                "",
+                f"## {asof_date} ({len(group)})",
+                "",
+                "| 代號 | 股票 | 收盤 | K9 | D9 | 訊號失效觀察價 | 下一確認觀察價 |",
+                "|---|---|---:|---:|---:|---:|---:|",
+            ]
+        )
+        for _, row in group.sort_values("stock_id").iterrows():
+            lines.append(
+                f"| {row.get('stock_id', '')} | {row.get('stock_name', '')} | "
+                f"{_format_event_number(row.get('close'))} | "
+                f"{_format_event_number(row.get('kd_k9'))} | "
+                f"{_format_event_number(row.get('kd_d9'))} | "
+                f"{_format_event_number(row.get('invalid_price'))} | "
+                f"{_format_event_number(row.get('confirm_price'))} |"
+            )
+    lines.extend(
+        [
+            "",
+            "mode=shadow_observation_only",
+            "formal_champion_changed=False",
+            "formal_trade_effect=False",
+        ]
+    )
+    return "\n".join(lines) + "\n"
 
 
 def _summary_markdown(summary: dict[str, Any], daily: pd.DataFrame) -> str:
@@ -401,6 +666,21 @@ def _summary_markdown(summary: dict[str, Any], daily: pd.DataFrame) -> str:
             f"{_format_metric(row.get('avg_d5'))} | {_format_metric(row.get('median_d5'))} | "
             f"{_format_metric(adverse)} |"
         )
+    kd_summary = summary.get("kd_observation_summary", {})
+    lines.extend(
+        [
+            "",
+            "## KD Observation Summary",
+            "",
+            f"- observation_rows: {kd_summary.get('observation_rows', 0)}",
+            f"- confirmed_rows: {kd_summary.get('confirmed_rows', 0)}",
+            f"- confirmed_event_rows: {kd_summary.get('confirmed_event_rows', 0)}",
+            "- stale_carried_confirmed_rows: "
+            f"{kd_summary.get('stale_carried_confirmed_rows', 0)}",
+            f"- unique_stocks: {kd_summary.get('unique_stocks', 0)}",
+            "- K < 20 僅為超賣觀察，不代表止跌或交易訊號。",
+        ]
+    )
     lines.extend(
         [
             "",
@@ -908,6 +1188,12 @@ def _format_metric(value: Any) -> str:
     if value is None or pd.isna(value):
         return ""
     return f"{float(value):.6f}"
+
+
+def _format_event_number(value: Any) -> str:
+    if value is None or pd.isna(value):
+        return ""
+    return f"{float(value):.4f}".rstrip("0").rstrip(".")
 
 
 def _json_default(value: Any) -> Any:

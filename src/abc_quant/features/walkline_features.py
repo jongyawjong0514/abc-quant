@@ -16,6 +16,8 @@ KD_LOOKBACK = 9
 KD_SMOOTHING = 3
 KD_OVERSOLD_LEVEL = 20.0
 KD_RECENT_OVERSOLD_WINDOW = 5
+KD_TIGHT_BODY_MAX_PCT = 0.012
+KD_PRIOR_TIGHT_LOW_VOLUME_WINDOW = 5
 
 
 def compute_walkline_features(price_history: pd.DataFrame, *, asof_date: str) -> pd.DataFrame:
@@ -24,6 +26,20 @@ def compute_walkline_features(price_history: pd.DataFrame, *, asof_date: str) ->
     All rolling and shifted features are calculated after filtering rows to
     ``date <= asof_date``. The returned frame contains one latest row per stock.
     """
+    data = compute_walkline_feature_history(price_history, asof_date=asof_date)
+    latest = data.groupby("stock_id", group_keys=False, sort=False).tail(1).copy().reset_index(drop=True)
+    latest["asof_date"] = asof_date
+    _add_support_resistance(latest)
+    _add_kd_observation_features(latest)
+    return latest
+
+
+def compute_walkline_feature_history(
+    price_history: pd.DataFrame,
+    *,
+    asof_date: str,
+) -> pd.DataFrame:
+    """Compute causal walkline features for every row through ``asof_date``."""
     data = _prepare_price_history(price_history, asof_date=asof_date)
     grouped = data.groupby("stock_id", group_keys=False, sort=False)
 
@@ -125,13 +141,40 @@ def compute_walkline_features(price_history: pd.DataFrame, *, asof_date: str) ->
     _add_price_zone_source_features(data)
     data = data.copy()
     _add_state_labels(data)
+    return data
 
-    grouped = data.groupby("stock_id", group_keys=False, sort=False)
-    latest = grouped.tail(1).copy().reset_index(drop=True)
-    latest["asof_date"] = asof_date
-    _add_support_resistance(latest)
-    _add_kd_observation_features(latest)
-    return latest
+
+def compute_kd_observation_history(
+    price_history: pd.DataFrame,
+    *,
+    start_date: str,
+    end_date: str,
+) -> pd.DataFrame:
+    """Build daily point-in-time KD observation rows with one feature pass."""
+    data = compute_walkline_feature_history(price_history, asof_date=end_date)
+    dates = pd.to_datetime(data["date"], errors="coerce")
+    start = pd.to_datetime(start_date, errors="raise")
+    end = pd.to_datetime(end_date, errors="raise")
+    observation_dates = sorted(
+        pd.Timestamp(value) for value in dates[dates.between(start, end)].unique()
+    )
+    if not observation_dates:
+        return data.iloc[0:0].copy()
+
+    daily_frames: list[pd.DataFrame] = []
+    for asof_date in observation_dates:
+        available = data.loc[dates <= asof_date]
+        daily = (
+            available.groupby("stock_id", group_keys=False, sort=False)
+            .tail(1)
+            .copy()
+            .reset_index(drop=True)
+        )
+        daily["asof_date"] = asof_date.date().isoformat()
+        _add_support_resistance(daily)
+        _add_kd_observation_features(daily)
+        daily_frames.append(daily)
+    return pd.concat(daily_frames, ignore_index=True)
 
 
 def forbidden_signal_feature_columns(columns: Iterable[str]) -> list[str]:
@@ -220,6 +263,28 @@ def _add_volume_state_features(data: pd.DataFrame) -> None:
 def _add_kd_features(data: pd.DataFrame) -> None:
     """Add point-in-time KD(9, 3, 3) and post-oversold transition fields."""
     grouped = data.groupby("stock_id", group_keys=False, sort=False)
+    data["kd_open_close_body_pct"] = _safe_div(
+        (data["close"] - data["open"]).abs(), data["open"]
+    )
+    data["kd_tight_low_volume_day"] = (
+        (data["kd_open_close_body_pct"] <= KD_TIGHT_BODY_MAX_PCT)
+        & data["volume_contraction"].fillna(False).astype(bool)
+    )
+    quiet_day_grouped = data.groupby("stock_id", group_keys=False, sort=False)[
+        "kd_tight_low_volume_day"
+    ]
+    data["kd_prior_5d_tight_low_volume_count"] = quiet_day_grouped.transform(
+        lambda series: (
+            series.shift(1)
+            .rolling(KD_PRIOR_TIGHT_LOW_VOLUME_WINDOW, min_periods=KD_PRIOR_TIGHT_LOW_VOLUME_WINDOW)
+            .sum()
+            .fillna(0)
+            .astype(int)
+        )
+    )
+    data["kd_prior_5d_tight_low_volume_gate"] = (
+        data["kd_prior_5d_tight_low_volume_count"] >= 1
+    )
     rolling_low = grouped["low"].transform(
         lambda series: series.rolling(KD_LOOKBACK, min_periods=1).min()
     )
@@ -527,6 +592,9 @@ def _add_kd_observation_features(latest: pd.DataFrame) -> None:
     ).fillna(False)
     latest["kd_reclaim_price"] = latest.apply(_kd_reclaim_price, axis=1)
     supply_clear = ~latest["high_volume_upper_shadow"].fillna(False).astype(bool)
+    tight_low_volume_gate = (
+        latest["kd_prior_5d_tight_low_volume_gate"].fillna(False).astype(bool)
+    )
     latest["kd_recovery_confirmation"] = (
         latest["kd_recent_oversold"].fillna(False).astype(bool)
         & latest["kd_k_rising"].fillna(False).astype(bool)
@@ -536,6 +604,7 @@ def _add_kd_observation_features(latest: pd.DataFrame) -> None:
         & latest["bull_trend_gate"]
         & latest["strong_stock_gate"]
         & supply_clear
+        & tight_low_volume_gate
     )
     latest["kd_observation_stage"] = np.select(
         [
@@ -552,6 +621,7 @@ def _add_kd_observation_features(latest: pd.DataFrame) -> None:
             & latest["kd_price_reclaim"]
             & ~(latest["bull_trend_gate"] & latest["strong_stock_gate"]),
             latest["kd_recent_oversold"].fillna(False) & ~supply_clear,
+            latest["kd_recent_oversold"].fillna(False) & ~tight_low_volume_gate,
         ],
         [
             "CONFIRMED",
@@ -561,6 +631,7 @@ def _add_kd_observation_features(latest: pd.DataFrame) -> None:
             "WAIT_PRICE_RECLAIM",
             "WAIT_TREND_STRENGTH",
             "WAIT_SUPPLY_CLEAR",
+            "WAIT_TIGHT_LOW_VOLUME",
         ],
         default="EMPTY",
     )

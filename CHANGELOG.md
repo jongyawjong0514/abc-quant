@@ -92,3 +92,5 @@
 
 - 建立 YAML 設定載入、OHLCV 資料驗證、價量 rolling 特徵、forward return label 與基礎績效指標。
 - 新增資料驗證、防未來資料洩漏、label shift 與績效指標測試。
+- 2026-07-13: Added `kd_prior_5d_tight_low_volume_gate_v1` to the Zhu walkline shadow KD recovery rule. Confirmation now requires at least one prior-five-session row with open/close body at most 1.2% and existing 20-day volume ratio at most 0.75; the signal row is excluded with `shift(1)`. Formal strategy and trade effects remain unchanged.
+- 2026-07-13: Added a one-pass, point-in-time KD observation range sidecar. It exports scanner-compatible confirmation states separately from fresh-price confirmation events so suspended or non-trading stock rows are not misreported as new signal dates.

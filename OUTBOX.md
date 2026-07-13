@@ -55,6 +55,28 @@
 - 不產生交易指令
 - 不輸出絕對買賣建議
 
+## 2026-07-13 KD 前5日窄幅縮量閘門
+
+- 建議成交量門檻：採既有 `vol_ratio_20 <= 0.75`，不採跨股票固定張數。
+- 新增條件：訊號日前 5 個交易日至少 1 天同時符合 `abs(close/open-1) <= 1.2%` 與低量門檻；訊號當日不能自我滿足。
+- 2464：2026-06-11／06-12 仍為 `OVERSOLD_ONLY`，2026-06-15 前 5 日有 2 天符合，仍為 `CONFIRMED`。
+- 2026-07-09 歷史橫截面：舊規則確認 9 檔，新規則保留 5 檔，剔除 2408、2465、4961、5351。
+- 驗證：focused pytest 33 passed、full pytest 493 passed、`ruff check .`、`git diff --check`、latest no-web scanner 全部通過。
+- Archive：`reports/zhu_walkline_shadow_mutations/2026-07-13_kd_prior_5d_tight_low_volume_gate_v1.md` 與 `.json`。
+- `mode=shadow_observation_only`; `formal_champion_changed=False`; `formal_trade_effect=False`; `promotion_decision=blocked_before_promotion_review`。
+
+## 2026-07-13 KD 2026-06 至 2026-07 歷史觀察
+
+- Requested: `2026-06-01` through `2026-07-31`; local price data resolved through `2026-07-09`, 28 trading days.
+- Non-empty KD stages: 14,142 rows; scanner-compatible confirmations: 215 rows.
+- Fresh-price confirmation events: 201 rows, 138 unique stocks, 25 event dates.
+- Stale carry-forward confirmations: 14 rows. These remain in the scanner-compatible audit file but are excluded from the event-date list.
+- 2464 replay: 2026-06-11 and 2026-06-12 are `OVERSOLD_ONLY`; fresh confirmations occur on 2026-06-15, 2026-06-16, and 2026-06-18.
+- Output: `reports/zhu_walkline_kd_observations_2026_06_07/`.
+- No forward-return evaluator was run in this KD observation-only pass; these are not promotion metrics.
+- Validation: `ruff check .`, full pytest 495, `git diff --check`, fixed range/value assertions, and missing-string audit passed.
+- `mode=shadow_observation_only`; `formal_champion_changed=False`; `formal_trade_effect=False`; no formal strategy/champion/trade effect modified.
+
 ## 2026-07-12 Canonical Window - 2026-06-01 to 2026-07-09
 
 ### 契約

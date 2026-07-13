@@ -8,6 +8,34 @@ import pytest
 from scripts import backtest_zhu_walkline_shadow_range as range_backtest
 
 
+def test_kd_observation_export_keeps_non_empty_stages_and_counts_confirmed() -> None:
+    feature_matrix = pd.DataFrame(
+        [
+            _kd_row("2330", "OVERSOLD_ONLY", confirmed=False),
+            _kd_row("2464", "CONFIRMED", confirmed=True),
+            _kd_row("2317", "EMPTY", confirmed=False),
+        ]
+    )
+    result = SimpleNamespace(feature_matrix=feature_matrix)
+
+    observations = range_backtest._kd_observation_rows(result)
+    counts = range_backtest._kd_daily_counts(observations)
+    summary = range_backtest._kd_observation_summary(observations)
+
+    assert observations["stock_id"].tolist() == ["2464", "2330"]
+    assert counts == {
+        "kd_observation_count": 2,
+        "kd_oversold_only_count": 1,
+        "kd_confirmed_count": 1,
+        "kd_confirmed_event_count": 0,
+    }
+    assert summary["confirmed_rows"] == 1
+    assert summary["confirmed_event_rows"] == 0
+    assert summary["stale_carried_confirmed_rows"] == 1
+    assert summary["unique_stocks"] == 2
+    assert summary["stage_counts"] == {"CONFIRMED": 1, "OVERSOLD_ONLY": 1}
+
+
 def test_monthly_metrics_separate_fall_downside_and_adverse_rally() -> None:
     evaluations = pd.DataFrame(
         [
@@ -169,4 +197,19 @@ def _baseline_row(
         row[f"hit_rate_{horizon}"] = hit_rate if horizon == suffix else pd.NA
         row[f"avg_forward_return_{horizon}"] = avg_return if horizon == suffix else pd.NA
         row[f"median_forward_return_{horizon}"] = avg_return if horizon == suffix else pd.NA
+    return row
+
+
+def _kd_row(stock_id: str, stage: str, *, confirmed: bool) -> dict[str, object]:
+    row = {column: "" for column in range_backtest.KD_OBSERVATION_COLUMNS}
+    row.update(
+        {
+            "asof_date": "2026-06-15",
+            "stock_id": stock_id,
+            "stock_name": f"測試{stock_id}",
+            "close": 100.0,
+            "kd_observation_stage": stage,
+            "kd_recovery_confirmation": confirmed,
+        }
+    )
     return row

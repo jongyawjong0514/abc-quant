@@ -31,6 +31,10 @@ RISE_CSV_COLUMNS = [
     "kd_above_d",
     "kd_bull_cross",
     "kd_recent_bull_cross",
+    "kd_open_close_body_pct",
+    "kd_tight_low_volume_day",
+    "kd_prior_5d_tight_low_volume_count",
+    "kd_prior_5d_tight_low_volume_gate",
     "kd_price_reclaim",
     "bull_trend_gate",
     "strong_stock_gate",
@@ -147,6 +151,10 @@ SHADOW_LOG_COLUMNS = [
     "kd_above_d",
     "kd_bull_cross",
     "kd_recent_bull_cross",
+    "kd_open_close_body_pct",
+    "kd_tight_low_volume_day",
+    "kd_prior_5d_tight_low_volume_count",
+    "kd_prior_5d_tight_low_volume_gate",
     "kd_price_reclaim",
     "bull_trend_gate",
     "strong_stock_gate",
@@ -311,6 +319,16 @@ def _candidate_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
                 "kd_above_d": bool(row.get("kd_above_d", False)),
                 "kd_bull_cross": bool(row.get("kd_bull_cross", False)),
                 "kd_recent_bull_cross": bool(row.get("kd_recent_bull_cross", False)),
+                "kd_open_close_body_pct": _float(row.get("kd_open_close_body_pct")),
+                "kd_tight_low_volume_day": bool(
+                    row.get("kd_tight_low_volume_day", False)
+                ),
+                "kd_prior_5d_tight_low_volume_count": int(
+                    row.get("kd_prior_5d_tight_low_volume_count", 0) or 0
+                ),
+                "kd_prior_5d_tight_low_volume_gate": bool(
+                    row.get("kd_prior_5d_tight_low_volume_gate", False)
+                ),
                 "kd_price_reclaim": bool(row.get("kd_price_reclaim", False)),
                 "bull_trend_gate": bool(row.get("bull_trend_gate", False)),
                 "strong_stock_gate": bool(row.get("strong_stock_gate", False)),
@@ -610,6 +628,8 @@ def _stock_report(result: ZhuWalklineResult) -> str:
         f"- K在D上方：{bool(row.get('kd_above_d', False))}",
         f"- 今日K向上突破D：{bool(row.get('kd_bull_cross', False))}",
         f"- 近5日曾向上突破D：{bool(row.get('kd_recent_bull_cross', False))}",
+        f"- 前5個交易日窄幅縮量日數：{int(row.get('kd_prior_5d_tight_low_volume_count', 0) or 0)}",
+        f"- 窄幅縮量閘門（開收差<=1.2%、20日量比<=0.75）：{bool(row.get('kd_prior_5d_tight_low_volume_gate', False))}",
         f"- 價格站回壓力：{bool(row.get('kd_price_reclaim', False))}",
         f"- 多頭趨勢閘門：{bool(row.get('bull_trend_gate', False))}",
         f"- 強勢股閘門：{bool(row.get('strong_stock_gate', False))}",

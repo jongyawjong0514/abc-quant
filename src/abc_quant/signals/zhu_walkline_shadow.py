@@ -474,7 +474,9 @@ def _rise_reasons(row: pd.Series) -> list[str]:
     if row.get("trigger_type"):
         reasons.append(f"觸發={row['trigger_type']}")
     if bool(row.get("kd_recovery_confirmation", False)):
-        reasons.append("KD超賣後確認：K上彎突破D、價格站回壓力且通過多頭強勢閘門")
+        reasons.append(
+            "KD超賣後確認：前5日有窄幅縮量、K上彎突破D、價格站回壓力且通過多頭強勢閘門"
+        )
     elif bool(row.get("kd_oversold_marker", False)):
         reasons.append("KD短線超賣僅為標記，尚未止跌")
     if not reasons:

@@ -3,7 +3,11 @@ import pytest
 
 from abc_quant.data.local_tw_loader import DataQualityReport, LocalTwDataBundle
 from abc_quant.features.market_rotation import classify_market_state
-from abc_quant.features.walkline_features import compute_walkline_features, _cluster_price_zones
+from abc_quant.features.walkline_features import (
+    _cluster_price_zones,
+    compute_kd_observation_history,
+    compute_walkline_features,
+)
 from abc_quant.reports.zhu_walkline_report import (
     _candidate_records,
     _risk_records,
@@ -93,6 +97,7 @@ def test_walkline_features_compute_core_fields() -> None:
         "WAIT_PRICE_RECLAIM",
         "WAIT_TREND_STRENGTH",
         "WAIT_SUPPLY_CLEAR",
+        "WAIT_TIGHT_LOW_VOLUME",
         "CONFIRMED",
     }
     assert row["support_1"] <= row["close"]
@@ -168,12 +173,93 @@ def test_kd_recovery_requires_oversold_turn_cross_price_and_bull_strength() -> N
     assert bool(row["kd_k_rising"])
     assert bool(row["kd_above_d"])
     assert bool(row["kd_recent_bull_cross"])
+    assert row["kd_prior_5d_tight_low_volume_count"] >= 1
+    assert bool(row["kd_prior_5d_tight_low_volume_gate"])
     assert bool(row["kd_price_reclaim"])
     assert bool(row["bull_trend_gate"])
     assert bool(row["strong_stock_gate"])
     assert bool(row["kd_recovery_confirmation"])
     assert row["kd_observation_stage"] == "CONFIRMED"
     assert row["kd_observation_type"] == "KD_OVERSOLD_TREND_RECOVERY"
+
+
+def test_kd_observation_history_matches_individual_asof_scans() -> None:
+    price = _kd_recovery_price_frame()
+    history = compute_kd_observation_history(
+        price,
+        start_date="2026-05-06",
+        end_date="2026-05-09",
+    )
+    comparison_columns = [
+        "kd_k9",
+        "kd_d9",
+        "kd_oversold_marker",
+        "kd_recent_oversold",
+        "kd_k_rising",
+        "kd_recent_bull_cross",
+        "kd_price_reclaim",
+        "bull_trend_gate",
+        "strong_stock_gate",
+        "kd_recovery_confirmation",
+        "kd_observation_stage",
+    ]
+
+    for asof_date in pd.date_range("2026-05-06", "2026-05-09", freq="D"):
+        asof = asof_date.date().isoformat()
+        expected = compute_walkline_features(price, asof_date=asof).iloc[0]
+        actual = history[pd.to_datetime(history["date"]).eq(asof_date)].iloc[0]
+        for column in comparison_columns:
+            if column in {"kd_k9", "kd_d9"}:
+                assert actual[column] == pytest.approx(expected[column])
+            else:
+                assert actual[column] == expected[column]
+
+
+def test_kd_observation_history_carries_forward_latest_suspended_stock_row() -> None:
+    active = _kd_recovery_price_frame()
+    suspended = active[active["date"] <= pd.Timestamp("2026-05-07")].copy()
+    suspended["stock_id"] = "9999"
+    price = pd.concat([active, suspended], ignore_index=True)
+
+    history = compute_kd_observation_history(
+        price,
+        start_date="2026-05-08",
+        end_date="2026-05-09",
+    )
+    final_day = history[history["asof_date"].eq("2026-05-09")]
+
+    assert set(final_day["stock_id"]) == {"2330", "9999"}
+    suspended_row = final_day[final_day["stock_id"].eq("9999")].iloc[0]
+    assert pd.Timestamp(suspended_row["date"]) == pd.Timestamp("2026-05-07")
+
+
+def test_kd_recovery_requires_prior_five_day_tight_low_volume_session() -> None:
+    price = _kd_recovery_price_frame()
+    prior_five = price["date"].between("2026-05-04", "2026-05-08")
+    price.loc[prior_five, "volume"] = 1000.0
+
+    features = compute_walkline_features(price, asof_date="2026-05-09")
+    row = features.iloc[0]
+
+    assert row["kd_prior_5d_tight_low_volume_count"] == 0
+    assert bool(row["kd_prior_5d_tight_low_volume_gate"]) is False
+    assert row["kd_observation_stage"] == "WAIT_TIGHT_LOW_VOLUME"
+    assert bool(row["kd_recovery_confirmation"]) is False
+
+
+def test_signal_day_cannot_satisfy_prior_five_day_tight_low_volume_gate() -> None:
+    price = _kd_recovery_price_frame()
+    prior_five = price["date"].between("2026-05-04", "2026-05-08")
+    price.loc[prior_five, "volume"] = 1000.0
+    price.loc[price["date"] == "2026-05-09", "volume"] = 100.0
+
+    features = compute_walkline_features(price, asof_date="2026-05-09")
+    row = features.iloc[0]
+
+    assert bool(row["kd_tight_low_volume_day"])
+    assert row["kd_prior_5d_tight_low_volume_count"] == 0
+    assert bool(row["kd_prior_5d_tight_low_volume_gate"]) is False
+    assert bool(row["kd_recovery_confirmation"]) is False
 
 
 def test_kd_recovery_confirmation_enters_shadow_observation_lifecycle() -> None:
@@ -624,15 +710,18 @@ def _kd_recovery_price_frame() -> pd.DataFrame:
     prior_close = closes[-1]
     closes.extend(prior_close - 4.0 * index for index in range(1, 7))
     closes.extend(prior_close - 24.0 + 6.0 * index for index in range(1, 7))
+    dates = pd.date_range("2026-01-01", periods=len(closes), freq="D")
+    volumes = [1000.0] * len(closes)
+    volumes[dates.get_loc(pd.Timestamp("2026-05-08"))] = 500.0
     return pd.DataFrame(
         {
-            "date": pd.date_range("2026-01-01", periods=len(closes), freq="D"),
+            "date": dates,
             "stock_id": ["2330"] * len(closes),
             "open": [close - 0.5 for close in closes],
             "high": [close + 1.0 for close in closes],
             "low": [close - 1.0 for close in closes],
             "close": closes,
-            "volume": [1000.0] * len(closes),
+            "volume": volumes,
         }
     )
 
