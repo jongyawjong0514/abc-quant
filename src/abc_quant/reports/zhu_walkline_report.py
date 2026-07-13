@@ -279,24 +279,26 @@ def write_zhu_walkline_outputs(
 
 
 def _summary_payload(result: ZhuWalklineResult, quality: DataQualityReport) -> dict[str, Any]:
-    return {
-        "asof_date": result.asof_date,
-        "mode": result.mode,
-        "formal_champion_changed": result.formal_champion_changed,
-        "formal_trade_effect": result.formal_trade_effect,
-        "web_research_used": result.web_research_used,
-        "web_research_is_supplementary": result.web_research_is_supplementary,
-        "data_sources": quality.used_tables,
-        "data_quality": quality.to_dict(),
-        "market": result.market,
-        "sector_rotation": _records(result.sector_rotation.head(30)),
-        "concept_rotation": _records(result.concept_rotation.head(30)),
-        "top_bullish_watchlist": _candidate_records(result.top_bullish_watchlist),
-        "top_rise_candidates": _candidate_records(result.top_rise_candidates),
-        "top_fall_risks": _risk_records(result.top_fall_risks),
-        "shadow_log_columns": SHADOW_LOG_COLUMNS,
-        "run_notes": result.run_notes,
-    }
+    return _json_safe(
+        {
+            "asof_date": result.asof_date,
+            "mode": result.mode,
+            "formal_champion_changed": result.formal_champion_changed,
+            "formal_trade_effect": result.formal_trade_effect,
+            "web_research_used": result.web_research_used,
+            "web_research_is_supplementary": result.web_research_is_supplementary,
+            "data_sources": quality.used_tables,
+            "data_quality": quality.to_dict(),
+            "market": result.market,
+            "sector_rotation": _records(result.sector_rotation.head(30)),
+            "concept_rotation": _records(result.concept_rotation.head(30)),
+            "top_bullish_watchlist": _candidate_records(result.top_bullish_watchlist),
+            "top_rise_candidates": _candidate_records(result.top_rise_candidates),
+            "top_fall_risks": _risk_records(result.top_fall_risks),
+            "shadow_log_columns": SHADOW_LOG_COLUMNS,
+            "run_notes": result.run_notes,
+        }
+    )
 
 
 def _candidate_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
@@ -320,9 +322,7 @@ def _candidate_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
                 "kd_bull_cross": bool(row.get("kd_bull_cross", False)),
                 "kd_recent_bull_cross": bool(row.get("kd_recent_bull_cross", False)),
                 "kd_open_close_body_pct": _float(row.get("kd_open_close_body_pct")),
-                "kd_tight_low_volume_day": bool(
-                    row.get("kd_tight_low_volume_day", False)
-                ),
+                "kd_tight_low_volume_day": bool(row.get("kd_tight_low_volume_day", False)),
                 "kd_prior_5d_tight_low_volume_count": int(
                     row.get("kd_prior_5d_tight_low_volume_count", 0) or 0
                 ),
@@ -332,9 +332,7 @@ def _candidate_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
                 "kd_price_reclaim": bool(row.get("kd_price_reclaim", False)),
                 "bull_trend_gate": bool(row.get("bull_trend_gate", False)),
                 "strong_stock_gate": bool(row.get("strong_stock_gate", False)),
-                "kd_recovery_confirmation": bool(
-                    row.get("kd_recovery_confirmation", False)
-                ),
+                "kd_recovery_confirmation": bool(row.get("kd_recovery_confirmation", False)),
                 "kd_observation_stage": _text(row.get("kd_observation_stage", "")),
                 "kd_observation_type": _text(row.get("kd_observation_type", "")),
                 "kd_reclaim_price": _float(row.get("kd_reclaim_price")),
@@ -361,7 +359,9 @@ def _candidate_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
                 "big_holder_score": _float(row.get("big_holder_score")),
                 "margin_score": _float(row.get("margin_score")),
                 "web_event_score": _float(row.get("web_event_score")),
-                "support": [v for v in [row.get("support_1"), row.get("support_2")] if not _is_missing(v)],
+                "support": [
+                    v for v in [row.get("support_1"), row.get("support_2")] if not _is_missing(v)
+                ],
                 "resistance": [
                     v
                     for v in [row.get("resistance_1"), row.get("resistance_2")]
@@ -473,7 +473,13 @@ def _market_report(result: ZhuWalklineResult, quality: DataQualityReport) -> str
         "",
         _markdown_table(
             result.sector_rotation.head(15),
-            ["sector", "sector_rotation_rank", "sector_strength_score", "sector_risk_score", "sector_state"],
+            [
+                "sector",
+                "sector_rotation_rank",
+                "sector_strength_score",
+                "sector_risk_score",
+                "sector_state",
+            ],
         ),
         "",
         "## 三、概念股輪動",
@@ -482,7 +488,13 @@ def _market_report(result: ZhuWalklineResult, quality: DataQualityReport) -> str
         "",
         _markdown_table(
             result.concept_rotation.head(15),
-            ["concept", "concept_rotation_rank", "concept_strength_score", "concept_risk_score", "concept_leader_stock"],
+            [
+                "concept",
+                "concept_rotation_rank",
+                "concept_strength_score",
+                "concept_risk_score",
+                "concept_leader_stock",
+            ],
         ),
         "",
         "## 四、多方轉強觀察股",
@@ -548,8 +560,12 @@ def _stock_report(result: ZhuWalklineResult) -> str:
     support_1 = _zone_text(row, "support_zone_1") or _format_price(row.get("invalidation_price"))
     support_2 = _zone_text(row, "support_zone_2") or _format_price(row.get("support_2"))
     resistance_1 = _zone_text(row, "resistance_zone_1") or _format_price(row.get("confirm_price"))
-    resistance_2 = _zone_text(row, "resistance_zone_2") or _format_price(row.get("target_resistance_2"))
-    resistance_3 = _format_price(row.get("target_resistance_2")) or _format_price(row.get("resistance_2"))
+    resistance_2 = _zone_text(row, "resistance_zone_2") or _format_price(
+        row.get("target_resistance_2")
+    )
+    resistance_3 = _format_price(row.get("target_resistance_2")) or _format_price(
+        row.get("resistance_2")
+    )
     trend_state = _text(row.get("trend_state", ""))
     ma_state = _text(row.get("ma_state", ""))
     kline_state = _text(row.get("kline_state", ""))
@@ -564,7 +580,9 @@ def _stock_report(result: ZhuWalklineResult) -> str:
     )
     buy_trigger_role = _text(row.get("buy_trigger_price_role", ""))
     if buy_trigger_role == "NEXT_CONFIRMATION_PRICE":
-        buy_trigger_role_note = "NEXT_CONFIRMATION_PRICE（尚未觸發，這是下一個確認觀察價，不是進場指令）"
+        buy_trigger_role_note = (
+            "NEXT_CONFIRMATION_PRICE（尚未觸發，這是下一個確認觀察價，不是進場指令）"
+        )
     elif buy_trigger_role == "TRIGGERED_PRICE":
         buy_trigger_role_note = "TRIGGERED_PRICE（已觸發的支撐壓力觀察價，仍不是動作指令）"
     else:
@@ -885,7 +903,13 @@ def _fixed_statement(result: ZhuWalklineResult) -> str:
 def _write_json(path: Path, payload: dict[str, Any]) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True, default=_json_default),
+        json.dumps(
+            _json_safe(payload),
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+            allow_nan=False,
+        ),
         encoding="utf-8",
     )
     return path
@@ -900,9 +924,11 @@ def _write_csv(path: Path, frame: pd.DataFrame, columns: list[str]) -> Path:
     for column in output.columns:
         if output[column].map(lambda value: isinstance(value, list)).any():
             output[column] = output[column].map(
-                lambda value: "|".join(_text(item) for item in value if _text(item))
-                if isinstance(value, list)
-                else value
+                lambda value: (
+                    "|".join(_text(item) for item in value if _text(item))
+                    if isinstance(value, list)
+                    else value
+                )
             )
         output[column] = output[column].map(_clean_output_value)
     output.to_csv(path, index=False, encoding="utf-8-sig")
@@ -952,7 +978,7 @@ def _format_number(value: Any) -> str:
 
 
 def _records(frame: pd.DataFrame) -> list[dict[str, Any]]:
-    return json.loads(json.dumps(frame.to_dict(orient="records"), default=_json_default, ensure_ascii=False))
+    return _json_safe(frame.to_dict(orient="records"))
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -999,6 +1025,27 @@ def _clean_output_value(value: Any) -> Any:
         return ""
     if isinstance(value, str):
         return _text(value)
+    return value
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, (np.integer,)):
+        return int(value)
+    if isinstance(value, (float, np.floating)):
+        number = float(value)
+        return None if not np.isfinite(number) else number
+    if isinstance(value, (bool, np.bool_)):
+        return bool(value)
+    if isinstance(value, pd.Timestamp):
+        return value.date().isoformat()
+    if isinstance(value, Path):
+        return str(value)
+    if _is_missing(value):
+        return None
     return value
 
 

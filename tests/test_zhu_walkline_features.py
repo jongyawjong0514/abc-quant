@@ -1,3 +1,5 @@
+import json
+
 import pandas as pd
 import pytest
 
@@ -126,7 +128,9 @@ def test_price_zone_clustering_merges_nearby_levels() -> None:
 
 
 def test_walkline_features_detect_bearish_alignment() -> None:
-    features = compute_walkline_features(_mock_price_frame("2317", bearish=True), asof_date="2026-06-30")
+    features = compute_walkline_features(
+        _mock_price_frame("2317", bearish=True), asof_date="2026-06-30"
+    )
     row = features.iloc[0]
 
     assert bool(row["ma_bear_alignment"])
@@ -566,7 +570,9 @@ def test_missing_price_fields_do_not_emit_nan_like_strings() -> None:
 
     assert pd.isna(frame.loc[0, "invalid_price"])
     assert pd.isna(frame.loc[0, "confirm_price"])
-    assert not log_frame.map(lambda value: str(value).lower() in {"nan", "none", "<na>"}).any().any()
+    assert (
+        not log_frame.map(lambda value: str(value).lower() in {"nan", "none", "<na>"}).any().any()
+    )
 
 
 def test_summary_records_include_stop_reference_and_detail_fields() -> None:
@@ -588,6 +594,38 @@ def test_summary_records_include_stop_reference_and_detail_fields() -> None:
     assert "sell_warning_detail_types" in risk
 
 
+def test_summary_payload_normalizes_nested_nan_values() -> None:
+    empty = pd.DataFrame()
+    result = ZhuWalklineResult(
+        asof_date="2026-07-13",
+        mode="shadow_observation_only",
+        formal_champion_changed=False,
+        formal_trade_effect=False,
+        web_research_used=False,
+        web_research_is_supplementary=True,
+        feature_matrix=empty,
+        top_bullish_watchlist=empty,
+        top_rise_candidates=empty,
+        top_fall_risks=empty,
+        market={"support_levels": [float("nan"), pd.NA]},
+        sector_rotation=pd.DataFrame([{"sector": "test", "sector_return_5d": float("nan")}]),
+        concept_rotation=pd.DataFrame([{"concept": "test", "concept_return_5d": pd.NA}]),
+        web_records=[],
+        run_notes=[],
+    )
+
+    payload = _summary_payload(
+        result,
+        DataQualityReport(sqlite_path="mock.sqlite", sqlite_exists=True),
+    )
+    encoded = json.dumps(payload, allow_nan=False)
+
+    assert payload["market"]["support_levels"] == [None, None]
+    assert payload["sector_rotation"][0]["sector_return_5d"] is None
+    assert payload["concept_rotation"][0]["concept_return_5d"] is None
+    assert "NaN" not in encoded
+
+
 def test_reports_use_observation_language_not_trade_commands() -> None:
     result = build_zhu_walkline_shadow_result(
         _mock_bundle(_mock_price_frame("2330")),
@@ -597,7 +635,9 @@ def test_reports_use_observation_language_not_trade_commands() -> None:
         web_research_used=False,
         config={"scoring": {"web_score_cap": 5}},
     )
-    payload = _summary_payload(result, DataQualityReport(sqlite_path="mock.sqlite", sqlite_exists=True))
+    payload = _summary_payload(
+        result, DataQualityReport(sqlite_path="mock.sqlite", sqlite_exists=True)
+    )
     report = _stock_report(result)
 
     assert "不是買進名單，不是賣出指令，僅為支撐壓力觀察價與訊號失效價。" in report
@@ -694,13 +734,14 @@ def test_forward_evaluation_marks_incomplete_horizon_missing() -> None:
     assert summary["precision_at_10"] is None
 
 
-
 def _score_one_market_state(market_state: str) -> pd.DataFrame:
     frame = _scoring_frame()
     _score_features(
         frame,
         market={"market_state": market_state, "market_score": 10, "market_risk_score": 0},
-        config={"scoring": {"rise_min_a": 80, "rise_min_b": 70, "rise_min_c": 60, "web_score_cap": 5}},
+        config={
+            "scoring": {"rise_min_a": 80, "rise_min_b": 70, "rise_min_c": 60, "web_score_cap": 5}
+        },
     )
     return frame
 
