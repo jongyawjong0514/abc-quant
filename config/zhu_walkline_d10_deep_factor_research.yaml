@@ -1,0 +1,91 @@
+mode: shadow_observation_only
+formal_trade_effect: false
+
+analysis:
+  market: TW
+  currency: TWD
+  timezone: Asia/Taipei
+  history_start: "2025-01-01"
+  signal_start: "2026-01-01"
+  signal_end: "2026-06-30"
+  horizon_trading_days: 5
+  target_net_return_pct: 10.0
+  large_gain_net_return_pct: 20.0
+  tail_loss_net_return_pct: -3.0
+
+splits:
+  discovery_start: "2026-01-01"
+  discovery_end: "2026-02-28"
+  validation_start: "2026-03-01"
+  validation_end: "2026-03-31"
+  calibration_start: "2026-04-01"
+  calibration_end: "2026-04-30"
+  holdout_start: "2026-05-01"
+  holdout_end: "2026-06-30"
+  require_prior_split_label_maturity_purge: true
+
+universe_guards:
+  markets: ["TWSE", "TPEX"]
+  minimum_history_rows: 60
+  minimum_avg_turnover_20_twd: 20000000
+  sensitivity_avg_turnover_20_twd: 50000000
+  same_stock_cooldown_trade_days: 5
+
+baselines:
+  prespecified_t1:
+    t5_max_volume_ratio_20: 0.75
+    t3_min_daily_return_pct: 0.0
+    t1_min_daily_return_pct: 0.0
+    t1_min_volume_ratio_20: 0.70
+  d10_fixed_6:
+    max_k: 20.0
+    min_k_change_1d: 2.0
+    min_daily_return_pct: 1.0
+    max_volume_ratio_20: 0.8
+    max_close_to_sma20_pct: 0.0
+    max_distance_from_trailing_5d_low_pct: 8.0
+
+execution:
+  entry: next_trading_day_adjusted_open
+  exit: fifth_trading_day_adjusted_close
+  brokerage_fee_rate_each_side: 0.001425
+  sell_tax_rate: 0.003
+  one_way_slippage_rate: 0.001
+  exclude_entry_locked_limit_up_from_tradable_view: true
+  position_capacity_fraction_of_avg_turnover_20: 0.01
+
+model:
+  mutation_id: d10_tech_plus_lagged_institutional_ratio_v1
+  baseline_model: ridge_logistic_technical_v1
+  challenger_model: ridge_logistic_technical_plus_institutional_v1
+  lambda_grid: [0.1, 1.0, 10.0, 100.0]
+  maximum_iterations: 100
+  tolerance: 0.0000001
+  ece_bins: 10
+  decision_coverage_reference: prespecified_t1_validation_coverage
+  matched_count_reference: prespecified_t1_daily_count
+
+factor_frontier:
+  discovery_quantiles: [0.25, 0.75]
+  volume_ratio_fixed_thresholds: [0.50, 0.60, 0.70, 0.75, 0.80, 0.90, 1.00, 1.20, 1.30, 1.50]
+  permutation_repetitions: 300
+  bootstrap_repetitions: 500
+  bootstrap_block_length_days: 5
+  random_seed: 20260714
+  fdr_q: 0.05
+  minimum_factor_coverage: 0.80
+  minimum_selected_rows_per_split: 100
+
+data:
+  sqlite_path: "C:/Users/User/Desktop/新增資料夾 (4)/state/tw_data_mirror.sqlite"
+  finlab_items_root: "C:/Users/User/Desktop/finlab_ml_course/history/items"
+  shadow_strength_rules_csv: "config/zhu_walkline_shadow_strength_rules.csv"
+  confirmed_events_csv: "reports/zhu_walkline_kd_observations_2026_01_06/zhu_walkline_range_kd_confirmed_events.csv"
+  event_trajectory_csv: "reports/zhu_walkline_d10_trajectory_optimizer_2026_01_06/zhu_walkline_d10_trajectory_rows.csv"
+
+governance:
+  research_scope: retrospective_full_market_point_in_time_factor_challenger
+  selection_period_previously_inspected: true
+  live_deployable: false
+  next_required_gate: forward_shadow_evidence_after_2026_07_14
+  promotion_decision: blocked_before_promotion_review

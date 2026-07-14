@@ -1,5 +1,826 @@
 # OUTBOX
 
+## 2026-07-15 GitHub 發布前時間邊界加固
+
+- D+5 discovery／validation 已依標籤實際成熟日 purge；提早參數模型共剔除 86 筆跨邊界標籤，四項規則發現期另剔除 4 筆。
+- 四項特徵不再由候選股自己的價格日期推測「前一交易日」，改用 `tw_adjusted_ohlcv_daily` 的獨立全市場日曆。即使價格、主力、融資整批一起少一天，也會標記 `INSUFFICIENT_FEATURES`。
+- 指定 scanner `--asof` 時，`daily_ohlcv_features` 與 `tw_adjusted_ohlcv_daily` 必須同時存在該日；不存在就先停止，不產生或覆寫報告。
+- 重新估算仍為 H1 909 筆中 826 筆完整，量比門檻 `0.7052399035`，holdout 完整 230/247。
+- 2026-07-14 重跑：4 筆確認候選，9921／1726 各 75 分、1336 為 25 分，2910 因資料不足不排名；另有 44 筆回溯軌跡與 109 筆提早觀察。市場狀態為 `MARKET_HIGH_RISK_BREAKDOWN`，全部 `watch_only`。
+- 驗證：`pytest` 646 passed、`ruff check .`、compileall、`git diff --check`、secret scan、修正後分析器與 2026-07-14 scanner 串接均通過；唯讀複審未見 P0／P1。
+- `mode=shadow_observation_only`、`formal_champion_changed=False`、`formal_trade_effect=False`、`promotion_decision=blocked_before_promotion_review`。
+
+## 2026-07-14 提早低點觀察與四類機率決策面
+
+- 日報新增獨立 `D-5 / D-3 / D-1` 提早觀察池；母體限 PIT 產業可辨識個股並排除 ETF。2026-07-13 共 124 檔：D-5 38、D-3 57、D-1 29，`watch_only` 120、`avoid_chase` 4。
+- 入池只看核心分：D-5 月線斜率正、量比 `<=0.50`、單日回檔介於 -4%～+0.5%，且沒有長上影與連續破底。實跑 D-5 量比範圍 0.1185～0.5000。
+- 訊號日前五個交易日的開收窄幅使用 `shift(1)`，不含觀察當日；開收差 `<=1.2%` 與下影承接各只加 5 分。124 檔中窄幅加分 113、下影加分 15；即使兩者失敗仍可入池，且入池門檻只比較 core score。
+- D-5/D-3/D-1 日期由全市場共同交易日曆取得；個股停牌或缺該日就不升級階段，不再用個股列位置把數週前資料誤標成 D-5。
+- 四項影子強度仍是「已確認候選」主報告的排序；提早池一律標記 `NOT_APPLICABLE_EARLY_STAGE`，不藉由是否已有確認後分數洩漏階段。
+- 四類結果改為虧損、0%～<10%、10%～<20%、>=20%，並輸出非虧損、>=10%、>=20% 與尾損機率；累積機率強制單調。
+- Holdout 機率中，>=10% 的 Brier 0.1206、calibration gap 0.0461；P(>=10%) 前 10% 為 3,586 列、>=10% 命中 20.13%、平均淨報酬 +1.67%。這仍是歷史 evaluator 結果，不是 live 選股績效。
+- 預期報酬模型 holdout correlation 0.0013、bias +2.09 pct，判為 `DIAGNOSTIC_UNTRUSTED`；所有市場／產業 rank percentile 留空。開啟 holdout 後才提出的 probability edge 也標為未驗證，不取代排序。
+- PIT 產業 lineage 完整保留；市場 regime 改由 label-free 全市場 raw price 形成。自由流通市值缺資料、概念股 H1 歷史不足，分別標記 `INSUFFICIENT_FEATURES` 與 `insufficient_data`，不以股本或 7 月概念名單回填。
+- 主要 artifacts：`reports/zhu_walkline_shadow/2026-07-13_zhu_walkline_early_lowpoint.*`、`reports/zhu_walkline_shadow_decision_surface_2026_07_14/`。
+- 驗證：`pytest` 639 passed、`ruff check .`、compileall、`git diff --check`、strict CSV/JSON/schema audit、PIT source-date 回查與 scanner 串接全部通過；兩個本機日線表均新鮮至 2026-07-13。此 SQLite／pandas 路徑採 CPU，GPU 不會改善主要 I/O 瓶頸。
+- `mode=shadow_observation_only`、`formal_champion_changed=False`、`formal_trade_effect=False`、`promotion_decision=blocked_before_promotion_review`。
+
+## 2026-07-14 D-10 深層因子、選擇性門檻與 PIT 產業分層
+
+- 全市場母表：93,896 stock-date、61 項技術因子、48 項嚴格落後法人量／成交量比例因子；無原始法人股數或原始融資餘額。
+- Holdout tradable 35,699 列：T-1 1,401 筆，`>=10%` 11.92%、虧損 61.38%、尾損 44.54%、平均 -0.89%。
+- 每日等配額 TECH 1,386 筆：命中 16.88%，5 日 block CI 相對 T-1 為 +0.63～+10.52 pct；但尾損升至 49.42%，平均報酬差 CI 跨 0，不能全面取代。
+- 可棄權 TECH threshold 976 筆：命中 21.11%、虧損 39.65%、尾損 28.48%、平均 +2.79%；相對 T-1 的命中、平均與虧損 block CI 支持改善，尾損 CI 仍跨 0。
+- Threshold 無標籤／holdout leakage、同股冷卻違規 0；但 6/26、6/29 占訊號 46.9%，且為 holdout 已開啟後才提升重點，故只列 retrospective regime-gated selective shadow challenger。
+- 加入法人量相對純技術：命中與平均報酬無穩定增益，維持不用原始法人股數／融資餘額。
+- PIT 產業 join 覆蓋 100%；34 產業中 T-1 有 18 個少於 20 筆、TECH threshold 有 23 個少於 20 筆。兩邊至少 20 筆的 11 產業，部分池化後 TECH threshold 命中較高 9 個、平均淨報酬較高 10 個；不據此按產業調參。
+- 排除 threshold 最集中的兩日後，命中仍 22.39%、平均 +0.83%，但虧損／尾損升至 54.05%／45.75%，顯示命中排序與風險優勢不是同一件事。
+- 概念股 H1=`insufficient_data`；股本=`sensitivity_only_historical_vintage_unverified`。完整方法檢討：`reports/zhu_walkline_strategy_grouped_validation_review_2026_07_14.md`。
+- 主要 artifacts：`reports/zhu_walkline_d10_deep_factor_research_2026_01_06/`、`reports/zhu_walkline_grouped_validation_2026_07_14/`。
+- 驗證：`ruff check .`、compileall、`pytest` 585 passed、`git diff --check`、strict JSON finite-value audit、禁用原始籌碼欄位 schema audit 全部通過。此 pandas／SQLite 分組工作採 CPU；雙 RTX 3060 可見但不適合本次 I/O／表格聚合路徑。
+- `mode=shadow_observation_only`、`formal_champion_changed=False`、`formal_trade_effect=False`；下一 gate 是 2026-07-14 後 forward shadow。
+
+## 2026-07-14 D-10～D 軌跡與全市場提早起漲 gate
+
+- 日報已加入每檔 D-10、D-9、…、D-1、D 的四項影子強度軌跡；2026-07-13 為 5 檔、55 列且全部完整。歷史 rank 不顯示，因股票集合是到 D 日才知道的 confirmed candidates。
+- 事件條件式研究：614 events、6,754 trajectory rows、1,296 bounded rules。沒有任何規則通過 validation noninferiority；診斷規則中位提前至 D-4。
+- 修正 temporal leakage：discovery labels 到 2026-03-06 才全成熟，validation purge 後 177→132；validation labels 到 2026-05-08 才全成熟，holdout purge 後 211→126。
+- Purged holdout：T-1 baseline 19 alerts，precision 31.58%、recall 23.08%、balanced 55.04%、loss 36.84%；D-4 diagnostic 15 alerts，precision 20.00%、recall 11.54%、balanced 49.77%、loss 40.00%，且低於最低 20 筆。
+- 提醒日→同一 D+5 endpoint 的 D-4 diagnostic 中位回報 13.24%、>=10% 73.33%，但這仍是未來 D 確認條件化母體，不能稱 live edge。
+- 全市場固定規則 replay：225,038 PIT membership、225,033 matched、來源日與 listing-date violation 均為 0；109,748 liquid/history-eligible rows，1,150 pre-cooldown、995 post-cooldown candidates（TWSE 606、TPEX 389）。
+- Primary evaluator 排除 6 筆 forward corporate actions，但選股仍保留它們：989 candidates，D+5>=10% precision 11.12% vs universe 13.34%，lift 0.83x；recall 0.77%、balanced 49.91%、loss 48.33%、median +0.20%。只有 2026-06 單月 lift >1，跨月不穩。
+- 2～10 日內連到正式 KD confirmation：57/916 mature candidates，6.22%，中位提前 4 個交易日、候選到 D 中位漲幅 11.29%。
+- 四項完整 939/995；分數 0/25/50/75/100 的 D+5>=10% 依序 17.91%/9.28%/10.21%/6.00%/0%，不單調，故維持報告用途，不加入 early hard filter。
+- 主要 artifacts：`reports/zhu_walkline_d10_trajectory_optimizer_2026_01_06/`、`reports/zhu_walkline_full_market_early_start_replay_2026_01_06/`、`reports/zhu_walkline_shadow/latest_zhu_walkline_shadow_strength_trajectory.csv`。
+- 驗證：38 focused tests、548 full tests、`ruff check .`、compileall、`git diff --check`、2026-07-13 scanner/trajectory 串接與 strict CSV/JSON schema audit 全部通過。全市場 replay 98.8 秒；CPU 向量化，雙 RTX 3060 可見但不適合此 SQLite/pandas 路徑。
+- 結論：保留 D-10～D 可稽核觀察資料；不新增早期選股 gate。`earlier_accuracy_verified=False`、`retrospective_edge_observed=False`、`live_deployable=False`、`formal_champion_changed=False`、`formal_trade_effect=False`。
+
+## 2026-07-14 提早起漲影子參數最佳化
+
+- 新增 `config/zhu_walkline_early_start_optimizer.yaml`、`scripts/optimize_zhu_walkline_early_start_parameters.py` 與 focused tests。
+- 完整母體：2026-01-01～2026-06-30 共 907 筆成熟 D+5 標籤；保留 0%～<10% 中性結果，排除公司行動、套同股 5 交易日 cooldown，並 purge 86 筆跨 discovery／validation 選擇邊界才成熟的標籤後為 528 筆。
+- 時間切分：Jan-Feb discovery 146 筆、Mar-Apr validation 171 筆、May-Jun untouched holdout 211 筆。
+- 搜尋 6,570 組有界參數；調整項目只含 T-5 量比／月線斜率、T-3 漲幅／K 變化、T-1 漲幅／量比／站回月線。
+- 最佳化 T-5：量比 `<=0.85`；holdout 179 筆，D+5>=10% precision 19.55%、recall 87.50%、balanced accuracy 51.64%、loss 54.19%。適合作寬鬆觀察池，不足以維持 T-1 精確率。
+- 最佳化 T-3：T-5 量比 `<=0.85`、T-3 日報酬 `>2%`；holdout 34 筆，precision 8.82%、recall 7.50%、balanced accuracy 44.69%、loss 64.71%，May precision 更只有 5.26%，判定 regime failure。
+- T-1 最佳化回到原條件：T-5 量比 `<=0.75`、T-3 日報酬 `>0`、T-1 日報酬 `>0`、T-1 量比 `>=0.70`；holdout 26 筆，precision 23.08%、loss 42.31%、D+5 平均 2.57%。月線斜率、K 轉向與站回月線未被保留為硬門檻。
+- 結論：`earlier_detection_verified=False`，保留 `T1_PRICE_VOLUME_CONFIRM`。四項影子強度仍是報告主要排序，本結果只作 watch-only 提早標籤。
+- 報告：`reports/zhu_walkline_early_start_optimizer_2026_01_06/zhu_walkline_early_start_summary.md`，並附完整 search、modeling rows、stage metrics、holdout monthly metrics、selected parameters CSV。
+- 本機 `tw_adjusted_ohlcv_daily` 與 `daily_ohlcv_features` 均確認新鮮至 2026-07-13。
+- 驗證：focused pytest 4 passed、full pytest 530 passed、`ruff check .`、compileall、`git diff --check`、strict JSON/schema audit 與 missing-literal audit 全部通過。
+- `mode=shadow_observation_only`; `promotion_decision=blocked_before_promotion_review`; `formal_champion_changed=False`; `formal_trade_effect=False`。
+
+## 2026-07-13 KD D+5 三組特徵分析
+
+- Window: `2026-01-01` through `2026-06-30`; D+5 是訊號日後第 5 個個股交易日。
+- Label: 以還原收盤為主；raw return、還原因子變動與公司行動旗標另行保留。
+- 909 筆 fresh KD confirmation；907 筆成熟標籤；2 筆缺少第 5 個後續交易日。
+- `D5_LOSS`: 466 rows / 338 unique stocks，平均 `-5.650872%`，中位數 `-4.460145%`。
+- `D5_GAIN_10_20`: 88 rows / 74 unique stocks，平均 `14.842829%`，中位數 `14.842214%`。
+- `D5_GAIN_GE_20`: 87 rows / 55 unique stocks，平均 `30.894779%`，中位數 `28.676471%`。
+- 另有 266 筆成熟訊號位於 0% 至未滿 10%，不強塞進三組。
+- 20% 以上組相較虧損組：股價相對月線乖離 `11.73% vs 6.52%`、20 日報酬 `20.00% vs 13.41%`、月線斜率 `1.86 vs 1.21`、K 值 `58.69 vs 53.82`、日量比 `2.17 vs 1.86`。
+- 類別特徵：20% 以上組 `UPTREND` 比率 `25.29% vs 9.44%`，月線上方至少 10% 比率 `49.43% vs 22.10%`，量能擴張 `31.03% vs 19.74%`。
+- 結論：大漲組較像已在多頭趨勢中的強勢再確認，不是單純超賣反彈；但乖離與追價風險也更高，不可直接轉成買進規則。
+- Output: `reports/zhu_walkline_kd_d5_groups_2026_01_06/`。
+- Validation: focused pytest 6 passed、full pytest 501 passed、`ruff check .`、`git diff --check`、strict JSON／missing-literal audit、latest no-web scanner 全部通過。
+- `mode=shadow_observation_only`; `formal_champion_changed=False`; `formal_trade_effect=False`; no formal strategy/champion/trade effect modified。
+
+## 2026-07-12 Yahoo Concept Important Snapshot + Hierarchical Shadow Gate
+
+### 重要快照
+- Source: `https://tw.stock.yahoo.com/class#CONCEPT_STOCK` and its Yahoo class-quotes pagination API.
+- Snapshot ID: `yahoo_concept_2026-07-09_b17edf05cd17`.
+- Yahoo data date: `2026-07-09`; fetched at: `2026-07-12T17:53:28+08:00`.
+- 101 concepts, 2,724 concept-stock memberships, 1,063 unique stocks.
+- Content SHA-256: `b17edf05cd17a225b590428953da2bd73e1e3dc9e22ed66c9d5e452ec56aad63`.
+- Importance: `IMPORTANT_BASELINE`; SQLite: `state/yahoo_concept_membership.sqlite`.
+- Historical projection is user-authorized and labeled `static_current_backfill_user_authorized`; it is exploratory and is not represented as historical point-in-time membership.
+
+### 固定篩選順序
+1. 大盤：只讓 `MARKET_STRONG_UPTREND`、`MARKET_PULLBACK_IN_UPTREND`、`MARKET_RANGE_BOUND` 往下評估。
+2. 類股：只讓 `SECTOR_LEADING`、`SECTOR_ROTATING_IN` 往下評估。
+3. 概念股：由同日成分股站上20日線比率、20日線正斜率比率、5日正報酬比率計算，只讓 `CONCEPT_LEADING`、`CONCEPT_ROTATING_IN` 通過。
+4. 個股：最後才檢查 `driver_score >= 11`。
+
+### 2026-06-01 至 2026-07-09 結果
+- Canonical upstream: 778 rows；driver-score-only: 39 observations；hierarchy: 15 observations。
+- 通過名單：`2308 台達電`、`2460 建通`、`2484 希華`、`3236 千如`、`1471 首利`、`3092 鴻碩`、`3484 崧騰`、`3624 光頡`、`2478 大毅`、`2327 國巨*`、`2420 新巨`、`2457 飛宏`、`2492 華新科`、`3321 同泰`、`5227 立凱-KY`。
+- `5488 松普`：Yahoo membership=`華為`，2026-07-02 concept score `42.298068`、state=`CONCEPT_WEAK`，因此 `hierarchy_gate_stage=CONCEPT_NOT_LEADING`，不再列入分層候選。
+- 本短區間僅 1 筆具完整 D+20 標籤，不足以獨立判定效果。
+
+### 延伸成熟樣本比較
+- Canonical `2026-01-01`~`2026-07-09`: 2,875 source rows；driver-only 286 observations；hierarchy 154 observations。
+- Mature D+20: hierarchy 140 rows；avg `21.293754%`、median `9.53055%`、hit>=20% `35.0%`、hit>=50% `18.5714%`、downside `30.0%`、tail<=-10% `13.5714%`。
+- Same-date/same-count driver-score control 140 rows: avg `20.935121%`、median `9.1462%`、hit>=20% `34.2857%`、hit>=50% `18.5714%`、downside `31.4286%`、tail<=-10% `17.1429%`。
+- Hierarchy minus fair control: avg `+0.358633` pct、median `+0.38435` pct、hit>=20% `+0.007143`、hit>=50% `0`、downside `-0.014286`、tail loss `-0.035715`。
+- Decision: keep as shadow risk-filter research; blocked before formal promotion because static-current membership backfill and limited independent OOS evidence remain.
+
+### 產出
+- `reports/yahoo_concept_membership/yahoo_concept_2026-07-09_b17edf05cd17/`
+- `reports/zhu_walkline_driver_screen_hierarchy_2026_06_01_07_09/`
+- `reports/zhu_walkline_early_observation_labels_2026_01_07_09_canonical/`
+- `reports/zhu_walkline_driver_screen_hierarchy_2026_01_07_09_canonical/`
+
+### 驗證
+- `ruff check .`: passed.
+- `python -m pytest -q`: 486 passed.
+- `git diff --check`: passed.
+- Latest scanner smoke: `2026-07-09`, `--no-web`, passed.
+- Snapshot audit: category/member counts match, all pagination counts match, tracked membership CSV reproduces manifest SHA-256.
+- Output audit: no `NaN` / `None` / `<NA>` string leakage.
+- No-lookahead tests: future OHLC/SMA mutation and future concept state cannot change an earlier observation.
+
+### 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+
+## 2026-07-13 KD 前5日窄幅縮量閘門
+
+- 建議成交量門檻：採既有 `vol_ratio_20 <= 0.75`，不採跨股票固定張數。
+- 新增條件：訊號日前 5 個交易日至少 1 天同時符合 `abs(close/open-1) <= 1.2%` 與低量門檻；訊號當日不能自我滿足。
+- 2464：2026-06-11／06-12 仍為 `OVERSOLD_ONLY`，2026-06-15 前 5 日有 2 天符合，仍為 `CONFIRMED`。
+- 2026-07-09 歷史橫截面：舊規則確認 9 檔，新規則保留 5 檔，剔除 2408、2465、4961、5351。
+- 驗證：focused pytest 33 passed、full pytest 493 passed、`ruff check .`、`git diff --check`、latest no-web scanner 全部通過。
+- Archive：`reports/zhu_walkline_shadow_mutations/2026-07-13_kd_prior_5d_tight_low_volume_gate_v1.md` 與 `.json`。
+- `mode=shadow_observation_only`; `formal_champion_changed=False`; `formal_trade_effect=False`; `promotion_decision=blocked_before_promotion_review`。
+
+## 2026-07-13 KD 2026-06 至 2026-07 歷史觀察
+
+- Requested: `2026-06-01` through `2026-07-31`; local price data resolved through `2026-07-09`, 28 trading days.
+- Non-empty KD stages: 14,142 rows; scanner-compatible confirmations: 215 rows.
+- Fresh-price confirmation events: 201 rows, 138 unique stocks, 25 event dates.
+- Stale carry-forward confirmations: 14 rows. These remain in the scanner-compatible audit file but are excluded from the event-date list.
+- 2464 replay: 2026-06-11 and 2026-06-12 are `OVERSOLD_ONLY`; fresh confirmations occur on 2026-06-15, 2026-06-16, and 2026-06-18.
+- Output: `reports/zhu_walkline_kd_observations_2026_06_07/`.
+- No forward-return evaluator was run in this KD observation-only pass; these are not promotion metrics.
+- Validation: `ruff check .`, full pytest 495, `git diff --check`, fixed range/value assertions, and missing-string audit passed.
+- `mode=shadow_observation_only`; `formal_champion_changed=False`; `formal_trade_effect=False`; no formal strategy/champion/trade effect modified.
+
+## 2026-07-12 Canonical Window - 2026-06-01 to 2026-07-09
+
+### 契約
+- Upstream: `fast_precomputed_daily_ohlcv`, `max_per_day=30`。
+- Screen: `driver_score >= 11`。
+- No MA5 cap, cooldown, forward-return label, or hindsight outcome filter。
+- Source rows: 778；selected rows: 39；unique stocks: 34；signal dates: 9。
+
+### 日期與股票
+| 日期 | 檔數 | 股票 |
+|---|---:|---|
+| 2026-06-08 | 11 | 2483百容、3520華盈、4939亞電、5381光譜、8043蜜望實、5228鈺鎧、7788松川精密、4542科嶠、6153嘉聯益、5227立凱-KY、6175立敦 |
+| 2026-06-09 | 3 | 2308台達電、2457飛宏、2462良得電 |
+| 2026-06-15 | 5 | 2460建通、2484希華、3236千如、6156松上、6259百徽 |
+| 2026-06-17 | 6 | 3092鴻碩、3296勝德、3484崧騰、2478大毅、1471首利、3624光頡 |
+| 2026-06-18 | 3 | 2327國巨*、2483百容、8121越峰 |
+| 2026-06-22 | 6 | 3321同泰、5227立凱-KY、2420新巨、2457飛宏、2492華新科、3288點晶 |
+| 2026-06-24 | 2 | 2483百容、6672騰輝電子-KY |
+| 2026-06-30 | 2 | 6156松上、1815富喬 |
+| 2026-07-02 | 1 | 5488松普 |
+
+### 產出
+- `reports/zhu_walkline_driver_screen_candidates_2026_06_01_07_09/zhu_walkline_driver_screen_candidates.csv`
+- `reports/zhu_walkline_driver_screen_candidates_2026_06_01_07_09/zhu_walkline_driver_screen_date_stock_codes.csv`
+- `reports/zhu_walkline_driver_screen_candidates_2026_06_01_07_09/zhu_walkline_driver_screen_daily_counts.csv`
+- `reports/zhu_walkline_driver_screen_candidates_2026_06_01_07_09/zhu_walkline_driver_screen_summary.json`
+- `reports/zhu_walkline_driver_screen_candidates_2026_06_01_07_09/zhu_walkline_driver_screen_summary.md`
+
+### 驗證
+- `ruff check .`: passed.
+- `git diff --check`: passed.
+- Assertions: 39 rows, 34 unique stocks, 9 signal dates, and July contains only `5488`.
+- Output audit: no `NaN` / `None` / `<NA>` strings.
+
+### 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+
+## 2026-07-12 Canonical Restore - 2026-07-01 to 2026-07-09
+
+### 恢復口徑
+- Upstream engine: `fast_precomputed_daily_ohlcv`.
+- Upstream cap: `max_per_day=30`，先保留每日前 30 個 observation candidates。
+- Driver screen: `driver_score >= 11`。
+- Forward returns are not attached; this is an as-of-only observation list.
+
+### 結果
+| 日期 | 代號 | 股票 | 收盤 | 分數 | 型態 | 類股 | 訊號階段 | 訊號失效觀察價 |
+|---|---|---|---:|---:|---|---|---|---:|
+| 2026-07-02 | 5488 | 松普 | 14.05 | 12.0 | 區間突破確認 | 電子零組件 | CONFIRMED | 13.05 |
+
+- `vol_ratio_20=4.7852`、`close_location_in_bar=1.0`、下一確認壓力 `14.3`。
+- Source rows: 180；canonical candidate rows: 1。
+- `max_per_day=0` 的較寬母體結果只保留為研究存檔，不再作為本策略 canonical 日期清單。
+
+### 產出
+- `reports/zhu_walkline_driver_screen_candidates_2026_07_01_09/zhu_walkline_driver_screen_candidates.csv`
+- `reports/zhu_walkline_driver_screen_candidates_2026_07_01_09/zhu_walkline_driver_screen_summary.json`
+- `reports/zhu_walkline_driver_screen_candidates_2026_07_01_09/zhu_walkline_driver_screen_summary.md`
+- `reports/zhu_walkline_driver_screen_candidates_2026_07_01_09/zhu_walkline_driver_screen_teaching_report.md`
+
+### 驗證
+- Full `.venv` pytest: 474 passed.
+- `ruff check .`: passed.
+- `git diff --check`: passed.
+- Canonical assertion: exactly one row, stock `5488`, invalidation `13.05`, confirmation `14.3`.
+- Output audit: no `NaN` / `None` / `<NA>` strings.
+
+### 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+
+## 2026-07-12 Window Run - 2026-06-01 to 2026-07-09 (Non-Canonical Research Archive)
+
+### 資料與規則
+- Local adjusted/features max date: `2026-07-09`; range contains 28 trading days.
+- Observation rule: `driver_score >= 11` plus replicated risk-control cap `close_to_sma5_pct <= 12`.
+- Signal time: after as-of close; D+20 evaluator uses next-day adjusted open, D+20 adjusted close, fees, tax, and slippage.
+- Same-stock 20-day cooldown is an evaluator de-overlap scope, not a trade command.
+
+### 結果
+- Source candidates: 2,031.
+- `driver_score >= 11`: 117 rows.
+- MA5-gap-capped observations: 76 rows, 60 stocks, 9 dates.
+- Latest qualifying observation date: `2026-07-02`; 7/3~7/9 had no full-threshold observation.
+- Window-local cooldown: 60 rows; mature D+20: 23 rows over only 2 signal dates; one mature row was next-day locked-limit-up.
+- Mature 23-row net avg/median: 4.231% / -6.216%; positive mean is driven by a small number of large winners while the median remains negative.
+- `maturity_status=insufficient_mature_horizon`; `action=watch_only`; `promotion_decision=blocked_before_promotion_review`.
+
+### 產出
+- `reports/zhu_walkline_strategy_window_2026_06_01_07_09/zhu_walkline_window_summary.md`
+- `reports/zhu_walkline_strategy_window_2026_06_01_07_09/zhu_walkline_window_summary.json`
+- `reports/zhu_walkline_strategy_window_2026_06_01_07_09/zhu_walkline_window_observations.csv`
+- `reports/zhu_walkline_strategy_window_2026_06_01_07_09/zhu_walkline_window_date_stock_codes.csv`
+- `reports/zhu_walkline_strategy_window_2026_06_01_07_09/zhu_walkline_window_daily_counts.csv`
+
+### 程式修正
+- `scripts/backtest_zhu_walkline_driver_screen.py`: empty/short rolling windows now return a stable empty schema instead of failing report rendering.
+- `tests/test_zhu_walkline_driver_screen_backtest.py`: added empty rolling schema regression coverage.
+
+### 驗證
+- Focused pytest: 4 passed.
+- Full `.venv` pytest: 474 passed.
+- `ruff check .`: passed.
+- `git diff --check`: passed.
+- Latest no-web scanner: passed; asof `2026-07-09`.
+- Three output directories passed missing-string audit and summary hard-boundary/count assertions.
+
+### 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+
+## 2026-07-12 Recommended Follow-Up - Buyability + Backward-OOS
+
+### 修改與執行
+- `scripts/experiment_zhu_walkline_strategy.py`: added next-day one-price limit-up evaluator fields, buyable-entry scopes, `BASELINE_EXCLUDE_STRONG_UPTREND`, and prespecified replication reviews.
+- `tests/test_zhu_walkline_strategy_experiment.py`: expanded to 15 focused tests covering limit-up positive/negative cases, buyable scope isolation, future evaluator isolation, market-state membership, and four-way replication gates.
+- Exported `reports/zhu_walkline_early_observation_labels_2019_2021/`: 56,098 candidates, 1,736 stocks, 731 trading days, 541 non-empty days.
+- Wrote `reports/zhu_walkline_strategy_backward_oos_2019_2021/` using 2019 development, 2020 validation, and 2021 locked holdout.
+
+### Backward-OOS 結果
+| variant | 2020 primary avg/median/tail delta | 2021 primary avg/median/tail delta | decision |
+|---|---|---|---|
+| `BASELINE_MA5_GAP_CAP_12` | -0.153 / +0.298 / -0.628 pct | +0.085 / +0.514 / -0.603 pct | `shadow_replication_supported` |
+| `BASELINE_EXCLUDE_STRONG_UPTREND` | +0.501 / -0.757 / +0.090 pct | -2.934 / -2.905 / +7.691 pct | `blocked_before_promotion_review` |
+
+- MA5 cap also passed both years after removing next-day one-price limit-up rows. It is a risk-control shadow candidate, not a formal rule or an absolute return enhancer.
+- The market-state exclusion did not generalize backward. Its 2025/2026 improvement is regime-dependent and must not become a fixed gate.
+- Next-day one-price limit-up rate in the baseline cooldown scope was 1.813% in 2020 and 0.745% in 2021; the separate buyable scope removes those rows without changing signals.
+- Current 2022-2026 rerun remains `selected_by_validation=BASELINE_LIQUIDITY_20M`, yearly holdout pass count `0/3`, and `blocked_before_promotion_review`.
+
+### 產出
+- `reports/zhu_walkline_strategy_backward_oos_2019_2021/zhu_walkline_strategy_experiment_summary.md`
+- `reports/zhu_walkline_strategy_backward_oos_2019_2021/zhu_walkline_strategy_experiment_summary.json`
+- `reports/zhu_walkline_strategy_backward_oos_2019_2021/zhu_walkline_strategy_experiment_metrics.csv`
+- `reports/zhu_walkline_strategy_experiment_2022_2026_06_10/zhu_walkline_strategy_experiment_summary.md`
+
+### 驗證
+- `.\.venv\Scripts\ruff.exe check .`: passed.
+- `.\.venv\Scripts\python.exe -m pytest -q`: 473 passed.
+- `git diff --check`: passed.
+- Latest no-web scanner: passed; asof `2026-07-09`.
+- Backward-OOS and current report audits: no `NaN` / `nan` / `None` / `<NA>` output strings; hard-boundary assertions passed.
+
+### 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+
+## 2026-07-12 Direct Follow-Up - Full Zhu Walkline Strategy Experiment
+
+## 修改檔案
+- `scripts/experiment_zhu_walkline_strategy.py`: added execution-aware finite-variant comparison, same-stock cooldown, adjusted-price/company-action labels, validation-only selection, yearly walk-forward replication, no-op rejection, and failure attribution.
+- `tests/test_zhu_walkline_strategy_experiment.py`: added 10 tests for next-open cost labels, future-label isolation, holdout isolation, no-op rejection, missing fields, cooldown, timing attribution, temporal splits, and multi-file loading.
+- `scripts/analyze_zhu_walkline_forward_return_buckets.py`: replaced SciPy-dependent Spearman with mathematically equivalent rank-then-Pearson calculation.
+- `README.md`, `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: documented the command, evidence, blockers, and hard boundaries.
+
+## 實驗契約
+- Market/currency/timezone: Taiwan TWSE/TPEx common stocks, TWD, Asia/Taipei.
+- Candidate period: `2022-01-03`~`2026-06-10`, 79,969 as-of candidate rows.
+- Signal time: after as-of close.
+- Evaluator entry: next trading day adjusted open.
+- Evaluator exit: as-of plus 20 trading days adjusted close.
+- Costs: brokerage 0.1425% each side, sell tax 0.3%, slippage 0.1% each side.
+- Primary evaluation: 20-trading-day same-stock cooldown.
+- Company actions: `tw_adjusted_ohlcv_daily`, plus no-event robustness scope.
+- Variant selection: validation only; holdout cannot affect selection.
+
+## 主結果
+| period | baseline rows | avg net | median net | hit >=20% | downside <0 | tail <=-10% |
+|---|---:|---:|---:|---:|---:|---:|
+| 2022~2024 development | 1,169 | -1.390% | -2.945% | 6.587% | 61.335% | 25.064% |
+| 2025 validation | 471 | 4.955% | 0.868% | 17.410% | 47.771% | 20.595% |
+| 2026H1 holdout | 501 | 10.086% | 3.280% | 24.950% | 42.914% | 20.359% |
+
+- 2025 validation selected `BASELINE_LIQUIDITY_20M`.
+- 2026H1 holdout: avg 10.475%, median 4.185%, but tail loss rose to 23.472%; holdout failed.
+- Yearly folds: 2023 select -> 2024 test selected unchanged baseline; 2024 select -> 2025 test sector-neutral failed; 2025 select -> 2026H1 liquidity failed. Final pass count `0/3`.
+- `BASELINE_MA5_GAP_CAP_12` is post-holdout research only: holdout avg delta -0.1225 pct, median delta +0.4499 pct, tail delta -1.2349 pct, coverage 86.63%. It is not eligible for current selection and needs new replication.
+- Signal-date `late_chase_risk_flag`, `upper_tail_flag`, and `volume_exhaustion_flag` removed zero baseline rows. These belong in a later peak/holding lifecycle monitor, not the initial screen.
+- Highest failure windows include 2024Q4 tail 65.823%, 2024Q3 tail 50.000%, 2022Q1 tail 45.946%, and 2022Q2 tail 44.118%.
+
+## 產出
+- `reports/zhu_walkline_strategy_experiment_2022_2026_06_10/zhu_walkline_strategy_experiment_summary.md`
+- `reports/zhu_walkline_strategy_experiment_2022_2026_06_10/zhu_walkline_strategy_experiment_summary.json`
+- `reports/zhu_walkline_strategy_experiment_2022_2026_06_10/zhu_walkline_strategy_experiment_metrics.csv`
+- `reports/zhu_walkline_strategy_experiment_2022_2026_06_10/zhu_walkline_strategy_experiment_quarterly.csv`
+- `reports/zhu_walkline_strategy_experiment_2022_2026_06_10/zhu_walkline_strategy_walk_forward_reviews.csv`
+- `reports/zhu_walkline_strategy_experiment_2022_2026_06_10/zhu_walkline_strategy_walk_forward_metrics.csv`
+- `reports/zhu_walkline_strategy_experiment_2022_2026_06_10/zhu_walkline_strategy_failure_attribution.csv`
+
+## 驗證
+- `.\.venv\Scripts\ruff.exe check .`: passed.
+- `.\.venv\Scripts\python.exe -m pytest -q`: 468 passed.
+- `git diff --check`: passed.
+- `python scripts\run_zhu_walkline_shadow.py --asof latest --top-n 30 --no-web --verbose`: passed; latest asof `2026-07-09`.
+- Output audit: no `NaN` / `nan` / `None` / `<NA>` strings.
+
+## 結論與邊界
+- `promotion_decision=blocked_before_promotion_review`
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令，不輸出絕對買賣建議。
+
+## 2026-07-11 Direct Follow-Up - Driver Screen Overlay And Rolling Backtest
+
+## 修改檔案
+- `scripts/backtest_zhu_walkline_driver_screen.py`: added a shadow-only as-of driver screen and rolling backtest sidecar.
+- `tests/test_zhu_walkline_driver_screen_backtest.py`: added coverage for no-forward-label scoring, same-count baseline alignment, and shadow summary boundaries.
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: recorded the overlay, run outputs, validation, and hard boundaries.
+
+## 篩選規則
+Default threshold: `driver_score >= 11`.
+
+Score rules:
+- `sector == 電子零組件`: +3
+- `sector in 光電, 其他電子`: +1
+- `early_observation_rule == STRICT_BREAKOUT`: +2
+- `volume_state == ATTACK_VOLUME` or `vol_ratio_20/day_volume_ratio_20 >= 1.8`: +2
+- `kline_state == ATTACK_RED_K`: +1
+- `open_to_close_pct >= 4%` and `close_location_in_bar >= 0.8`: +1
+- `close_to_sma5_pct >= 7%`: +1
+- `sector_state == SECTOR_LEADING`: +1
+- `signal_stage == CONFIRMED` and `fall_risk_score <= 3`: +1
+- no sell/failure warning and `review_bucket == CLEAN_REVIEW`: +1
+
+These rules use only as-of fields. Forward returns are evaluator-only labels.
+
+## 回測指令
+```powershell
+python scripts\backtest_zhu_walkline_driver_screen.py --output-dir reports\zhu_walkline_driver_screen_backtest_2026_01_06 --min-driver-score 11 --horizon-trading-days 20 --rolling-window-days 20
+```
+
+## 產出檔案
+- `reports/zhu_walkline_driver_screen_backtest_2026_01_06/zhu_walkline_driver_screen_rows.csv`
+- `reports/zhu_walkline_driver_screen_backtest_2026_01_06/zhu_walkline_driver_screen_scored_universe.csv`
+- `reports/zhu_walkline_driver_screen_backtest_2026_01_06/zhu_walkline_driver_screen_same_count_top_rise.csv`
+- `reports/zhu_walkline_driver_screen_backtest_2026_01_06/zhu_walkline_driver_screen_same_count_random.csv`
+- `reports/zhu_walkline_driver_screen_backtest_2026_01_06/zhu_walkline_driver_screen_daily_metrics.csv`
+- `reports/zhu_walkline_driver_screen_backtest_2026_01_06/zhu_walkline_driver_screen_monthly_metrics.csv`
+- `reports/zhu_walkline_driver_screen_backtest_2026_01_06/zhu_walkline_driver_screen_rolling_metrics.csv`
+- `reports/zhu_walkline_driver_screen_backtest_2026_01_06/zhu_walkline_driver_screen_summary.json`
+- `reports/zhu_walkline_driver_screen_backtest_2026_01_06/zhu_walkline_driver_screen_summary.md`
+
+## 回測摘要
+| cohort | rows | avg 20d return | median | hit >=20% | hit >=50% | downside <0 | tail <=-10% |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| driver_screen | 1,084 | 14.518% | 6.460% | 30.258% | 13.007% | 37.362% | 17.343% |
+| all_candidates | 12,060 | 8.209% | 1.852% | 21.824% | 6.219% | 43.897% | 16.625% |
+| same_count_top_rise | 1,084 | 8.944% | 2.872% | 20.019% | 6.827% | 40.683% | 13.469% |
+| same_count_random | 1,084 | 9.152% | 2.480% | 23.432% | 7.565% | 42.343% | 17.159% |
+
+## 研究結論
+- Driver screen 相對 same-count top-rise baseline：平均 20d return +5.574 pct、hit20 +10.240 pct、hit50 +6.181 pct、downside<0 -3.321 pct。
+- 主要 blocker：tail-loss<=-10% 為 17.343%，高於 top-rise baseline 13.469%。因此不能 promotion，只能保留為 shadow research overlay。
+- 最新 20 交易日 rolling window (`2026-05-07`~`2026-06-10`)：driver_screen 平均 22.478%、hit20 44.095%、hit50 21.654%，仍高於 same-count baselines。
+
+## 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+
+## 2026-07-13 KD D+5 訊號日前籌碼／量價比較
+
+- 新增 `src/abc_quant/features/pre_signal_features.py` 與 `scripts/analyze_zhu_walkline_kd_d5_pre_signal_features.py`。
+- 641 筆三組事件全部使用嚴格早於訊號日的來源資料；主要 robustness scope 排除公司行動與同股重疊後為 475 rows。
+- 資料覆蓋：法人 100%、主力 proxy 99.38%、買賣家數差 100%、TDCC 千張大戶 50.55%、融資 91.42%。
+- Apr-Jun 固定門檻參考中，訊號前一日主力 proxy 對 `D5 >=10% vs loss` lift 1.270；訊號前一日量比對 `D5 >=20% vs loss` lift 1.148。這些是多重比較下的 shadow 特徵排序，不是可用交易門檻。
+- 外資原始買超股數與買超／成交量比例在 20% 組方向矛盾；TDCC 覆蓋不足；窄幅 K 棒次數在既有 gate 通過樣本中沒有額外 holdout lift。
+- 報告：`reports/zhu_walkline_kd_d5_pre_signal_features_2026_01_06/zhu_walkline_kd_d5_pre_signal_summary.md`。
+- 驗證：focused pytest 6 passed、full pytest 507 passed、`ruff check .`、`git diff --check`、無前視日期稽核與 missing-string audit 全部通過。
+- `mode=shadow_observation_only`、`formal_champion_changed=False`、`formal_trade_effect=False`、`promotion_decision=blocked_before_promotion_review`。
+
+## 2026-07-14 四項影子強度排序
+
+- 新增 `src/abc_quant/features/shadow_strength.py`，以主力 proxy、無上影供給、前一日 20 日量比、融資 5 日變化四項各 25 分，合計 0～100。
+- 門檻固定取自 2026-01～03：主力 `>=7.5` 張、前 5 日上影供給次數 `<=0.5`、量比 `>=0.6959067`、融資 5 日變化 `>=0%`。
+- 原始融資餘額與外資買賣超原始股數明確不進入分數；任一項缺值即 `INSUFFICIENT_FEATURES`，不補零、不排名。
+- 排名母體為 2026H1 全部 909 筆訊號，含 0～<10% 中性結果；827 筆四項完整。D+5 分組只供驗證，不決定誰能進排名。
+- Apr-Jun holdout 完整樣本 230/247；累積 score 0/25/50/75/100 的 `D5 >=10%` 比率為 30.87%/31.22%/33.56%/39.74%/47.62%，loss 為 69.13%/68.78%/66.44%/60.26%/52.38%。
+- 累積門檻具單調性，但精確分箱不完全單調，且 75/100 分報酬中位數仍為負；只作影子強度排序，不是校準機率或交易 gate。
+- 輸出：`zhu_walkline_kd_d5_shadow_strength_rules.csv`、`zhu_walkline_kd_d5_shadow_strength_validation.csv`、`zhu_walkline_kd_d5_shadow_strength_ranked_rows.csv`、`zhu_walkline_kd_d5_shadow_strength_latest.csv`。
+- 驗證：focused pytest 11 passed、full pytest 517 passed、`ruff check .`、無前視、forward-label mutation 與缺值封鎖測試通過。
+- `mode=shadow_observation_only`、`formal_champion_changed=False`、`formal_trade_effect=False`、`promotion_decision=blocked_before_promotion_review`。
+
+## 2026-07-13 每日影子強度實跑
+
+- 本機 `daily_ohlcv_features`、籌碼、融資與產業資料已確認到 `2026-07-13`，重新執行無網路 scanner。
+- 大盤狀態為 `MARKET_HIGH_RISK_BREAKDOWN`，多方觀察名單 0 筆；另有 5 筆同日新鮮 KD recovery confirmation 可作影子排序。
+- 強度排序：9934 成霖 75、6944 兆聯實業 75、1434 福懋 50、9921 巨大 25、6517 保勝光學 25；沒有 100 分。
+- 五筆四項資料均完整，最新組件來源日期為 2026-07-09，嚴格早於訊號日。
+- 報告：`reports/zhu_walkline_shadow/2026-07-13_zhu_walkline_shadow_strength.md`；全部 `watch_only`。
+- 驗證：focused pytest 7 passed、full pytest 523 passed、`ruff check .`、輸出筆數／分數／來源日期 assertions 與 `git diff --check` 通過。
+
+## 2026-06-02 歷史每日影子強度實跑
+
+- 重新執行 `--asof 2026-06-02 --top-n 30 --no-web`；大盤為 `MARKET_PULLBACK_IN_UPTREND`，多方 6、風險 4。
+- Scanner 有 30 筆多方轉強觀察列；前五為 3231 緯創、6548 長科*、2357 華碩、2883 凱基金、3706 神達。
+- 另有 5 筆同日新鮮 KD recovery confirmation：1718 中纖、1714 和桐、6670 復盛應用、2727 王品各 75 分，2103 台橡 25 分；沒有 100 分。
+- 五筆四項資料均完整，最新組件來源日期為 2026-06-01，嚴格早於訊號日；未來 D+5 結果不參與排名。
+- 報告：`reports/zhu_walkline_shadow/2026-06-02_zhu_walkline_shadow_strength.md`；全部 `watch_only`。
+- 歷史重跑完成後已執行 `--asof latest`，確認 `latest_zhu_walkline_summary.json` 恢復為 2026-07-13。
+- 驗證：focused pytest 8 passed、full pytest 524 passed、`ruff check .`、歷史輸出 assertions、latest restore audit 與 `git diff --check` 通過。
+
+## 四項影子強度成為後續報告預設
+
+- 後續所有日期型 Zhu Walkline 回覆，以四項 strength 作主要個股排序；原 scanner rise score 僅作背景比較。
+- `run_zhu_walkline_shadow.py` 已預設自動產生日期版及 `latest` strength CSV／JSON／Markdown，不必再手動跑第二支腳本。
+- 固定規則已版本化於 `config/zhu_walkline_shadow_strength_rules.csv`；缺值不補零、不排名，原始融資餘額與外資股數不進分數。
+- 市場、類股仍先於個股；高風險大盤 gate 與正式策略邊界不可被 strength 覆蓋。
+- 最新端到端驗證以 2026-07-13 成功產出六個 dated/latest strength artifacts，全部維持 `watch_only`。
+- 驗證：focused pytest 10 passed、full pytest 526 passed、`ruff check .`、tracked-rule／enable-skip contract、output aliases 與 `git diff --check` 通過。
+
+## 目前驗證
+- Focused Ruff: `.\.venv\Scripts\ruff.exe check scripts\backtest_zhu_walkline_driver_screen.py tests\test_zhu_walkline_driver_screen_backtest.py`，All checks passed。
+- Focused tests: `python -m pytest tests\test_zhu_walkline_driver_screen_backtest.py -q`，3 passed。
+- Script smoke/backtest completed and wrote all output artifacts.
+
+## 2026-07-11 Direct Follow-Up - Forward Return Bucket Research
+
+## 修改檔案
+- `scripts/analyze_zhu_walkline_forward_return_buckets.py`: added a shadow/evaluator-only analysis sidecar that buckets 20-trading-day forward returns and quantifies feature differences, category lift, and reason drivers.
+- `tests/test_zhu_walkline_forward_return_bucket_analysis.py`: added bucket-boundary and reason-driver regression tests.
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: recorded the research output, validation, and hard boundaries.
+
+## 實作摘要
+- Input: `reports/zhu_walkline_early_observation_labels_2026_01_06_fwd20p/zhu_walkline_early_observation_candidates.csv`.
+- Buckets:
+  - `GAIN_21_30`: `20.0 <= forward_return_pct < 31.0`, label shown as `21%-30%`.
+  - `GAIN_31_40`: `31.0 <= forward_return_pct < 41.0`.
+  - `GAIN_41_50`: `41.0 <= forward_return_pct < 51.0`.
+  - `GAIN_GT_50`: `forward_return_pct >= 51.0`.
+- The first bucket starts at 20.0 because the prior filter kept rows with `>=20%`; the display label follows the user's 21%-30% wording.
+- Daily OHLCV features are joined as-of by `asof_date` and `stock_id`; future return remains evaluator-only.
+
+## 產出檔案
+- `reports/zhu_walkline_forward_return_bucket_research_2026_01_06/zhu_walkline_forward_return_bucket_rows.csv`
+- `reports/zhu_walkline_forward_return_bucket_research_2026_01_06/zhu_walkline_forward_return_bucket_summary.csv`
+- `reports/zhu_walkline_forward_return_bucket_research_2026_01_06/zhu_walkline_forward_return_numeric_features.csv`
+- `reports/zhu_walkline_forward_return_bucket_research_2026_01_06/zhu_walkline_forward_return_category_lift.csv`
+- `reports/zhu_walkline_forward_return_bucket_research_2026_01_06/zhu_walkline_forward_return_reason_drivers.csv`
+- `reports/zhu_walkline_forward_return_bucket_research_2026_01_06/zhu_walkline_forward_return_bucket_summary.json`
+- `reports/zhu_walkline_forward_return_bucket_research_2026_01_06/zhu_walkline_forward_return_bucket_summary.md`
+
+## 量化摘要
+- Total bucketed rows: 2,632
+- Unique stocks: 523
+- Date count: 76
+- `21%-30%`: 988 rows, avg forward return 25.0671%, median 24.8540%
+- `31%-40%`: 560 rows, avg forward return 35.4777%, median 35.1351%
+- `41%-50%`: 366 rows, avg forward return 45.5872%, median 45.3901%
+- `>50%`: 718 rows, avg forward return 74.6827%, median 67.1007%
+
+## 初步大漲原因歸因
+- `>50%` bucket 的主要類別驅動是 `sector=電子零組件`: 288 rows, bucket share 40.11%, all share 29.41%, lift 1.364。
+- `>50%` bucket 的數值驅動較分散，偏向較高短均乖離、較強當日紅K與較高量比：`open_to_close_pct` 平均 4.48% vs all 4.13%，`vol_ratio_20` 1.874 vs all 1.774，`attack_volume_share` 60.86% vs all 58.13%。
+- `41%-50%` bucket 類股 lift 偏向 `光電`: bucket share 12.57%, all share 8.62%, lift 1.457。
+- `31%-40%` bucket 類股 lift 偏向 `電機機械`、`電子通路`、`通信網路`。
+- `21%-30%` bucket 較常見 `金融保險` 與風險警示/供給壓力標籤；平均 fall risk score 1.579，高於其他三桶。
+
+## 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+
+## 目前驗證
+- Focused Ruff: `.\.venv\Scripts\ruff.exe check scripts\analyze_zhu_walkline_forward_return_buckets.py tests\test_zhu_walkline_forward_return_bucket_analysis.py`，All checks passed。
+- Focused tests: `python -m pytest tests\test_zhu_walkline_forward_return_bucket_analysis.py -q`，2 passed。
+- Analysis command: `python scripts\analyze_zhu_walkline_forward_return_buckets.py --output-dir reports\zhu_walkline_forward_return_bucket_research_2026_01_06 --min-category-count 8` completed.
+- Output audit: no `NaN`/`nan`/`None`/`<NA>` output strings.
+
+## 2026-07-11 Direct Follow-Up - Forward 20 Trading Day Return Filter
+
+## 修改檔案
+- `scripts/export_zhu_walkline_early_observation_candidates.py`: added evaluator-only `forward_close_date`, `forward_close`, and `forward_return_pct` labels plus `--min-forward-return-pct`, `--forward-return-trading-days`, and `--include-forward-return-labels`.
+- `tests/test_zhu_walkline_early_observation_export.py`: added coverage that candidates below the forward-return threshold or missing the future close are removed from the filtered sidecar.
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: recorded the filter, output path, validation, and formal-boundary guarantees.
+
+## 實作摘要
+- This filter is a manual-label/backtest sidecar only. It uses future close data after candidate selection and must not be treated as an as-of selection rule.
+- User-requested rule: keep only rows where the close 20 trading days later is at least 20% above the as-of close.
+- Rows without enough future price history are removed from the filtered output because the one-month outcome cannot be confirmed.
+- Daily counts now preserve `candidate_count_before_forward_return_filter` and replace `candidate_count` with the final filtered count.
+
+## 區間輸出
+- Command: `python scripts/export_zhu_walkline_early_observation_candidates.py --engine fast --start-date 2026-01-01 --end-date 2026-06-30 --max-per-day 0 --min-forward-return-pct 20 --forward-return-trading-days 20 --output-dir reports/zhu_walkline_early_observation_labels_2026_01_06_fwd20p --verbose`
+- Output directory: `reports/zhu_walkline_early_observation_labels_2026_01_06_fwd20p/`
+- Candidate rows before filter: 13,116
+- Missing forward-return rows: 1,056
+- Rows removed by forward-return filter: 10,484
+- Final candidate rows: 2,632
+- Unique stocks: 523
+- Non-empty days: 76
+- `forward_return_pct < 20`: 0
+- Missing final forward return: 0
+
+## 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+
+## 目前驗證
+- Focused Ruff: `.\.venv\Scripts\ruff.exe check scripts\export_zhu_walkline_early_observation_candidates.py tests\test_zhu_walkline_early_observation_export.py`，All checks passed。
+- Focused tests: `python -m pytest tests\test_zhu_walkline_early_observation_export.py -q`，6 passed。
+- Output audit: filtered CSV has zero below-threshold rows, zero missing forward returns, and no `NaN`/`nan`/`None`/`<NA>` output strings.
+
+## 2026-07-11 Direct Follow-Up - Zhu Walkline Early Observation Manual Labels
+
+## 修改檔案
+- `scripts/export_zhu_walkline_early_observation_candidates.py`: added a shadow-only early-observation label export sidecar with exact scanner mode and fast precomputed daily-OHLCV mode.
+- `tests/test_zhu_walkline_early_observation_export.py`: added selector coverage plus a no-lookahead regression that mutating future rows after `end_date` does not affect fast observation fields.
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: recorded the sidecar, run outputs, validation, and hard boundaries.
+
+## 實作摘要
+- The sidecar exports early observation rows for manual labeling only; it does not create orders, positions, holdings, portfolio weights, or formal strategy state.
+- Rule layers are `STRICT_BREAKOUT`, `STRICT_SUPPORT_TURN`, `AGGRESSIVE_MA_RECLAIM_REVIEW`, `AGGRESSIVE_BREAKOUT_REVIEW`, and `AGGRESSIVE_SUPPORT_REVIEW`.
+- Candidate rows must satisfy `close > ma20`, `ma20_slope > 0`, and `close > ma120`; rows below the monthly line, below the half-year line, or with a non-positive monthly-line slope are removed.
+- Fast mode default lookback is 260 calendar days so the 120-day moving average can be computed for early-2026 labels.
+- Fast mode uses only local `daily_ohlcv_features` rows up to the requested end date plus rolling historical highs/lows, moving averages, volume ratio, market breadth, and sector rank approximations.
+- Fast mode defaults to excluding `00xx` ETF-like tickers; use `--include-etf-like` to include them.
+- Output includes `zhu_walkline_early_observation_date_stock_codes.csv` for direct user relabeling.
+
+## 區間輸出
+- Command: `python scripts/export_zhu_walkline_early_observation_candidates.py --engine fast --start-date 2026-01-01 --end-date 2026-06-30 --max-per-day 0 --output-dir reports/zhu_walkline_early_observation_labels_2026_01_06 --verbose`
+- Output directory: `reports/zhu_walkline_early_observation_labels_2026_01_06/`
+- Resolved dates: `2026-01-02`~`2026-06-30`
+- Trading days: 116
+- Candidate rows: 13,116
+- Unique stocks: 1,433
+- Non-empty days: 90
+- `include_etf_like=false`
+- Output audit: no `close<=ma20` rows, no `ma20_slope<=0` rows, no `close<=ma120` rows, and no missing `ma20/ma20_slope/ma120`.
+
+## 測試方式
+- `.\.venv\Scripts\ruff.exe check scripts\export_zhu_walkline_early_observation_candidates.py tests\test_zhu_walkline_early_observation_export.py`
+- `python -m pytest tests\test_zhu_walkline_early_observation_export.py -q`
+- `python scripts\export_zhu_walkline_early_observation_candidates.py --engine fast --start-date 2026-01-01 --end-date 2026-06-30 --max-per-day 0 --output-dir reports\zhu_walkline_early_observation_labels_2026_01_06 --verbose`
+- `rg -n "NaN|nan|None|<NA>" reports\zhu_walkline_early_observation_labels_2026_01_06`
+
+## 測試結果
+- Focused `ruff check`: passed.
+- Focused pytest: 5 passed.
+- Jan-Jun fast export completed and wrote candidate, label todo, date/stock code, daily-count, summary JSON, and summary Markdown outputs.
+- Output grep found no `NaN`/`nan`/`None`/`<NA>` strings.
+
+## 邊界
+- `mode=shadow_observation_only`.
+- `formal_champion_changed=False`.
+- `formal_trade_effect=False`.
+- no formal strategy modified.
+- no formal champion modified.
+- no formal trade effect.
+- No trade instructions, orders, holdings, weights, or formal promotion.
+
+## 2026-07-10 Direct Follow-Up - Zhu Walkline Report Tone Spec
+
+## 修改檔案
+- `CODEx_WALKLINE_REPORT_TONE_SPEC.md`: saved the attached walkline teaching-style tone specification.
+- `src/abc_quant/reports/zhu_walkline_report.py`: rewrote the single-stock Markdown report into the fixed walkline teaching order and observation-only wording.
+- `tests/test_zhu_walkline_features.py`: added regression checks for report section order, scenario order, observation language, and banned deterministic trading phrases.
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: recorded this follow-up and hard boundaries.
+
+## 實作摘要
+- Single-stock reports now use the fixed section order: conclusion, trend, moving averages, K-bar, volume, institutional chips, big-holder/main-force proxy, margin/short data, support/resistance, tomorrow scenarios, non-holder view, holder view, and one-line summary.
+- Scenario order is fixed as `劇本A：轉強`, `劇本B：整理`, `劇本C：續弱`.
+- Reports use teaching-style observation language: observation price, defense point, signal invalidation, support/resistance, and confirmation watch price.
+- The runtime fixed statement remains `本報告為技術分析教育與 shadow observation，不是投資建議，不是買賣指令。`
+- The attached spec's example `mode=shadow_advisory_only` is preserved in the spec file only; generated runtime reports remain hard-locked to `mode=shadow_observation_only`.
+
+## 測試方式
+- `.\.venv\Scripts\ruff.exe check src\abc_quant\reports\zhu_walkline_report.py tests\test_zhu_walkline_features.py`
+- `python -m pytest tests/test_zhu_walkline_features.py::test_reports_use_observation_language_not_trade_commands -q`
+
+## 測試結果
+- Focused `ruff check`: passed.
+- Focused report-language pytest: 1 passed.
+
+## 邊界
+- `mode=shadow_observation_only`.
+- `formal_champion_changed=False`.
+- `formal_trade_effect=False`.
+- no formal strategy modified.
+- no formal champion modified.
+- no formal trade effect.
+- No trade instructions, orders, holdings, weights, or formal promotion.
+
+## 2026-07-10 Direct Follow-Up - Zhu Walkline Range Backtest Metric Review Fix
+
+## 修改檔案
+- `src/abc_quant/signals/zhu_walkline_shadow.py`: fixed forward evaluator incomplete-horizon hits so missing future rows stay missing instead of counting as misses.
+- `scripts/backtest_zhu_walkline_shadow_range.py`: added row-weighted metrics, daily equal-weighted metrics, horizon completeness, baseline metrics, excess vs baseline, monthly metrics, fixed-seed random same-count baselines, score-decile baselines, and fall downside/adverse-rally semantics.
+- `tests/test_zhu_walkline_features.py`: added incomplete-horizon regression coverage.
+- `tests/test_zhu_walkline_range_backtest.py`: added sidecar summary, monthly semantics, and baseline regression coverage.
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: recorded review fix, validation, and hard boundaries.
+
+## 實作摘要
+- Missing future rows now produce `future_return_dN` missing and `hit_dN` missing; hit-rate helpers drop missing rows.
+- Summary JSON now exposes `daily_equal_weighted_metrics`, `row_weighted_metrics`, `valid_row_count_by_horizon`, `baseline_metrics`, `excess_vs_baseline`, `monthly_preview`, `baseline_rows`, `monthly_rows`, and `max_future_date_used`.
+- Range sidecar now writes `zhu_walkline_range_baseline_metrics.csv` and `zhu_walkline_range_monthly_metrics.csv`.
+- Fall-risk D5 semantics are split into `fall_tail_down_rate_d5` and `fall_adverse_rally_rate_d5`; rise keeps `rise_tail_loss_rate_d5`.
+- Baselines are all-market, fixed-seed random same-count, and score-decile groups, all observation-only.
+
+## 回測輸出
+- Command: `python scripts/backtest_zhu_walkline_shadow_range.py --start-date 2026-01-01 --end-date 2026-05-31 --top-n 30 --future-calendar-days 25 --output-dir reports/zhu_walkline_shadow_backtest_2026_01_05 --verbose`
+- Output directory: `reports/zhu_walkline_shadow_backtest_2026_01_05/`
+- Resolved dates: `2026-01-02`~`2026-05-29`
+- Trading days: 95
+- Evaluation rows: 5,368
+- Baseline rows: 2,280
+- Monthly rows: 10
+- `max_future_date_used=2026-06-23`
+- Row-weighted D5 rise: hit 0.529833, average return 0.028668, median return 0.008547, valid/missing 2514/4.
+- Row-weighted D5 fall-risk: correct 0.520924, average forward return 0.004332, median -0.002999, valid/missing 2772/78.
+- Fall-risk D5 downside rate: 0.246032.
+- Fall-risk D5 adverse rally rate: 0.229437.
+
+## 測試方式
+- `.\.venv\Scripts\ruff.exe check .`
+- `python -m pytest -q`
+- `git diff --check`
+- `python scripts/run_zhu_walkline_shadow.py --asof latest --top-n 30 --no-web --verbose`
+- `python scripts/backtest_zhu_walkline_shadow_range.py --start-date 2026-01-01 --end-date 2026-05-31 --top-n 30 --future-calendar-days 25 --output-dir reports/zhu_walkline_shadow_backtest_2026_01_05 --verbose`
+- `rg -n "NaN|nan|None|<NA>" reports/zhu_walkline_shadow_backtest_2026_01_05`
+
+## 測試結果
+- `ruff check .`: passed.
+- Full pytest: 445 passed in 38.41s.
+- `git diff --check`: passed.
+- Latest no-web scanner passed and wrote asof `2026-07-09` outputs.
+- Jan-May range backtest completed with empty stderr and wrote evaluation, daily, baseline, monthly, summary JSON, and summary Markdown files.
+- Output grep found no `NaN`/`nan`/`None`/`<NA>` strings.
+
+## 邊界
+- `mode=shadow_observation_only`.
+- `formal_champion_changed=False`.
+- `formal_trade_effect=False`.
+- no formal strategy modified.
+- no formal champion modified.
+- no formal trade effect.
+- No trade instructions, orders, holdings, weights, or formal promotion.
+
+## 2026-07-09 Direct Follow-Up - Zhu Walkline Support And Resistance Zones
+
+## 修改檔案
+- `src/abc_quant/features/walkline_features.py`: added support/resistance zone clustering, zone source features, support-hold/fail flags, resistance-breakout/failure flags, and de-fragmented the feature pipeline to keep scanner CLI output clean.
+- `src/abc_quant/signals/zhu_walkline_shadow.py`: made invalid/confirm prices use support-zone lower bound and resistance-zone upper bound, and linked support-zone failure / resistance false-breakout into failure tagging.
+- `src/abc_quant/reports/zhu_walkline_report.py`: added zone columns to CSV/shadow-log outputs, structured zone records to summary JSON, and zone wording in the stock Markdown report.
+- `tests/test_zhu_walkline_features.py`: added zone clustering and required zone field coverage.
+- `tests/test_zhu_walkline_no_lookahead.py`: extended future-row invariance checks to zone lows/highs/labels and support/breakout flags.
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: recorded this follow-up and validation evidence.
+
+## 實作摘要
+- Support/resistance is no longer treated as only a single price. Nearby levels within 1.5% are merged into zones.
+- Support sources include previous low, 3/5/20/60-day lows, 5/10/20/60-day moving averages, high-volume red-K lows, long-lower-shadow lows, gap-up support, and round-number support.
+- Resistance sources include previous high, 3/5/20/60-day highs, 5/10/20/60-day moving averages, high-volume black-K highs, long-upper-shadow highs, gap-down resistance, and round-number resistance.
+- Added `support_zone_holding_today`, `support_zone_failed_today`, `resistance_zone_breakout_today`, and `resistance_zone_breakout_failed_today`.
+- Added zone labels and structured zone records to reports so explanations can say "支撐區" / "壓力區" instead of pretending a single price is magic.
+- Legacy `support_1/support_2/resistance_1/resistance_2` columns remain for compatibility.
+
+## 測試方式
+- `.\.venv\Scripts\ruff.exe check src\abc_quant\features\walkline_features.py src\abc_quant\signals\zhu_walkline_shadow.py src\abc_quant\reports\zhu_walkline_report.py tests\test_zhu_walkline_features.py tests\test_zhu_walkline_no_lookahead.py`
+- `.\.venv\Scripts\python.exe -m pytest tests/test_zhu_walkline_features.py tests/test_zhu_walkline_no_lookahead.py tests/test_web_research_no_lookahead.py -q`
+- `.\.venv\Scripts\python.exe scripts\run_zhu_walkline_shadow.py --asof latest --top-n 30 --no-web --verbose`
+
+## 測試結果
+- Full `ruff check .`: passed.
+- Focused Zhu/no-lookahead/web tests: 11 passed.
+- Full pytest: 424 passed in 29.28s.
+- `git diff --check`: passed.
+- Latest no-web scanner smoke passed without pandas fragmentation warnings and wrote asof `2026-07-09` outputs with zone fields in `latest_zhu_walkline_shadow_log.csv`, summary JSON, and stock report.
+
+## 邊界
+- `mode=shadow_observation_only`.
+- `formal_champion_changed=False`.
+- `formal_trade_effect=False`.
+- This follow-up does not modify formal champion, formal strategy, weights, orders, positions, or trade instructions.
+- Web research remains supplementary and was disabled for the validation smoke (`--no-web`).
+
+## 2026-07-09 Direct Follow-Up - Zhu Walkline Signal Discipline
+
+## 修改檔案
+- `config/zhu_walkline_shadow.yaml`: changed default mode to `shadow_observation_only`.
+- `src/abc_quant/signals/zhu_walkline_shadow.py`: added bullish watchlist alias, signal lifecycle fields, failure taxonomy, market grade caps, high-level supply pressure, institutional divergence, and margin crowding risk.
+- `src/abc_quant/reports/zhu_walkline_report.py`: added `top_bullish_watchlist` CSV/summary output, shadow log CSV, signal/failure columns, and fixed non-holder/holder discipline report text.
+- `tests/test_zhu_walkline_features.py`: added regression coverage for shadow mode, required signal fields, market grade caps, and failure-type tagging.
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: recorded this follow-up and validation evidence.
+
+## 實作摘要
+- Renamed the primary bullish output contract to `top_bullish_watchlist` while keeping `top_rise_candidates` as a legacy-compatible alias.
+- Added `signal_stage`, `trigger_type`, `invalid_price`, `confirm_price`, `failure_type`, and `reversal_state` to feature/report outputs.
+- Added SETUP/TRIGGER/CONFIRMED/FAILED signal staging and trigger labels for MA reclaim, previous-high break, range breakout, bottom reversal, and pullback restart.
+- Added hard market-state caps: weak rebound caps bullish grade at B, downtrend caps at C, high-risk breakdown suppresses A/B bullish candidates.
+- Added high-level supply-pressure detection for near-60-day-high, high-volume, long-upper-shadow bars that fail to close near the high.
+- Added failure tags for institutional buy/price weakness divergence, margin crowding under MA20/support, support break, no-volume follow-through, market drag, sector rotation out, supply pressure, and false breakout.
+- Added fixed report language for `未持有者` and `已持有者` with observation/confirmation/defense/stop conditions.
+- Added `latest_zhu_walkline_shadow_log.csv` to archive why candidates failed, not only their rank.
+
+## 測試方式
+- `.\.venv\Scripts\ruff.exe check .`
+- `.\.venv\Scripts\python.exe -m pytest tests/test_zhu_walkline_features.py tests/test_zhu_walkline_no_lookahead.py tests/test_web_research_no_lookahead.py -q`
+- `.\.venv\Scripts\python.exe -m pytest -q`
+- `.\.venv\Scripts\python.exe scripts\run_zhu_walkline_shadow.py --asof latest --top-n 30 --no-web --verbose`
+
+## 測試結果
+- `ruff check .`: passed.
+- Focused Zhu walkline tests: 10 passed.
+- Full pytest: 423 passed in 29.38s.
+- Latest no-web scanner smoke passed and wrote asof `2026-07-08` outputs including `latest_zhu_walkline_top_bullish_watchlist.csv`, legacy `latest_zhu_walkline_top_rise_candidates.csv`, `latest_zhu_walkline_shadow_log.csv`, summary JSON, market report, stock report, and data-quality report.
+
+## 邊界
+- `mode=shadow_observation_only`.
+- `formal_champion_changed=False`.
+- `formal_trade_effect=False`.
+- This follow-up does not modify formal champion, formal strategy, weights, orders, positions, or trade instructions.
+- Web research remains supplementary and was disabled for the validation smoke (`--no-web`).
+
 ## 2026-07-09 Closed-Loop Task 055 - Walk-Forward Constant-Baseline Evaluation Smoke Diagnostics
 
 ## 修改檔案
@@ -2371,3 +3192,198 @@
 - Add a small sample-data loader plus end-to-end fixture that validates data -> builds features -> creates labels -> computes metrics.
 - Add transaction cost and slippage-aware backtest scaffolding.
 - Ask ChatGPT Pro to review the horizon/entry label semantics before building model training around it.
+## 2026-07-09 Direct User Task - Zhu Walkline Shadow Scanner
+
+## 修改檔案
+- `CODEx_ZHU_WALKLINE_SHADOW_TASK.md`: 保存使用者提供的完整任務書。
+- `config/zhu_walkline_shadow.yaml`, `config/concept_stock_map.yaml`: 新增 scanner 設定與人工維護概念股模板。
+- `src/abc_quant/data/local_tw_loader.py`, `web_cache.py`, `web_research.py`: 新增本地 SQLite loader、官方事件 cache、官方重大訊息補充。
+- `src/abc_quant/features/*walkline/chip/margin/market/news*`: 新增走圖、法人、大戶proxy、融資券、市場/類股/概念輪動與網路事件特徵。
+- `src/abc_quant/signals/zhu_walkline_shadow.py`: 新增 shadow/advisory scoring、候選/風險分級與 evaluator-only forward metrics。
+- `src/abc_quant/reports/zhu_walkline_report.py`: 新增 JSON/CSV/Markdown/parquet/JSONL 報告輸出。
+- `scripts/run_zhu_walkline_shadow.py`: 新增 CLI 入口。
+- `tests/test_zhu_walkline_features.py`, `tests/test_zhu_walkline_no_lookahead.py`, `tests/test_web_research_no_lookahead.py`: 新增 focused tests。
+- `pyproject.toml`, `requirements.txt`: 新增 `pyarrow>=14.0` 以支援 parquet 輸出。
+
+## 實作摘要
+- 預設 `--no-web`；`--use-web` 僅讀本地官方 TWSE/TPEx 重大訊息 mirror 並寫入 `data/web_cache/`，不取代 OHLCV/法人/融資券。
+- 所有輸出固定 `mode=shadow_advisory_only`、`formal_champion_changed=False`、`formal_trade_effect=False`。
+- No-lookahead：價格、法人、融資、大戶、類股 snapshot 均以 `<= asof_date` 過濾；forward return 只在 `--evaluate-forward` evaluator 檔案輸出。
+
+## 測試結果
+- Ruff：`All checks passed!`
+- Focused tests：`8 passed`。
+- Full test suite：`421 passed`。
+- Scanner smoke：`python scripts/run_zhu_walkline_shadow.py --asof latest --top-n 30 --no-web --verbose` 成功。
+- 單檔 smoke：`--stock 6830` 成功。
+- Web smoke：`--use-web --web-max-results 5` 成功。
+- Forward evaluation smoke：`--asof 2026-07-01 --evaluate-forward --output-dir reports/zhu_walkline_shadow/eval_smoke` 成功。
+
+## 資料狀態
+- SQLite：找到 `C:/Users/User/Desktop/新增資料夾 (4)/state/tw_data_mirror.sqlite`。
+- Price / 法人 / 融資券最新日期：`2026-07-08`。
+- 大戶/TDCC 最新日期：`2026-06-26`。
+- 正式大盤指數均線較股價資料舊，報告已降級使用全市場等權 proxy 並寫入 data quality warning。
+
+## 2026-07-09 Direct User Task - Zhu Walkline Observation Points
+
+## 修改檔案
+- `src/abc_quant/signals/zhu_walkline_shadow.py`: 新增支撐壓力買賣觀察點欄位與規則。
+- `src/abc_quant/reports/zhu_walkline_report.py`: 將觀察型態、trigger、目標壓力、賣點警示與失敗價輸出到 CSV、summary JSON、shadow log、Markdown。
+- `tests/test_zhu_walkline_features.py`: 新增突破觀察與賣點警示欄位測試。
+- `tests/test_zhu_walkline_no_lookahead.py`: 新增觀察欄位忽略未來價格列測試。
+- `CHANGELOG.md`, `STATUS.md`: 記錄本輪 shadow-only 變更。
+
+## 實作摘要
+- 買點觀察型態：`SUPPORT_REBOUND`、`RESISTANCE_BREAKOUT`、`RESISTANCE_TURN_SUPPORT`、`FAILED_BREAKDOWN_RECLAIM`。
+- 賣點警示型態：`RESISTANCE_REJECTION`、`SUPPORT_BREAKDOWN`、`ATTACK_K_FAILURE`、`FALSE_BREAKOUT`、`MA_SUPPORT_FAILURE`。
+- 有效買點觀察必須同時具備收盤越過 trigger、量能大於 5 日或 20 日均量、收在相對高檔、非高檔長上影，且有明確 stop/invalidation reference。
+- 本輪仍是 `shadow_observation_only`；不修改 formal champion，不產生正式交易指令。
+
+## 目前驗證
+- Focused tests：`tests/test_zhu_walkline_features.py tests/test_zhu_walkline_no_lookahead.py -q`，12 passed。
+- Ruff focused：指定 signal/report/test 檔案，All checks passed。
+- Ruff full：`ruff check .`，All checks passed。
+- Full pytest：`427 passed`。
+- Diff check：`git diff --check` 通過。
+- Scanner smoke：`python scripts/run_zhu_walkline_shadow.py --asof latest --top-n 30 --no-web --verbose` 成功，寫出 `2026-07-09` 與 `latest` 報告。
+- CSV header check：bullish watchlist 與 shadow log 包含 `buy_observation_type`、`buy_trigger_price`、`target_resistance_1`、`target_resistance_2`、`sell_warning_type`、`invalidation_price`；fall risk 包含 `sell_warning_type`、`invalidation_price`。
+
+## 2026-07-09 Review Fix - Zhu Walkline Observation Points
+
+## 修改檔案
+- `src/abc_quant/signals/zhu_walkline_shadow.py`: hard-lock shadow mode, split main/detail observation fields, add trigger price role, strict retest logic, support-breakdown guard, target resistance filtering, and missing-value-safe price selection.
+- `src/abc_quant/reports/zhu_walkline_report.py`: add `stop_reference`, detail fields, and trigger role to CSV/summary/shadow log; clean missing values; replace trade-command wording with observation wording.
+- `tests/test_zhu_walkline_features.py`: add tests for mode lock, trigger role semantics, strict resistance-turn-support, support-breakdown overmarking, target resistance filtering, report wording, and missing-value output safety.
+- `tests/test_zhu_walkline_no_lookahead.py`: add multi-stock future row, future high/low/volume, future chip/margin/holder, and future retest no-lookahead tests.
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: record the review fix and formal-boundary guarantees.
+
+## 實作摘要
+- `ZhuWalklineResult.mode` is always `shadow_observation_only`; config attempts to set another mode are ignored with a run note.
+- `buy_observation_type` and `sell_warning_type` are single highest-priority main fields; complete details are in `buy_observation_detail_types` and `sell_warning_detail_types`.
+- `buy_trigger_price_role` clarifies `TRIGGERED_PRICE` versus `NEXT_CONFIRMATION_PRICE` versus `EMPTY`; Markdown states untriggered prices are confirmation observation prices, not buy prices.
+- `RESISTANCE_TURN_SUPPORT` now requires an old resistance, prior close above it, current retest near it, current close above it, no same-candle first breakout, and no high-level upper-shadow supply pressure.
+- `SUPPORT_BREAKDOWN` requires a clear broken support zone, support zone, or previous low breach; `price_down_volume_up` remains risk context but is not enough by itself.
+- `target_resistance_1/2` only outputs resistance above current close; lower/equal fallback levels are blank.
+- CSV/JSON/Markdown output avoids `nan`, `None`, and `<NA>` strings.
+- Report language uses `續強觀察條件`, `風險升高觀察條件`, `訊號失效觀察條件`, and explicitly states: `不是買進名單，不是賣出指令，僅為支撐壓力觀察價與訊號失效價。`
+
+## 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+
+## 目前驗證
+- Ruff：project `.venv` `ruff check .`，All checks passed。
+- Focused tests：`python -m pytest tests/test_zhu_walkline_features.py tests/test_zhu_walkline_no_lookahead.py -q`，25 passed。
+- Full pytest：`python -m pytest -q`，440 passed。
+- Diff check：`git diff --check` 通過。
+- Scanner smoke：`python scripts/run_zhu_walkline_shadow.py --asof latest --top-n 30 --no-web --verbose` 成功，寫出 `2026-07-09` 與 `latest` 報告。
+- Output audit：bullish watchlist、fall risk、shadow log、summary JSON 均含 required `stop_reference`/detail/role 欄位；CSV 未出現 `nan`、`None`、`<NA>` 字串；market/stock reports 含 required observation disclaimer。
+
+## 2026-07-10 User Request - Backtest 2026-01 to 2026-05
+
+## 修改檔案
+- `scripts/backtest_zhu_walkline_shadow_range.py`: 新增區間回測 sidecar，逐交易日跑 Zhu walkline shadow scanner 與 evaluator-only forward outcomes，輸出 evaluations/daily metrics/summary。
+- `src/abc_quant/features/market_rotation.py`: 歷史正式大盤資料缺 `volume` 時改用等權市場 proxy，避免 `_add_market_rolling` 在 Jan 2026 as-of 中斷。
+- `tests/test_zhu_walkline_features.py`: 新增 official market history 缺 `volume` 時 fallback proxy 的 regression test。
+- `CHANGELOG.md`, `STATUS.md`, `OUTBOX.md`: 記錄本輪回測與 hard boundary。
+
+## 回測指令
+```powershell
+python scripts/backtest_zhu_walkline_shadow_range.py --start-date 2026-01-01 --end-date 2026-05-31 --top-n 30 --output-dir reports/zhu_walkline_shadow_backtest_2026_01_05 --verbose
+```
+
+## 產出檔案
+- `reports/zhu_walkline_shadow_backtest_2026_01_05/zhu_walkline_range_evaluations.csv`
+- `reports/zhu_walkline_shadow_backtest_2026_01_05/zhu_walkline_range_daily_metrics.csv`
+- `reports/zhu_walkline_shadow_backtest_2026_01_05/zhu_walkline_range_summary.json`
+- `reports/zhu_walkline_shadow_backtest_2026_01_05/zhu_walkline_range_summary.md`
+- `reports/zhu_walkline_shadow_backtest_2026_01_05/run.log`
+- `reports/zhu_walkline_shadow_backtest_2026_01_05/run.err.log`
+
+## 回測摘要
+- Requested range：`2026-01-01` ~ `2026-05-31`
+- Resolved trading dates：`2026-01-02` ~ `2026-05-29`
+- Trading days：95
+- Evaluator rows：5,368
+- `run.err.log`：empty
+- Market states：`MARKET_STRONG_UPTREND` 55 days, `MARKET_PULLBACK_IN_UPTREND` 26 days, `MARKET_RANGE_BOUND` 14 days。
+
+## 全段平均
+- `rise_hit_rate_d1=0.522470`
+- `rise_hit_rate_d3=0.508352`
+- `rise_hit_rate_d5=0.529002`
+- `rise_avg_forward_return_d5=0.028781`
+- `rise_median_forward_return_d5=0.006783`
+- `rise_tail_loss_rate_d5=0.344207`
+- `fall_hit_rate_d5=0.506667`
+- `fall_avg_forward_return_d5=0.004272`
+- `fall_median_forward_return_d5=-0.002529`
+- `fall_tail_loss_rate_d5=0.246612`
+
+## 月度 D+5 摘要
+| month | side | rows | hit_d5 | avg_d5 | median_d5 | tail_loss_d5 |
+|---|---|---:|---:|---:|---:|---:|
+| 2026-01 | rise | 628 | 0.466561 | 0.010097 | -0.005606 | 0.396497 |
+| 2026-02 | rise | 287 | 0.550523 | 0.034863 | 0.009615 | 0.306620 |
+| 2026-03 | rise | 461 | 0.416486 | 0.004483 | -0.013793 | 0.431670 |
+| 2026-04 | rise | 551 | 0.626134 | 0.053481 | 0.036585 | 0.266788 |
+| 2026-05 | rise | 591 | 0.582064 | 0.041292 | 0.021645 | 0.292724 |
+| 2026-01 | fall | 630 | 0.504762 | 0.009032 | -0.001663 | 0.192063 |
+| 2026-02 | fall | 360 | 0.486111 | 0.001511 | 0.000000 | 0.241667 |
+| 2026-03 | fall | 660 | 0.587879 | -0.007461 | -0.010176 | 0.316667 |
+| 2026-04 | fall | 600 | 0.510000 | 0.005521 | -0.005508 | 0.241667 |
+| 2026-05 | fall | 600 | 0.428333 | 0.012966 | 0.002703 | 0.200000 |
+
+## 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議
+- 本回測是 observation-only gross forward outcome，不是交易 PnL；未套用交易成本/滑價，因為沒有模擬成交、部位或持倉。
+
+## 2026-07-13 KD 超賣後轉強 Shadow 規則
+
+## 修改檔案
+- `src/abc_quant/features/walkline_features.py`: 新增無前視 KD(9,3,3)、超賣狀態、K/D 轉折與多頭／強勢股 gate。
+- `src/abc_quant/signals/zhu_walkline_shadow.py`: 新增 `KD_OVERSOLD_TREND_RECOVERY` shadow observation lifecycle。
+- `src/abc_quant/reports/zhu_walkline_report.py`: CSV、JSON、shadow log 與個股報告輸出 KD 數值、確認階段及各 gate。
+- `tests/test_zhu_walkline_features.py`, `tests/test_zhu_walkline_no_lookahead.py`: 新增正反例、報告文字與未來列 mutation 測試。
+
+## 規則
+- `K < 20` 只輸出 `OVERSOLD_ONLY`，不等於止跌。
+- 確認需同時符合：近 5 日曾超賣、K 向上、近 5 日曾實際向上突破 D 且目前 K 在 D 上方、價格站回壓力、多頭趨勢 gate、強勢股 gate、無放量上影供給。
+- 多頭趨勢 gate：20 日與 60 日均線斜率大於 0、股價高於 60 日線，且非空頭／破底／弱反彈狀態。
+- 強勢股 gate：股價高於 20 日與 120 日均線，且 20 日報酬大於 0。
+
+## 2464 點時驗證
+- `2026-06-11`: K=17.9923、D=30.9754，`OVERSOLD_ONLY`，未確認。
+- `2026-06-12`: K=19.1744、D=27.0417，`OVERSOLD_ONLY`，未確認。
+- `2026-06-15`: K=29.7472、D=27.9436，K 上彎且 K>D、價格站回壓力、多頭／強勢 gate 通過，`CONFIRMED`。
+
+## 驗證
+- Focused pytest：31 passed。
+- Full pytest：490 passed。
+- `ruff check .`：passed。
+- `git diff --check`：passed。
+- Latest no-web scanner：passed；本機全市場資料最新日期為 `2026-07-09`。
+
+## 硬邊界
+- `mode=shadow_observation_only`
+- `formal_champion_changed=False`
+- `formal_trade_effect=False`
+- no formal strategy modified
+- no formal champion modified
+- no formal trade effect
+- 不產生交易指令
+- 不輸出絕對買賣建議

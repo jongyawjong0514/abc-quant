@@ -17,3 +17,8 @@ Instruction source:
 - For code or data changes, inspect first, make scoped reversible edits, and validate locally before reporting done.
 
 Default reply language: Traditional Chinese unless asked otherwise.
+
+Stock-report default:
+- For every dated Zhu Walkline report, automatically generate and present the frozen four-component shadow strength rank (main-force proxy, no upper-tail supply, volume ratio, five-day margin change) as the primary stock ordering. Keep market/sector state and the original scanner score as context only.
+- Exclude raw margin balance and raw foreign net-share counts from this score. Missing any component means `INSUFFICIENT_FEATURES`, with no zero fill and no rank.
+- The rank stays `shadow_observation_only` / `watch_only`; it may not override market risk gates or formal strategy state without a separate promotion review.

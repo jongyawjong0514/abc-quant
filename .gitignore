@@ -16,10 +16,16 @@ data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
+data/web_cache/*
+!data/web_cache/.gitkeep
 reports/*
 !reports/.gitkeep
 
 state/codex_context/
+state/*.sqlite
+state/*.sqlite-*
+state/*.db
+state/*.db-*
 
 CODEX_REVIEW_PACKAGE.md
 CODEX_TEST_RESULT.txt

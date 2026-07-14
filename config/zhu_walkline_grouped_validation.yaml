@@ -1,0 +1,32 @@
+analysis:
+  market: TWSE_TPEX
+  currency: TWD
+  timezone: Asia/Taipei
+  as_of: "2026-06-30"
+  split: HOLDOUT
+  target: target_gain_ge10
+  tail_loss_net_return_pct: -3.0
+  minimum_report_rows: 20
+  stable_group_rows: 50
+  fallback_beta_prior_strength: 20.0
+
+data:
+  modeling_parquet: "reports/zhu_walkline_d10_deep_factor_research_2026_01_06/zhu_walkline_d10_deep_factor_full_market_modeling_rows.parquet"
+  sqlite_path: "C:/Users/User/Desktop/新增資料夾 (4)/state/tw_data_mirror.sqlite"
+  sector_table: stock_pit_sector_membership_daily
+  primary_membership_mode: point_in_time_observed_asof
+
+strategies:
+  ALL_ELIGIBLE: null
+  PRESPECIFIED_T1: prespecified_t1
+  TECH_BASE_MATCHED_T1: tech_base_matched_t1
+  TECH_PLUS_INST_MATCHED_T1: tech_plus_inst_matched_t1
+  TECH_BASE_THRESHOLD: tech_base_threshold
+  TECH_PLUS_INST_THRESHOLD: tech_plus_inst_threshold
+
+governance:
+  concept_status: insufficient_data_before_2026_07_09
+  share_capital_status: sensitivity_only_historical_vintage_unverified
+  promotion_decision: blocked_before_forward_validation
+  next_required_gate: forward_shadow_after_2026_07_14
+  mode: shadow_observation_only

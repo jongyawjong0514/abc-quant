@@ -1,0 +1,36 @@
+mode: shadow_observation_only
+formal_trade_effect: false
+
+analysis:
+  signal_start: "2026-01-01"
+  signal_end: "2026-06-30"
+  discovery_start: "2026-01-01"
+  discovery_end: "2026-02-28"
+  validation_start: "2026-03-01"
+  validation_end: "2026-04-30"
+  holdout_start: "2026-05-01"
+  holdout_end: "2026-06-30"
+  target_return_pct: 10.0
+  large_gain_return_pct: 20.0
+  same_stock_cooldown_trade_days: 5
+
+search_grid:
+  t5_volume_ratio_max: [0.55, 0.65, 0.75, 0.85, 1.0]
+  t5_require_positive_ma20_slope: [false, true]
+  t3_daily_return_min_pct: [0.0, 0.5, 1.0, 2.0]
+  t3_k_change_min: [null, 0.0, 1.0, 2.0]
+  t1_daily_return_min_pct: [0.0, 0.5, 1.0, 2.0]
+  t1_volume_ratio_min: [0.6, 0.7, 0.8, 1.0, 1.2]
+  t1_require_above_ma20: [false, true]
+
+selection:
+  minimum_rows:
+    T5_SETUP: 40
+    T3_EARLY_TURN: 20
+    T1_PRICE_VOLUME_CONFIRM: 10
+  discovery_shortlist_size: 20
+  precision_noninferiority_margin: 0.02
+  balanced_accuracy_noninferiority_margin: 0.02
+  loss_rate_tolerance: 0.05
+  minimum_holdout_rows: 20
+  require_all_months_nonempty: true

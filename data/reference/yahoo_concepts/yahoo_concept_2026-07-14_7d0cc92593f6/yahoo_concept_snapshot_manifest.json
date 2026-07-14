@@ -1,0 +1,16 @@
+{
+  "category_count": 101,
+  "category_label": "概念股",
+  "content_sha256": "7d0cc92593f6c517c5131e72eeb35ba56a392118fbd1ad2ec6f7b06c800c8e91",
+  "fetched_at": "2026-07-14T23:26:53+08:00",
+  "importance": "IMPORTANT_BASELINE",
+  "is_important": true,
+  "membership_count": 2722,
+  "membership_mode": "point_in_time_snapshot",
+  "snapshot_date": "2026-07-14",
+  "snapshot_id": "yahoo_concept_2026-07-14_7d0cc92593f6",
+  "source_url": "https://tw.stock.yahoo.com/class",
+  "static_backfill_authorized": true,
+  "status": "complete",
+  "unique_stock_count": 1061
+}
