@@ -134,6 +134,7 @@ def main(argv: list[str] | None = None) -> int:
 
     feature_frame = build_pre_signal_feature_frame(
         ranking_signals,
+        market_calendar=histories["market_calendar"],
         price_history=histories["price"],
         institutional_history=histories["institutional"],
         holder_history=histories["holder"],
@@ -341,6 +342,27 @@ def load_local_histories(
             row[0]
             for row in connection.execute("select name from sqlite_master where type='table'")
         }
+        calendar_table = "tw_adjusted_ohlcv_daily"
+        if calendar_table not in tables:
+            raise RuntimeError(
+                "independent market calendar table is unavailable: "
+                f"{calendar_table}"
+            )
+        output["market_calendar"] = pd.read_sql_query(
+            f"""
+            select distinct date
+            from {calendar_table}
+            where date >= ? and date <= ?
+            order by date
+            """,
+            connection,
+            params=(start_date, end_date),
+        )
+        if output["market_calendar"].empty:
+            raise RuntimeError(
+                "independent market calendar is empty for "
+                f"{start_date} through {end_date}"
+            )
         for key, (table, date_column, columns) in table_specs.items():
             if table not in tables:
                 output[key] = pd.DataFrame(columns=columns)

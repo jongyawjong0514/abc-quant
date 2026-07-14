@@ -2,6 +2,7 @@ import pandas as pd
 
 from scripts.optimize_zhu_walkline_early_start_parameters import (
     EarlyStartParameters,
+    _assign_splits,
     apply_same_stock_cooldown,
     classification_metrics,
     generate_candidates,
@@ -55,6 +56,33 @@ def test_search_space_is_bounded_by_stage() -> None:
     assert len(list(generate_candidates("T5_SETUP", grid))) == 4
     assert len(list(generate_candidates("T3_EARLY_TURN", grid))) == 16
     assert len(list(generate_candidates("T1_PRICE_VOLUME_CONFIRM", grid))) == 128
+
+
+def test_split_assignment_purges_labels_crossing_selection_boundaries() -> None:
+    dates = pd.to_datetime(
+        ["2026-02-20", "2026-02-27", "2026-04-20", "2026-04-30", "2026-05-01"]
+    )
+    label_dates = pd.to_datetime(
+        ["2026-02-27", "2026-03-06", "2026-04-27", "2026-05-08", "2026-05-08"]
+    )
+    config = {
+        "discovery_start": "2026-01-01",
+        "discovery_end": "2026-02-28",
+        "validation_start": "2026-03-01",
+        "validation_end": "2026-04-30",
+        "holdout_start": "2026-05-01",
+        "holdout_end": "2026-06-30",
+    }
+
+    result = _assign_splits(pd.Series(dates), pd.Series(label_dates), config)
+
+    assert result.tolist() == [
+        "DISCOVERY",
+        "PURGED_LABEL_BOUNDARY",
+        "VALIDATION",
+        "PURGED_LABEL_BOUNDARY",
+        "HOLDOUT",
+    ]
 
 
 def test_metrics_include_precision_recall_and_balanced_accuracy() -> None:

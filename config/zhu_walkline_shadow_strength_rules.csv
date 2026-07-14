@@ -1,5 +1,5 @@
 component,feature,source_date_column,direction,threshold,points,reference_task,discovery_end
 main_force,pre_main_force_net_lots_1d,pre_main_force_source_date,HIGHER,7.5,25,D5_GAIN_GE10_VS_LOSS,2026-03-31
 no_upper_tail,pre5_upper_tail_count,pre_price_source_date,LOWER,0.5,25,D5_GAIN_GE10_VS_LOSS,2026-03-31
-volume_ratio,pre_day_volume_ratio_20,pre_price_source_date,HIGHER,0.6959067059422785,25,D5_GAIN_GE10_VS_LOSS,2026-03-31
+volume_ratio,pre_day_volume_ratio_20,pre_price_source_date,HIGHER,0.7052399034950172,25,D5_GAIN_GE10_VS_LOSS,2026-03-31
 margin_change,pre_margin_balance_change_5d_pct,pre_margin_available_date,HIGHER,0.0,25,D5_GAIN_GE10_VS_LOSS,2026-03-31

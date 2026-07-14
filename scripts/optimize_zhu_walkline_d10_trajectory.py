@@ -728,6 +728,7 @@ def _build_scored_trajectory(
     )
     features = build_pre_signal_feature_frame(
         keys,
+        market_calendar=histories["market_calendar"],
         price_history=histories["price"],
         institutional_history=histories["institutional"],
         holder_history=histories["holder"],

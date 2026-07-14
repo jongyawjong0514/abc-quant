@@ -142,6 +142,7 @@ def main(argv: list[str] | None = None) -> int:
         signal_keys = candidates[["asof_date", "stock_id"]].copy()
         feature_rows = build_pre_signal_feature_frame(
             signal_keys,
+            market_calendar=histories["market_calendar"],
             price_history=histories["price"],
             institutional_history=histories["institutional"],
             holder_history=histories["holder"],
@@ -160,6 +161,7 @@ def main(argv: list[str] | None = None) -> int:
         if trajectory_enabled:
             trajectory = build_scored_candidate_trajectory(
                 candidates,
+                market_calendar=histories["market_calendar"],
                 price_history=histories["price"],
                 institutional_history=histories["institutional"],
                 holder_history=histories["holder"],
@@ -369,6 +371,7 @@ def build_candidate_observation_keys(
 def build_scored_candidate_trajectory(
     candidates: pd.DataFrame,
     *,
+    market_calendar: pd.DataFrame | pd.DatetimeIndex,
     price_history: pd.DataFrame,
     institutional_history: pd.DataFrame,
     holder_history: pd.DataFrame,
@@ -388,6 +391,7 @@ def build_scored_candidate_trajectory(
         return _empty_trajectory_frame()
     features = build_pre_signal_feature_frame(
         keys[["asof_date", "stock_id"]],
+        market_calendar=market_calendar,
         price_history=price_history,
         institutional_history=institutional_history,
         holder_history=holder_history,

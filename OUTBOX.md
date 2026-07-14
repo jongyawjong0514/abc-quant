@@ -1,5 +1,15 @@
 # OUTBOX
 
+## 2026-07-15 GitHub 發布前時間邊界加固
+
+- D+5 discovery／validation 已依標籤實際成熟日 purge；提早參數模型共剔除 86 筆跨邊界標籤，四項規則發現期另剔除 4 筆。
+- 四項特徵不再由候選股自己的價格日期推測「前一交易日」，改用 `tw_adjusted_ohlcv_daily` 的獨立全市場日曆。即使價格、主力、融資整批一起少一天，也會標記 `INSUFFICIENT_FEATURES`。
+- 指定 scanner `--asof` 時，`daily_ohlcv_features` 與 `tw_adjusted_ohlcv_daily` 必須同時存在該日；不存在就先停止，不產生或覆寫報告。
+- 重新估算仍為 H1 909 筆中 826 筆完整，量比門檻 `0.7052399035`，holdout 完整 230/247。
+- 2026-07-14 重跑：4 筆確認候選，9921／1726 各 75 分、1336 為 25 分，2910 因資料不足不排名；另有 44 筆回溯軌跡與 109 筆提早觀察。市場狀態為 `MARKET_HIGH_RISK_BREAKDOWN`，全部 `watch_only`。
+- 驗證：`pytest` 646 passed、`ruff check .`、compileall、`git diff --check`、secret scan、修正後分析器與 2026-07-14 scanner 串接均通過；唯讀複審未見 P0／P1。
+- `mode=shadow_observation_only`、`formal_champion_changed=False`、`formal_trade_effect=False`、`promotion_decision=blocked_before_promotion_review`。
+
 ## 2026-07-14 提早低點觀察與四類機率決策面
 
 - 日報新增獨立 `D-5 / D-3 / D-1` 提早觀察池；母體限 PIT 產業可辨識個股並排除 ETF。2026-07-13 共 124 檔：D-5 38、D-3 57、D-1 29，`watch_only` 120、`avoid_chase` 4。
@@ -48,12 +58,12 @@
 ## 2026-07-14 提早起漲影子參數最佳化
 
 - 新增 `config/zhu_walkline_early_start_optimizer.yaml`、`scripts/optimize_zhu_walkline_early_start_parameters.py` 與 focused tests。
-- 完整母體：2026-01-01～2026-06-30 共 907 筆成熟 D+5 標籤；保留 0%～<10% 中性結果，排除公司行動並套同股 5 交易日 cooldown 後為 614 筆。
-- 時間切分：Jan-Feb discovery 226 筆、Mar-Apr validation 177 筆、May-Jun untouched holdout 211 筆。
+- 完整母體：2026-01-01～2026-06-30 共 907 筆成熟 D+5 標籤；保留 0%～<10% 中性結果，排除公司行動、套同股 5 交易日 cooldown，並 purge 86 筆跨 discovery／validation 選擇邊界才成熟的標籤後為 528 筆。
+- 時間切分：Jan-Feb discovery 146 筆、Mar-Apr validation 171 筆、May-Jun untouched holdout 211 筆。
 - 搜尋 6,570 組有界參數；調整項目只含 T-5 量比／月線斜率、T-3 漲幅／K 變化、T-1 漲幅／量比／站回月線。
 - 最佳化 T-5：量比 `<=0.85`；holdout 179 筆，D+5>=10% precision 19.55%、recall 87.50%、balanced accuracy 51.64%、loss 54.19%。適合作寬鬆觀察池，不足以維持 T-1 精確率。
 - 最佳化 T-3：T-5 量比 `<=0.85`、T-3 日報酬 `>2%`；holdout 34 筆，precision 8.82%、recall 7.50%、balanced accuracy 44.69%、loss 64.71%，May precision 更只有 5.26%，判定 regime failure。
-- T-1 最佳化回到原條件：T-5 量比 `<=0.75`、T-3 日報酬 `>0`、T-1 日報酬 `>0`、T-1 量比 `>=0.70`；holdout 27 筆，precision 25.93%、loss 40.74%、D+5 平均 3.92%。月線斜率、K 轉向與站回月線未被保留為硬門檻。
+- T-1 最佳化回到原條件：T-5 量比 `<=0.75`、T-3 日報酬 `>0`、T-1 日報酬 `>0`、T-1 量比 `>=0.70`；holdout 26 筆，precision 23.08%、loss 42.31%、D+5 平均 2.57%。月線斜率、K 轉向與站回月線未被保留為硬門檻。
 - 結論：`earlier_detection_verified=False`，保留 `T1_PRICE_VOLUME_CONFIRM`。四項影子強度仍是報告主要排序，本結果只作 watch-only 提早標籤。
 - 報告：`reports/zhu_walkline_early_start_optimizer_2026_01_06/zhu_walkline_early_start_summary.md`，並附完整 search、modeling rows、stage metrics、holdout monthly metrics、selected parameters CSV。
 - 本機 `tw_adjusted_ohlcv_daily` 與 `daily_ohlcv_features` 均確認新鮮至 2026-07-13。

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+from datetime import date
 from pathlib import Path
 import shutil
+import sqlite3
 import sys
 
 import yaml
@@ -40,7 +42,13 @@ def main(argv: list[str] | None = None) -> int:
         config.setdefault("data", {})["output_dir"] = args.output_dir
 
     top_n = int(args.top_n or config.get("runtime", {}).get("default_top_n", 30))
+    _assert_explicit_asof_available(config, args.asof, stock_id=args.stock)
     bundle = load_local_tw_bundle(config, asof=args.asof, stock_id=args.stock)
+    if args.asof != "latest" and str(bundle.asof_date) != args.asof:
+        raise RuntimeError(
+            "explicit --asof must not fall back to another market date: "
+            f"requested={args.asof}, loaded={bundle.asof_date}"
+        )
     concept_map = load_concept_stock_map(REPO_ROOT / "config" / "concept_stock_map.yaml")
     web_records: list[dict[str, object]] = []
     if args.use_web:
@@ -222,6 +230,65 @@ def _load_yaml(path: Path) -> dict[str, object]:
     if not isinstance(data, dict):
         raise ValueError(f"config root must be a mapping: {path}")
     return data
+
+
+def _assert_explicit_asof_available(
+    config: dict[str, object],
+    asof: str,
+    *,
+    stock_id: str | None = None,
+) -> None:
+    """Fail closed before report writes when an explicit market date is unavailable."""
+    if asof == "latest":
+        return
+
+    try:
+        parsed_asof = date.fromisoformat(asof)
+    except ValueError as exc:
+        raise ValueError(f"--asof must be latest or YYYY-MM-DD: {asof}") from exc
+    if parsed_asof.isoformat() != asof:
+        raise ValueError(f"--asof must be latest or YYYY-MM-DD: {asof}")
+
+    data_config = config.get("data", {})
+    if not isinstance(data_config, dict):
+        raise ValueError("config data section must be a mapping")
+    sqlite_value = data_config.get("sqlite_path")
+    if not isinstance(sqlite_value, str) or not sqlite_value.strip():
+        raise ValueError("config data.sqlite_path must be a non-empty path")
+    sqlite_path = Path(sqlite_value)
+    if not sqlite_path.is_absolute():
+        sqlite_path = REPO_ROOT / sqlite_path
+    if not sqlite_path.exists():
+        raise FileNotFoundError(f"market SQLite file not found: {sqlite_path}")
+
+    required_tables = ("daily_ohlcv_features", "tw_adjusted_ohlcv_daily")
+    missing_tables: list[str] = []
+    predicate = "date = ?"
+    parameters: tuple[str, ...] = (asof,)
+    if stock_id:
+        predicate += " AND stock_id = ?"
+        parameters += (str(stock_id),)
+
+    try:
+        with sqlite3.connect(str(sqlite_path)) as connection:
+            connection.execute("PRAGMA query_only = ON")
+            for table in required_tables:
+                row = connection.execute(
+                    f"SELECT 1 FROM {table} WHERE {predicate} LIMIT 1",
+                    parameters,
+                ).fetchone()
+                if row is None:
+                    missing_tables.append(table)
+    except sqlite3.Error as exc:
+        raise RuntimeError(f"unable to verify explicit --asof in {sqlite_path}: {exc}") from exc
+
+    if missing_tables:
+        stock_context = f", stock_id={stock_id}" if stock_id else ""
+        raise RuntimeError(
+            "explicit --asof is unavailable; refusing to fall back or overwrite latest "
+            f"outputs: requested={asof}{stock_context}, "
+            f"missing_tables={','.join(missing_tables)}"
+        )
 
 
 if __name__ == "__main__":

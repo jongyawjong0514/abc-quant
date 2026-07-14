@@ -7,6 +7,10 @@ from abc_quant.features.pre_signal_features import (
     build_univariate_holdout_reference,
     compare_gain_groups_with_loss,
 )
+from abc_quant.features.shadow_strength import (
+    ShadowStrengthRule,
+    apply_shadow_strength_score,
+)
 from scripts.analyze_zhu_walkline_kd_d5_pre_signal_features import assert_no_lookahead
 
 
@@ -22,6 +26,7 @@ def test_pre_signal_features_ignore_signal_day_and_future_rows() -> None:
 
     baseline = build_pre_signal_feature_frame(
         signals,
+        market_calendar=dates,
         price_history=price[price["date"] < "2026-01-12"],
         institutional_history=institutional[institutional["date"] < "2026-01-12"],
         holder_history=holder[holder["date"] < "2026-01-12"],
@@ -41,6 +46,7 @@ def test_pre_signal_features_ignore_signal_day_and_future_rows() -> None:
 
     mutated = build_pre_signal_feature_frame(
         signals,
+        market_calendar=dates,
         price_history=mutated_price,
         institutional_history=mutated_institutional,
         holder_history=holder,
@@ -62,6 +68,7 @@ def test_prior_five_day_tight_body_feature_uses_exact_1_2_percent_boundary() -> 
 
     row = build_pre_signal_feature_frame(
         signals,
+        market_calendar=dates,
         price_history=price,
         institutional_history=pd.DataFrame(),
         holder_history=pd.DataFrame(),
@@ -97,7 +104,8 @@ def test_holder_and_margin_require_strict_availability_dates() -> None:
 
     row = build_pre_signal_feature_frame(
         signals,
-        price_history=pd.DataFrame(),
+        market_calendar=pd.to_datetime(["2026-01-08", "2026-01-09"]),
+        price_history=_price_history(pd.to_datetime(["2026-01-08", "2026-01-09"])),
         institutional_history=pd.DataFrame(),
         holder_history=holder,
         margin_history=margin,
@@ -109,9 +117,106 @@ def test_holder_and_margin_require_strict_availability_dates() -> None:
     assert row["pre_margin_balance"] == pytest.approx(100.0)
 
 
+def test_stale_daily_sources_fail_closed_instead_of_reusing_old_values() -> None:
+    signals = pd.DataFrame([{"asof_date": "2026-01-12", "stock_id": "2330"}])
+    price = _price_history(pd.to_datetime(["2026-01-08", "2026-01-09"]))
+    institutional = _institutional_history(pd.to_datetime(["2026-01-08"]))
+    main_force = pd.DataFrame(
+        {"2330": [100.0]}, index=pd.to_datetime(["2026-01-08"])
+    )
+    margin = pd.DataFrame(
+        {
+            "trade_date": ["2026-01-08"],
+            "stock_id": ["2330"],
+            "margin_balance": [1000.0],
+            "available_date": ["2026-01-08"],
+        }
+    )
+
+    row = build_pre_signal_feature_frame(
+        signals,
+        market_calendar=pd.to_datetime(["2026-01-08", "2026-01-09"]),
+        price_history=price,
+        institutional_history=institutional,
+        holder_history=pd.DataFrame(),
+        margin_history=margin,
+        main_force_panel=main_force,
+    ).iloc[0]
+
+    assert row["pre_price_source_date"] == "2026-01-09"
+    assert np.isnan(row["pre_institutional_source_date"])
+    assert np.isnan(row["pre_main_force_source_date"])
+    assert np.isnan(row["pre_main_force_net_lots_1d"])
+    assert np.isnan(row["pre_margin_available_date"])
+    assert np.isnan(row["pre_margin_balance_change_5d_pct"])
+
+
+def test_independent_market_calendar_blocks_self_anchored_stale_price() -> None:
+    signals = pd.DataFrame([{"asof_date": "2026-01-12", "stock_id": "2330"}])
+    stale_date = pd.to_datetime(["2026-01-08"])
+    price = _price_history(stale_date)
+    main_force = pd.DataFrame({"2330": [100.0]}, index=stale_date)
+    margin = pd.DataFrame(
+        {
+            "trade_date": stale_date,
+            "stock_id": ["2330"],
+            "margin_balance": [1000.0],
+            "available_date": stale_date,
+        }
+    )
+
+    features = build_pre_signal_feature_frame(
+        signals,
+        market_calendar=pd.to_datetime(["2026-01-08", "2026-01-09"]),
+        price_history=price,
+        institutional_history=pd.DataFrame(),
+        holder_history=pd.DataFrame(),
+        margin_history=margin,
+        main_force_panel=main_force,
+    )
+    rules = [
+        ShadowStrengthRule(
+            "main_force",
+            "pre_main_force_net_lots_1d",
+            "pre_main_force_source_date",
+            "HIGHER",
+            0.0,
+        ),
+        ShadowStrengthRule(
+            "no_upper_tail",
+            "pre5_upper_tail_count",
+            "pre_price_source_date",
+            "LOWER",
+            0.0,
+        ),
+        ShadowStrengthRule(
+            "volume_ratio",
+            "pre_day_volume_ratio_20",
+            "pre_price_source_date",
+            "HIGHER",
+            0.0,
+        ),
+        ShadowStrengthRule(
+            "margin_change",
+            "pre_margin_balance_change_5d_pct",
+            "pre_margin_available_date",
+            "HIGHER",
+            0.0,
+        ),
+    ]
+    scored = apply_shadow_strength_score(features, rules=rules).iloc[0]
+
+    assert np.isnan(scored["pre_price_source_date"])
+    assert np.isnan(scored["pre_main_force_source_date"])
+    assert np.isnan(scored["pre_margin_available_date"])
+    assert not bool(scored["shadow_strength_complete"])
+    assert scored["shadow_strength_score_status"] == "INSUFFICIENT_FEATURES"
+
+
 def test_missing_chip_sources_remain_missing_instead_of_zero() -> None:
     row = build_pre_signal_feature_frame(
         pd.DataFrame([{"asof_date": "2026-01-12", "stock_id": "2330"}]),
+        market_calendar=pd.to_datetime(["2026-01-09"]),
         price_history=pd.DataFrame(),
         institutional_history=pd.DataFrame(),
         holder_history=pd.DataFrame(),
@@ -147,6 +252,16 @@ def test_univariate_reference_freezes_discovery_threshold_for_holdout() -> None:
                 "D5_GAIN_GE_20",
                 "D5_GAIN_GE_20",
             ],
+            "d5_close_date": [
+                "2026-01-09",
+                "2026-01-12",
+                "2026-01-13",
+                "2026-01-14",
+                "2026-04-08",
+                "2026-04-09",
+                "2026-04-10",
+                "2026-04-13",
+            ],
             "feature_x": [0.0, 2.0, 8.0, 10.0, 3.0, 4.0, 9.0, 11.0],
         }
     )
@@ -164,6 +279,49 @@ def test_univariate_reference_freezes_discovery_threshold_for_holdout() -> None:
     assert row["holdout_selected_rows"] == 2
     assert row["holdout_precision"] == pytest.approx(1.0)
     assert row["holdout_lift"] == pytest.approx(2.0)
+
+
+def test_univariate_reference_purges_labels_maturing_after_discovery() -> None:
+    rows = pd.DataFrame(
+        {
+            "asof_date": [
+                "2026-03-20",
+                "2026-03-23",
+                "2026-03-24",
+                "2026-03-31",
+                "2026-04-01",
+                "2026-04-02",
+            ],
+            "d5_close_date": [
+                "2026-03-27",
+                "2026-03-30",
+                "2026-03-31",
+                "2026-04-09",
+                "2026-04-09",
+                "2026-04-10",
+            ],
+            "d5_group": [
+                "D5_LOSS",
+                "D5_GAIN_GE_20",
+                "D5_GAIN_GE_20",
+                "D5_LOSS",
+                "D5_LOSS",
+                "D5_GAIN_GE_20",
+            ],
+            "feature_x": [0.0, 8.0, 10.0, 100.0, 2.0, 12.0],
+        }
+    )
+
+    result = build_univariate_holdout_reference(
+        rows,
+        features=["feature_x"],
+        min_discovery_class_rows=1,
+        min_holdout_selected_rows=1,
+    )
+    row = result[result["task"].eq("D5_GAIN_GE20_VS_LOSS")].iloc[0]
+
+    assert row["threshold"] == pytest.approx(4.5)
+    assert row["discovery_label_maturity_purged_rows"] == 1
 
 
 def test_pairwise_comparison_reports_gain_minus_loss_medians() -> None:

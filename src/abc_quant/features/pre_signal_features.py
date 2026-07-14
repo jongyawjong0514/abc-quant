@@ -95,6 +95,7 @@ NUMERIC_PRE_SIGNAL_FEATURES = [
 def build_pre_signal_feature_frame(
     signals: pd.DataFrame,
     *,
+    market_calendar: Iterable[Any] | pd.DataFrame,
     price_history: pd.DataFrame,
     institutional_history: pd.DataFrame,
     holder_history: pd.DataFrame,
@@ -115,11 +116,13 @@ def build_pre_signal_feature_frame(
     institutional_groups = _group_by_stock(institutional)
     holder_groups = _group_by_stock(holder)
     margin_groups = _group_by_stock(margin)
+    market_dates = _prepare_market_calendar(market_calendar)
 
     records: list[dict[str, Any]] = []
     for event in events.itertuples(index=False):
         stock_id = str(event.stock_id)
         signal_date = pd.Timestamp(event.signal_date)
+        expected_source_date = _expected_prior_market_date(market_dates, signal_date)
         price_pre = _strictly_before(price_groups.get(stock_id), signal_date, "date")
         institutional_pre = _strictly_before(
             institutional_groups.get(stock_id), signal_date, "date"
@@ -131,8 +134,19 @@ def build_pre_signal_feature_frame(
             "asof_date": signal_date.strftime("%Y-%m-%d"),
             "stock_id": stock_id,
         }
-        row.update(_price_features(price_pre))
-        row.update(_institutional_features(institutional_pre, price_pre))
+        row.update(
+            _price_features(
+                price_pre,
+                expected_source_date=expected_source_date,
+            )
+        )
+        row.update(
+            _institutional_features(
+                institutional_pre,
+                price_pre,
+                expected_source_date=expected_source_date,
+            )
+        )
         row.update(
             _wide_flow_features(
                 main_force,
@@ -140,6 +154,7 @@ def build_pre_signal_feature_frame(
                 signal_date=signal_date,
                 price_pre=price_pre,
                 prefix="main_force",
+                expected_source_date=expected_source_date,
             )
         )
         row.update(
@@ -149,10 +164,16 @@ def build_pre_signal_feature_frame(
                 signal_date=signal_date,
                 price_pre=price_pre,
                 prefix="broker_count",
+                expected_source_date=expected_source_date,
             )
         )
         row.update(_holder_features(holder_pre, signal_date=signal_date))
-        row.update(_margin_features(margin_pre))
+        row.update(
+            _margin_features(
+                margin_pre,
+                expected_source_date=expected_source_date,
+            )
+        )
         records.append(row)
 
     output = pd.DataFrame(records)
@@ -267,10 +288,24 @@ def build_univariate_holdout_reference(
     the later holdout.  It is useful for feature triage while keeping the output
     shadow-only and multiple-testing aware.
     """
+    required = {"asof_date", "d5_close_date", "d5_group"}
+    missing = required - set(rows.columns)
+    if missing:
+        raise ValueError(f"rows missing split columns: {sorted(missing)}")
+
     frame = rows.copy()
     frame["asof_date"] = pd.to_datetime(frame["asof_date"], errors="coerce")
-    discovery = frame[frame["asof_date"] <= pd.Timestamp(discovery_end)]
+    frame["d5_close_date"] = pd.to_datetime(
+        frame["d5_close_date"], errors="coerce"
+    )
+    discovery_cutoff = pd.Timestamp(discovery_end)
+    discovery_signal_scope = frame["asof_date"].le(discovery_cutoff)
+    discovery_mature_scope = frame["d5_close_date"].le(discovery_cutoff)
+    discovery = frame[discovery_signal_scope & discovery_mature_scope]
     holdout = frame[frame["asof_date"] >= pd.Timestamp(holdout_start)]
+    discovery_purged_rows = int(
+        (discovery_signal_scope & ~discovery_mature_scope).sum()
+    )
     tasks = {
         "D5_GAIN_GE10_VS_LOSS": {"D5_GAIN_10_20", "D5_GAIN_GE_20"},
         "D5_GAIN_GE20_VS_LOSS": {"D5_GAIN_GE_20"},
@@ -318,6 +353,7 @@ def build_univariate_holdout_reference(
                     "feature": feature,
                     "discovery_end": discovery_end,
                     "holdout_start": holdout_start,
+                    "discovery_label_maturity_purged_rows": discovery_purged_rows,
                     "direction": direction,
                     "threshold": threshold,
                     "discovery_positive_rows": int(len(positive_values)),
@@ -420,12 +456,20 @@ def _strict_margin_history(
     return output[output["available_date"] < signal_date].sort_values("trade_date")
 
 
-def _price_features(frame: pd.DataFrame) -> dict[str, Any]:
+def _price_features(
+    frame: pd.DataFrame,
+    *,
+    expected_source_date: pd.Timestamp | None,
+) -> dict[str, Any]:
     output = {column: np.nan for column in PRICE_FEATURES}
     if frame.empty:
         return output
     values = frame.sort_values("date")
     latest = values.iloc[-1]
+    if not _matches_expected_source_date(
+        latest.get("date"), expected_source_date
+    ):
+        return output
     tail5 = values.tail(5)
     close = pd.to_numeric(values.get("close"), errors="coerce")
     open_price = pd.to_numeric(values.get("open"), errors="coerce")
@@ -465,7 +509,10 @@ def _price_features(frame: pd.DataFrame) -> dict[str, Any]:
 
 
 def _institutional_features(
-    frame: pd.DataFrame, price_pre: pd.DataFrame
+    frame: pd.DataFrame,
+    price_pre: pd.DataFrame,
+    *,
+    expected_source_date: pd.Timestamp | None,
 ) -> dict[str, Any]:
     output = {column: np.nan for column in INSTITUTIONAL_FEATURES}
     if frame.empty:
@@ -476,6 +523,10 @@ def _institutional_features(
     if values.empty:
         return output
     latest = values.iloc[-1]
+    if not _matches_expected_source_date(
+        latest.get("date"), expected_source_date
+    ):
+        return output
     tail5 = values.tail(5)
     volume_by_date = _volume_by_date(price_pre)
     five_day_volume = _aligned_volume_sum(tail5["date"], volume_by_date)
@@ -518,6 +569,7 @@ def _wide_flow_features(
     signal_date: pd.Timestamp,
     price_pre: pd.DataFrame,
     prefix: str,
+    expected_source_date: pd.Timestamp | None,
 ) -> dict[str, Any]:
     if prefix == "main_force":
         output = {column: np.nan for column in MAIN_FORCE_FEATURES[:5]}
@@ -528,6 +580,8 @@ def _wide_flow_features(
     values = pd.to_numeric(panel.loc[panel.index < signal_date, stock_id], errors="coerce")
     values = values.dropna().sort_index()
     if values.empty:
+        return output
+    if not _matches_expected_source_date(values.index[-1], expected_source_date):
         return output
     if prefix == "main_force":
         tail5 = values.tail(5)
@@ -585,12 +639,20 @@ def _holder_features(
     return output
 
 
-def _margin_features(frame: pd.DataFrame) -> dict[str, Any]:
+def _margin_features(
+    frame: pd.DataFrame,
+    *,
+    expected_source_date: pd.Timestamp | None,
+) -> dict[str, Any]:
     output = {column: np.nan for column in MARGIN_FEATURES}
     if frame.empty:
         return output
     values = frame.sort_values("trade_date")
     latest = values.iloc[-1]
+    if not _matches_expected_source_date(
+        latest.get("available_date"), expected_source_date
+    ):
+        return output
     balance = _numeric_series(values.get("margin_balance"))
     output.update(
         {
@@ -602,6 +664,48 @@ def _margin_features(frame: pd.DataFrame) -> dict[str, Any]:
         }
     )
     return output
+
+
+def _expected_prior_market_date(
+    market_dates: pd.DatetimeIndex,
+    signal_date: pd.Timestamp,
+) -> pd.Timestamp | None:
+    if market_dates.empty:
+        return None
+    position = market_dates.searchsorted(signal_date, side="left") - 1
+    if position < 0:
+        return None
+    return pd.Timestamp(market_dates[position]).normalize()
+
+
+def _prepare_market_calendar(
+    market_calendar: Iterable[Any] | pd.DataFrame,
+) -> pd.DatetimeIndex:
+    if isinstance(market_calendar, pd.DataFrame):
+        if "date" not in market_calendar.columns:
+            raise ValueError("market_calendar DataFrame must contain a date column")
+        values: Iterable[Any] = market_calendar["date"]
+    else:
+        values = market_calendar
+    parsed = pd.to_datetime(list(values), errors="coerce")
+    dates = pd.DatetimeIndex(parsed).dropna().normalize().drop_duplicates().sort_values()
+    if dates.empty:
+        raise ValueError("market_calendar must contain at least one valid market date")
+    return dates
+
+
+def _matches_expected_source_date(
+    value: Any,
+    expected_source_date: pd.Timestamp | None,
+) -> bool:
+    if expected_source_date is None or pd.isna(expected_source_date):
+        return False
+    source_date = pd.to_datetime(value, errors="coerce")
+    if pd.isna(source_date):
+        return False
+    return pd.Timestamp(source_date).normalize() == pd.Timestamp(
+        expected_source_date
+    ).normalize()
 
 
 def _volume_by_date(price_pre: pd.DataFrame) -> pd.Series:

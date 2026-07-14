@@ -483,9 +483,10 @@ apply costs, issue an order, or modify the formal strategy.
 The pre-signal sidecar extends the same three D+5 groups with local
 institutional flow, main-force/broker proxies, TDCC large-holder observations,
 margin balance, and prior price/volume structure. Every source row must satisfy
-`feature_date < signal_date`; signal-day and future rows are rejected by the
-no-lookahead audit. Missing chip or holder observations remain missing rather
-than being filled with zero.
+`feature_date < signal_date`; daily price, institution, main-force, and margin
+availability must also match the immediately preceding shared market session.
+Signal-day, future, or stale daily rows are rejected by the audit. Missing chip
+or holder observations remain missing rather than being filled with zero.
 
 ```powershell
 .\.venv\Scripts\python.exe `
@@ -494,7 +495,8 @@ than being filled with zero.
 
 The report includes all-event, corporate-action-excluded, same-stock cooldown,
 and combined robustness scopes. A univariate Jan-Mar discovery / Apr-Jun
-holdout table is feature-triage evidence only. The sidecar also emits an
+holdout table purges discovery events whose D+5 labels mature after March 31
+and remains feature-triage evidence only. The sidecar also emits an
 equal-weight 0-100 shadow strength rank using only four point-in-time inputs:
 prior-day main-force proxy, no prior-five-day upper-tail supply, prior-day
 20-day volume ratio, and five-day margin-balance change. Each component is 25
@@ -524,8 +526,12 @@ standalone rerun command is:
   --asof 2026-07-13
 ```
 
-The daily rank requires `trade_date == asof_date`, uses only component source
-dates strictly before the requested date, and always remains `watch_only`.
+The daily rank requires `trade_date == asof_date`, uses an independent shared
+market calendar from `tw_adjusted_ohlcv_daily`, and accepts daily component
+sources only when they match the exact preceding market session. An explicit
+scanner `--asof` must also exist in both raw-feature and adjusted-price tables
+before any report is written; it never silently falls back to an older date.
+Every output remains `watch_only`.
 Use `--skip-shadow-strength-report` on the scanner only for explicit diagnostics.
 Each dated report also writes
 `{date}_zhu_walkline_shadow_strength_trajectory.csv` and a matching `latest`
@@ -575,8 +581,10 @@ price-volume confirmation without losing D+5 >=10% precision, recall, balanced
 accuracy, loss control, or monthly coverage. It retains neutral 0%-to-<10%
 outcomes, removes corporate-action horizons, applies an outcome-independent
 same-stock cooldown, and uses chronological development/validation/holdout
-segments. Later audit showed that the original segment boundaries were not
-label-maturity purged, so those figures are exploratory rather than strict OOS.
+segments. Discovery and validation now purge any event whose D+5 label matures
+after that segment's selection boundary; the current H1 run removes 86 such
+rows before search or validation. The May-June holdout remains unopened during
+selection, but the result is still shadow research from one short market period.
 
 ```powershell
 .\.venv\Scripts\python.exe `

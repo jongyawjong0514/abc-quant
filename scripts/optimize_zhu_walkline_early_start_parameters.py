@@ -109,6 +109,7 @@ def prepare_modeling_events(
     """Keep complete mature labels after outcome-independent de-overlap."""
     required = {
         "asof_date",
+        "d5_close_date",
         "stock_id",
         "stock_name",
         "signal_trade_index",
@@ -121,6 +122,9 @@ def prepare_modeling_events(
         raise ValueError(f"labeled rows missing required columns: {sorted(missing)}")
     events = rows.copy()
     events["asof_date"] = pd.to_datetime(events["asof_date"], errors="raise")
+    events["d5_close_date"] = pd.to_datetime(
+        events["d5_close_date"], errors="raise"
+    )
     events["stock_id"] = events["stock_id"].astype(str).str.zfill(4)
     events = events[
         events["asof_date"].between(pd.Timestamp(signal_start), pd.Timestamp(signal_end))
@@ -173,6 +177,9 @@ def build_modeling_matrix(
     matrix["d5_adjusted_return_pct"] = pd.to_numeric(
         event_meta["d5_adjusted_return_pct"], errors="raise"
     )
+    matrix["d5_close_date"] = pd.to_datetime(
+        event_meta["d5_close_date"], errors="raise"
+    )
     for feature in MODEL_FEATURES:
         for offset in (5, 3, 1):
             matrix[f"t{offset}_{feature}"] = pd.to_numeric(
@@ -187,10 +194,16 @@ def build_modeling_matrix(
         float(split_config["large_gain_return_pct"])
     )
     matrix["target_loss"] = matrix["d5_adjusted_return_pct"].lt(0)
-    matrix["split"] = _assign_splits(matrix["asof_date"], split_config)
+    matrix["split"] = _assign_splits(
+        matrix["asof_date"], matrix["d5_close_date"], split_config
+    )
     if matrix["split"].eq("OUT_OF_SCOPE").any():
         raise ValueError("modeling rows fall outside configured temporal splits")
-    return matrix.sort_values(["asof_date", "stock_id"]).reset_index(drop=True)
+    purged_rows = int(matrix["split"].eq("PURGED_LABEL_BOUNDARY").sum())
+    matrix = matrix[~matrix["split"].eq("PURGED_LABEL_BOUNDARY")].copy()
+    output = matrix.sort_values(["asof_date", "stock_id"]).reset_index(drop=True)
+    output.attrs["purged_label_boundary_rows"] = purged_rows
+    return output
 
 
 def generate_candidates(
@@ -556,6 +569,9 @@ def run_optimizer(
         "target": f"D+5 adjusted close return >= {analysis['target_return_pct']}%",
         "event_rows_after_guards": int(len(matrix)),
         "split_rows": matrix["split"].value_counts().to_dict(),
+        "purged_label_boundary_rows": int(
+            matrix.attrs.get("purged_label_boundary_rows", 0)
+        ),
         "search_candidates": int(len(search_results)),
         "selected_parameters": {
             stage: asdict(parameters) for stage, parameters in selected_parameters.items()
@@ -647,6 +663,7 @@ def render_markdown(result: dict[str, Any]) -> str:
         "",
         f"- 訊號範圍：{summary['signal_start']} 至 {summary['signal_end']}。",
         "- discovery：2026-01～02；validation：2026-03～04；holdout：2026-05～06。",
+        f"- discovery／validation 邊界剔除 D+5 標籤尚未成熟列：{summary['purged_label_boundary_rows']}。",
         f"- 排除公司行動、未成熟標籤並套同股 5 交易日 cooldown 後：{summary['event_rows_after_guards']} 筆。",
         f"- 搜尋 {summary['search_candidates']} 組有界參數；holdout 不參與調參。",
         "- 目標為 D+5 調整後收盤報酬 >=10%；並同看召回率、平衡準確率、虧損率與月份空窗。",
@@ -700,7 +717,11 @@ def default_parameters(stage: str) -> EarlyStartParameters:
     return EarlyStartParameters(**values)
 
 
-def _assign_splits(dates: pd.Series, config: dict[str, Any]) -> pd.Series:
+def _assign_splits(
+    dates: pd.Series,
+    label_dates: pd.Series,
+    config: dict[str, Any],
+) -> pd.Series:
     output = pd.Series("OUT_OF_SCOPE", index=dates.index, dtype="string")
     ranges = {
         "DISCOVERY": (config["discovery_start"], config["discovery_end"]),
@@ -708,7 +729,13 @@ def _assign_splits(dates: pd.Series, config: dict[str, Any]) -> pd.Series:
         "HOLDOUT": (config["holdout_start"], config["holdout_end"]),
     }
     for split, (start, end) in ranges.items():
-        output.loc[dates.between(pd.Timestamp(start), pd.Timestamp(end))] = split
+        signal_scope = dates.between(pd.Timestamp(start), pd.Timestamp(end))
+        output.loc[signal_scope] = split
+        if split in {"DISCOVERY", "VALIDATION"}:
+            label_mature_by_boundary = label_dates.le(pd.Timestamp(end))
+            output.loc[signal_scope & ~label_mature_by_boundary] = (
+                "PURGED_LABEL_BOUNDARY"
+            )
     return output
 
 

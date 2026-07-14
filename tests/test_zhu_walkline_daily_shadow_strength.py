@@ -1,9 +1,11 @@
 from pathlib import Path
+import sqlite3
 
 import pandas as pd
 import pytest
 
 from scripts.run_zhu_walkline_shadow import (
+    _assert_explicit_asof_available,
     _early_lowpoint_report_enabled,
     _shadow_strength_report_enabled,
 )
@@ -109,6 +111,46 @@ def test_daily_scanner_enables_early_lowpoint_unless_explicitly_skipped() -> Non
     assert not _early_lowpoint_report_enabled(
         {"early_lowpoint_report": {"enabled": False}}, skip=False
     )
+
+
+def test_explicit_asof_requires_exact_date_in_both_price_tables(tmp_path) -> None:
+    sqlite_path = tmp_path / "market.sqlite"
+    with sqlite3.connect(sqlite_path) as connection:
+        for table in ("daily_ohlcv_features", "tw_adjusted_ohlcv_daily"):
+            connection.execute(
+                f"CREATE TABLE {table} (date TEXT NOT NULL, stock_id TEXT NOT NULL)"
+            )
+            connection.execute(
+                f"INSERT INTO {table} (date, stock_id) VALUES (?, ?)",
+                ("2026-07-14", "2464"),
+            )
+    config = {"data": {"sqlite_path": str(sqlite_path)}}
+
+    _assert_explicit_asof_available(config, "2026-07-14")
+    _assert_explicit_asof_available(config, "2026-07-14", stock_id="2464")
+
+
+def test_explicit_asof_fails_closed_when_any_required_price_table_is_missing_date(
+    tmp_path,
+) -> None:
+    sqlite_path = tmp_path / "market.sqlite"
+    with sqlite3.connect(sqlite_path) as connection:
+        for table in ("daily_ohlcv_features", "tw_adjusted_ohlcv_daily"):
+            connection.execute(
+                f"CREATE TABLE {table} (date TEXT NOT NULL, stock_id TEXT NOT NULL)"
+            )
+        connection.execute(
+            "INSERT INTO daily_ohlcv_features (date, stock_id) VALUES (?, ?)",
+            ("2026-07-14", "2464"),
+        )
+    config = {"data": {"sqlite_path": str(sqlite_path)}}
+
+    with pytest.raises(RuntimeError, match="refusing to fall back"):
+        _assert_explicit_asof_available(config, "2026-07-14")
+
+
+def test_latest_asof_bypasses_exact_date_gate() -> None:
+    _assert_explicit_asof_available({}, "latest")
 
 
 def test_candidate_observation_keys_use_stock_trading_days_d10_through_d() -> None:
@@ -229,6 +271,7 @@ def test_scored_trajectory_withholds_historical_rank_and_exports_only_four_contr
 
     rows = build_scored_candidate_trajectory(
         candidates,
+        market_calendar=dates,
         price_history=price,
         institutional_history=pd.DataFrame(),
         holder_history=pd.DataFrame(),
