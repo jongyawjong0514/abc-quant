@@ -7,7 +7,7 @@ project:
 data:
   sqlite_path: "C:/Users/User/Desktop/新增資料夾 (4)/state/tw_data_mirror.sqlite"
   yahoo_concept_sqlite_path: "E:/abc/state/yahoo_concept_membership.sqlite"
-  finlab_items_root: "C:/Users/User/Desktop/finlab_ml_course/history/history/items"
+  finlab_items_root: "C:/Users/User/Desktop/finlab_ml_course/history/items"
   output_dir: "reports/zhu_walkline_shadow"
   web_cache_dir: "data/web_cache"
 
@@ -37,6 +37,70 @@ concept_context:
   source: "Yahoo Taiwan concept stock classes"
   source_url: "https://tw.stock.yahoo.com/class#CONCEPT_STOCK"
   snapshot_importance: "IMPORTANT_BASELINE"
-  allow_static_current_backfill: true
+  allow_static_current_backfill: false
   min_available_members: 3
   hierarchy_gate_default: "required"
+
+shadow_strength_report:
+  enabled: true
+  primary_stock_ordering: true
+  rules_csv: "config/zhu_walkline_shadow_strength_rules.csv"
+  missing_policy: "INSUFFICIENT_FEATURES"
+  trajectory_enabled: true
+  trajectory_lookback_trading_days: 10
+  trajectory_scope: "retrospective_confirmed_candidates"
+  trajectory_live_deployable: false
+  action: "watch_only"
+
+early_lowpoint_report:
+  enabled: true
+  mode: "shadow_observation_only"
+  action: "watch_only"
+  formal_trade_effect: false
+  lookback_trading_days: 60
+  trailing_body_window: 5
+  minimum_core_score_to_report: 30
+  max_volume_ratio_20: 0.50
+  maximum_volume_ratio_slope: 0.0
+  minimum_pullback_return_pct: -4.0
+  maximum_pullback_return_pct: 0.5
+  max_abs_open_close_pct: 1.20
+  minimum_ma20_slope_pct_per_day: 0.0
+  maximum_upper_shadow_to_body_ratio: 1.0
+  maximum_consecutive_down_days: 2
+  minimum_lower_shadow_pct: 1.0
+  minimum_lower_shadow_to_body_ratio: 1.0
+  minimum_close_location_in_bar: 0.60
+  maximum_lower_shadow_volume_ratio: 1.50
+  maximum_distance_from_trailing_5d_low_pct: 8.0
+  avoid_chase_return_5d_pct: 8.0
+  market_volatility_high_threshold_pct: 2.56
+  core_evidence: "volume_contraction_with_positive_ma20_slope"
+  contextual_only_features:
+    - "tight_body_exists_le_1_2pct"
+    - "bullish_lower_shadow_support"
+  contextual_evidence_status: "unstable_context_only"
+
+decision_surface_report:
+  enabled: true
+  mode: "shadow_observation_only"
+  formal_trade_effect: false
+  mutually_exclusive_buckets:
+    - "loss_lt_0"
+    - "gain_0_10"
+    - "gain_10_20"
+    - "gain_ge_20"
+  probability_targets:
+    - "return_gt_0"
+    - "return_ge_10"
+    - "return_ge_20"
+    - "tail_loss_le_minus_3"
+  require_monotonic_gain_probabilities: true
+  group_hierarchy:
+    - "market_regime"
+    - "pit_sector"
+    - "free_float_market_cap"
+    - "liquidity"
+  free_float_market_cap_missing_policy: "INSUFFICIENT_FEATURES"
+  paid_in_capital_fallback_allowed: false
+  concept_history_missing_policy: "insufficient_data"

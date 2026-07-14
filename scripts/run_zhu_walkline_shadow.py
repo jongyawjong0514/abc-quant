@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import shutil
 import sys
 
 import yaml
@@ -11,6 +12,8 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
@@ -23,6 +26,12 @@ def main(argv: list[str] | None = None) -> int:
     from abc_quant.signals.zhu_walkline_shadow import (
         build_zhu_walkline_shadow_result,
         compute_forward_evaluation,
+    )
+    from scripts.score_zhu_walkline_daily_shadow_strength import (
+        main as score_strength_main,
+    )
+    from scripts.score_zhu_walkline_early_lowpoint import (
+        main as score_early_lowpoint_main,
     )
 
     args = _parse_args(argv)
@@ -74,6 +83,80 @@ def main(argv: list[str] | None = None) -> int:
         evaluation_frame=evaluation_frame,
         evaluation_summary=evaluation_summary,
     )
+    output_dir = REPO_ROOT / config.get(
+        "data", {}
+    ).get("output_dir", "reports/zhu_walkline_shadow")
+    if _shadow_strength_report_enabled(config, skip=args.skip_shadow_strength_report):
+        strength_config = config.get("shadow_strength_report", {})
+        rules_csv = str(
+            strength_config.get(
+                "rules_csv", "config/zhu_walkline_shadow_strength_rules.csv"
+            )
+        )
+        score_strength_main(
+            [
+                "--asof",
+                result.asof_date,
+                "--config",
+                args.config,
+                "--scanner-dir",
+                str(output_dir),
+                "--output-dir",
+                str(output_dir),
+                "--rules-csv",
+                rules_csv,
+            ]
+        )
+        for suffix, output_key in [
+            ("csv", "shadow_strength_csv"),
+            ("json", "shadow_strength_json"),
+            ("md", "shadow_strength_markdown"),
+        ]:
+            dated_path = output_dir / (
+                f"{result.asof_date}_zhu_walkline_shadow_strength.{suffix}"
+            )
+            latest_path = output_dir / f"latest_zhu_walkline_shadow_strength.{suffix}"
+            shutil.copyfile(dated_path, latest_path)
+            outputs[f"{result.asof_date}_{output_key}"] = dated_path
+            outputs[f"latest_{output_key}"] = latest_path
+        trajectory_dated_path = output_dir / (
+            f"{result.asof_date}_zhu_walkline_shadow_strength_trajectory.csv"
+        )
+        trajectory_latest_path = (
+            output_dir / "latest_zhu_walkline_shadow_strength_trajectory.csv"
+        )
+        shutil.copyfile(trajectory_dated_path, trajectory_latest_path)
+        outputs[f"{result.asof_date}_shadow_strength_trajectory_csv"] = (
+            trajectory_dated_path
+        )
+        outputs["latest_shadow_strength_trajectory_csv"] = trajectory_latest_path
+
+    if _early_lowpoint_report_enabled(
+        config, skip=args.skip_early_lowpoint_report
+    ):
+        score_early_lowpoint_main(
+            [
+                "--asof",
+                result.asof_date,
+                "--config",
+                args.config,
+                "--scanner-dir",
+                str(output_dir),
+                "--output-dir",
+                str(output_dir),
+            ]
+        )
+        for suffix, output_key in [
+            ("csv", "early_lowpoint_csv"),
+            ("json", "early_lowpoint_json"),
+            ("md", "early_lowpoint_markdown"),
+        ]:
+            dated_path = output_dir / (
+                f"{result.asof_date}_zhu_walkline_early_lowpoint.{suffix}"
+            )
+            latest_path = output_dir / f"latest_zhu_walkline_early_lowpoint.{suffix}"
+            outputs[f"{result.asof_date}_{output_key}"] = dated_path
+            outputs[f"latest_{output_key}"] = latest_path
 
     if args.verbose:
         for key, path in sorted(outputs.items()):
@@ -99,10 +182,36 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.set_defaults(use_web=False)
     parser.add_argument("--web-max-results", type=int, default=5)
     parser.add_argument("--evaluate-forward", action="store_true")
+    parser.add_argument("--skip-shadow-strength-report", action="store_true")
+    parser.add_argument("--skip-early-lowpoint-report", action="store_true")
     parser.add_argument("--output-dir", default=None)
     parser.add_argument("--config", default="config/zhu_walkline_shadow.yaml")
     parser.add_argument("--verbose", action="store_true")
     return parser.parse_args(argv)
+
+
+def _shadow_strength_report_enabled(
+    config: dict[str, object],
+    *,
+    skip: bool,
+) -> bool:
+    if skip:
+        return False
+    strength_config = config.get("shadow_strength_report", {})
+    return bool(
+        isinstance(strength_config, dict) and strength_config.get("enabled", True)
+    )
+
+
+def _early_lowpoint_report_enabled(
+    config: dict[str, object],
+    *,
+    skip: bool,
+) -> bool:
+    if skip:
+        return False
+    early_config = config.get("early_lowpoint_report", {})
+    return bool(isinstance(early_config, dict) and early_config.get("enabled", True))
 
 
 def _load_yaml(path: Path) -> dict[str, object]:

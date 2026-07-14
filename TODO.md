@@ -28,6 +28,21 @@
 - [ ] 基本面特徵。
 - [ ] 市場狀態特徵。
 - [x] 特徵洩漏測試。
+- [x] 建立主力／無上影／量比／融資變化四項等權影子強度分數與 holdout 驗證。
+- [x] 建立指定日期 scanner KD 確認事件的每日四項 shadow 排名輸出。
+- [x] 將四項 shadow strength 串入每日 scanner 並設為日期型報告預設主要排序。
+- [x] 以 2026H1 完整標籤、時間切分與未見樣本最佳化 T-5／T-3／T-1 提早起漲影子參數；結果未支持早於 T-1 的硬篩選。
+- [x] 建立 D-10～D 逐日技術／四項影子軌跡，補上 label-maturity purge 與提醒日到同一 D+5 endpoint 評估。
+- [x] 以單一凍結 D-4 規則重播 2026H1 TWSE/TPEX point-in-time 全市場；結果 precision lift 0.83x、balanced accuracy 49.91%，拒絕加入 early hard filter。
+- [x] 深挖 D-10～D 的 61 項技術與 48 項落後法人量因子，完成共同市場 D+1→D+5、成本、冷卻、公司行動、機率校準與 5 日區塊 bootstrap 比較。
+- [x] 建立 PIT 產業分層與 beta-binomial 部分池化報告；確認產業診斷有用，但樣本不足以按產業調參。
+- [x] 建立共同市場交易日曆的 D-5／D-3／D-1 提早低點日報；量比與月線為核心，小實體與下影只作不影響入池的 5 分加分。
+- [x] 建立四個互斥 D+5 結果、單調機率、PIT lineage、空市場狀態覆蓋與 fail-closed 排序狀態。
+- [ ] 以 2026-07-14 後全新 forward shadow 資料驗證提早低點池；不得用已查看的 2026H1／07-13 結果調高下影、小實體或 probability-edge 權重。
+- [ ] 補做純技術高信心門檻的每日容量上限、holdout 起點 cooldown reset／連續暖機及 2026-07-14 後前向影子複驗。
+- [ ] 從 2026-07-09 起累積 point-in-time 概念股多標籤快照；資料成熟前不得回填 2026H1 或用於 promotion。
+- [ ] 建立 point-in-time 自由流通市值／流動性分層；普通股股本只作 historical-vintage-unverified sensitivity。
+- [ ] 自 2026-07-14 後前向累積新的全市場 shadow candidates，再以 expanding walk-forward 複驗；不得用已查看的 Jan-Jun 或 May-Jun 重調固定規則。
 
 ## Phase 3：模型
 

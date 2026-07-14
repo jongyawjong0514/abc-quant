@@ -1,5 +1,65 @@
 # OUTBOX
 
+## 2026-07-14 提早低點觀察與四類機率決策面
+
+- 日報新增獨立 `D-5 / D-3 / D-1` 提早觀察池；母體限 PIT 產業可辨識個股並排除 ETF。2026-07-13 共 124 檔：D-5 38、D-3 57、D-1 29，`watch_only` 120、`avoid_chase` 4。
+- 入池只看核心分：D-5 月線斜率正、量比 `<=0.50`、單日回檔介於 -4%～+0.5%，且沒有長上影與連續破底。實跑 D-5 量比範圍 0.1185～0.5000。
+- 訊號日前五個交易日的開收窄幅使用 `shift(1)`，不含觀察當日；開收差 `<=1.2%` 與下影承接各只加 5 分。124 檔中窄幅加分 113、下影加分 15；即使兩者失敗仍可入池，且入池門檻只比較 core score。
+- D-5/D-3/D-1 日期由全市場共同交易日曆取得；個股停牌或缺該日就不升級階段，不再用個股列位置把數週前資料誤標成 D-5。
+- 四項影子強度仍是「已確認候選」主報告的排序；提早池一律標記 `NOT_APPLICABLE_EARLY_STAGE`，不藉由是否已有確認後分數洩漏階段。
+- 四類結果改為虧損、0%～<10%、10%～<20%、>=20%，並輸出非虧損、>=10%、>=20% 與尾損機率；累積機率強制單調。
+- Holdout 機率中，>=10% 的 Brier 0.1206、calibration gap 0.0461；P(>=10%) 前 10% 為 3,586 列、>=10% 命中 20.13%、平均淨報酬 +1.67%。這仍是歷史 evaluator 結果，不是 live 選股績效。
+- 預期報酬模型 holdout correlation 0.0013、bias +2.09 pct，判為 `DIAGNOSTIC_UNTRUSTED`；所有市場／產業 rank percentile 留空。開啟 holdout 後才提出的 probability edge 也標為未驗證，不取代排序。
+- PIT 產業 lineage 完整保留；市場 regime 改由 label-free 全市場 raw price 形成。自由流通市值缺資料、概念股 H1 歷史不足，分別標記 `INSUFFICIENT_FEATURES` 與 `insufficient_data`，不以股本或 7 月概念名單回填。
+- 主要 artifacts：`reports/zhu_walkline_shadow/2026-07-13_zhu_walkline_early_lowpoint.*`、`reports/zhu_walkline_shadow_decision_surface_2026_07_14/`。
+- 驗證：`pytest` 639 passed、`ruff check .`、compileall、`git diff --check`、strict CSV/JSON/schema audit、PIT source-date 回查與 scanner 串接全部通過；兩個本機日線表均新鮮至 2026-07-13。此 SQLite／pandas 路徑採 CPU，GPU 不會改善主要 I/O 瓶頸。
+- `mode=shadow_observation_only`、`formal_champion_changed=False`、`formal_trade_effect=False`、`promotion_decision=blocked_before_promotion_review`。
+
+## 2026-07-14 D-10 深層因子、選擇性門檻與 PIT 產業分層
+
+- 全市場母表：93,896 stock-date、61 項技術因子、48 項嚴格落後法人量／成交量比例因子；無原始法人股數或原始融資餘額。
+- Holdout tradable 35,699 列：T-1 1,401 筆，`>=10%` 11.92%、虧損 61.38%、尾損 44.54%、平均 -0.89%。
+- 每日等配額 TECH 1,386 筆：命中 16.88%，5 日 block CI 相對 T-1 為 +0.63～+10.52 pct；但尾損升至 49.42%，平均報酬差 CI 跨 0，不能全面取代。
+- 可棄權 TECH threshold 976 筆：命中 21.11%、虧損 39.65%、尾損 28.48%、平均 +2.79%；相對 T-1 的命中、平均與虧損 block CI 支持改善，尾損 CI 仍跨 0。
+- Threshold 無標籤／holdout leakage、同股冷卻違規 0；但 6/26、6/29 占訊號 46.9%，且為 holdout 已開啟後才提升重點，故只列 retrospective regime-gated selective shadow challenger。
+- 加入法人量相對純技術：命中與平均報酬無穩定增益，維持不用原始法人股數／融資餘額。
+- PIT 產業 join 覆蓋 100%；34 產業中 T-1 有 18 個少於 20 筆、TECH threshold 有 23 個少於 20 筆。兩邊至少 20 筆的 11 產業，部分池化後 TECH threshold 命中較高 9 個、平均淨報酬較高 10 個；不據此按產業調參。
+- 排除 threshold 最集中的兩日後，命中仍 22.39%、平均 +0.83%，但虧損／尾損升至 54.05%／45.75%，顯示命中排序與風險優勢不是同一件事。
+- 概念股 H1=`insufficient_data`；股本=`sensitivity_only_historical_vintage_unverified`。完整方法檢討：`reports/zhu_walkline_strategy_grouped_validation_review_2026_07_14.md`。
+- 主要 artifacts：`reports/zhu_walkline_d10_deep_factor_research_2026_01_06/`、`reports/zhu_walkline_grouped_validation_2026_07_14/`。
+- 驗證：`ruff check .`、compileall、`pytest` 585 passed、`git diff --check`、strict JSON finite-value audit、禁用原始籌碼欄位 schema audit 全部通過。此 pandas／SQLite 分組工作採 CPU；雙 RTX 3060 可見但不適合本次 I/O／表格聚合路徑。
+- `mode=shadow_observation_only`、`formal_champion_changed=False`、`formal_trade_effect=False`；下一 gate 是 2026-07-14 後 forward shadow。
+
+## 2026-07-14 D-10～D 軌跡與全市場提早起漲 gate
+
+- 日報已加入每檔 D-10、D-9、…、D-1、D 的四項影子強度軌跡；2026-07-13 為 5 檔、55 列且全部完整。歷史 rank 不顯示，因股票集合是到 D 日才知道的 confirmed candidates。
+- 事件條件式研究：614 events、6,754 trajectory rows、1,296 bounded rules。沒有任何規則通過 validation noninferiority；診斷規則中位提前至 D-4。
+- 修正 temporal leakage：discovery labels 到 2026-03-06 才全成熟，validation purge 後 177→132；validation labels 到 2026-05-08 才全成熟，holdout purge 後 211→126。
+- Purged holdout：T-1 baseline 19 alerts，precision 31.58%、recall 23.08%、balanced 55.04%、loss 36.84%；D-4 diagnostic 15 alerts，precision 20.00%、recall 11.54%、balanced 49.77%、loss 40.00%，且低於最低 20 筆。
+- 提醒日→同一 D+5 endpoint 的 D-4 diagnostic 中位回報 13.24%、>=10% 73.33%，但這仍是未來 D 確認條件化母體，不能稱 live edge。
+- 全市場固定規則 replay：225,038 PIT membership、225,033 matched、來源日與 listing-date violation 均為 0；109,748 liquid/history-eligible rows，1,150 pre-cooldown、995 post-cooldown candidates（TWSE 606、TPEX 389）。
+- Primary evaluator 排除 6 筆 forward corporate actions，但選股仍保留它們：989 candidates，D+5>=10% precision 11.12% vs universe 13.34%，lift 0.83x；recall 0.77%、balanced 49.91%、loss 48.33%、median +0.20%。只有 2026-06 單月 lift >1，跨月不穩。
+- 2～10 日內連到正式 KD confirmation：57/916 mature candidates，6.22%，中位提前 4 個交易日、候選到 D 中位漲幅 11.29%。
+- 四項完整 939/995；分數 0/25/50/75/100 的 D+5>=10% 依序 17.91%/9.28%/10.21%/6.00%/0%，不單調，故維持報告用途，不加入 early hard filter。
+- 主要 artifacts：`reports/zhu_walkline_d10_trajectory_optimizer_2026_01_06/`、`reports/zhu_walkline_full_market_early_start_replay_2026_01_06/`、`reports/zhu_walkline_shadow/latest_zhu_walkline_shadow_strength_trajectory.csv`。
+- 驗證：38 focused tests、548 full tests、`ruff check .`、compileall、`git diff --check`、2026-07-13 scanner/trajectory 串接與 strict CSV/JSON schema audit 全部通過。全市場 replay 98.8 秒；CPU 向量化，雙 RTX 3060 可見但不適合此 SQLite/pandas 路徑。
+- 結論：保留 D-10～D 可稽核觀察資料；不新增早期選股 gate。`earlier_accuracy_verified=False`、`retrospective_edge_observed=False`、`live_deployable=False`、`formal_champion_changed=False`、`formal_trade_effect=False`。
+
+## 2026-07-14 提早起漲影子參數最佳化
+
+- 新增 `config/zhu_walkline_early_start_optimizer.yaml`、`scripts/optimize_zhu_walkline_early_start_parameters.py` 與 focused tests。
+- 完整母體：2026-01-01～2026-06-30 共 907 筆成熟 D+5 標籤；保留 0%～<10% 中性結果，排除公司行動並套同股 5 交易日 cooldown 後為 614 筆。
+- 時間切分：Jan-Feb discovery 226 筆、Mar-Apr validation 177 筆、May-Jun untouched holdout 211 筆。
+- 搜尋 6,570 組有界參數；調整項目只含 T-5 量比／月線斜率、T-3 漲幅／K 變化、T-1 漲幅／量比／站回月線。
+- 最佳化 T-5：量比 `<=0.85`；holdout 179 筆，D+5>=10% precision 19.55%、recall 87.50%、balanced accuracy 51.64%、loss 54.19%。適合作寬鬆觀察池，不足以維持 T-1 精確率。
+- 最佳化 T-3：T-5 量比 `<=0.85`、T-3 日報酬 `>2%`；holdout 34 筆，precision 8.82%、recall 7.50%、balanced accuracy 44.69%、loss 64.71%，May precision 更只有 5.26%，判定 regime failure。
+- T-1 最佳化回到原條件：T-5 量比 `<=0.75`、T-3 日報酬 `>0`、T-1 日報酬 `>0`、T-1 量比 `>=0.70`；holdout 27 筆，precision 25.93%、loss 40.74%、D+5 平均 3.92%。月線斜率、K 轉向與站回月線未被保留為硬門檻。
+- 結論：`earlier_detection_verified=False`，保留 `T1_PRICE_VOLUME_CONFIRM`。四項影子強度仍是報告主要排序，本結果只作 watch-only 提早標籤。
+- 報告：`reports/zhu_walkline_early_start_optimizer_2026_01_06/zhu_walkline_early_start_summary.md`，並附完整 search、modeling rows、stage metrics、holdout monthly metrics、selected parameters CSV。
+- 本機 `tw_adjusted_ohlcv_daily` 與 `daily_ohlcv_features` 均確認新鮮至 2026-07-13。
+- 驗證：focused pytest 4 passed、full pytest 530 passed、`ruff check .`、compileall、`git diff --check`、strict JSON/schema audit 與 missing-literal audit 全部通過。
+- `mode=shadow_observation_only`; `promotion_decision=blocked_before_promotion_review`; `formal_champion_changed=False`; `formal_trade_effect=False`。
+
 ## 2026-07-13 KD D+5 三組特徵分析
 
 - Window: `2026-01-01` through `2026-06-30`; D+5 是訊號日後第 5 個個股交易日。
@@ -386,6 +446,57 @@ python scripts\backtest_zhu_walkline_driver_screen.py --output-dir reports\zhu_w
 - no formal trade effect
 - 不產生交易指令
 - 不輸出絕對買賣建議
+
+## 2026-07-13 KD D+5 訊號日前籌碼／量價比較
+
+- 新增 `src/abc_quant/features/pre_signal_features.py` 與 `scripts/analyze_zhu_walkline_kd_d5_pre_signal_features.py`。
+- 641 筆三組事件全部使用嚴格早於訊號日的來源資料；主要 robustness scope 排除公司行動與同股重疊後為 475 rows。
+- 資料覆蓋：法人 100%、主力 proxy 99.38%、買賣家數差 100%、TDCC 千張大戶 50.55%、融資 91.42%。
+- Apr-Jun 固定門檻參考中，訊號前一日主力 proxy 對 `D5 >=10% vs loss` lift 1.270；訊號前一日量比對 `D5 >=20% vs loss` lift 1.148。這些是多重比較下的 shadow 特徵排序，不是可用交易門檻。
+- 外資原始買超股數與買超／成交量比例在 20% 組方向矛盾；TDCC 覆蓋不足；窄幅 K 棒次數在既有 gate 通過樣本中沒有額外 holdout lift。
+- 報告：`reports/zhu_walkline_kd_d5_pre_signal_features_2026_01_06/zhu_walkline_kd_d5_pre_signal_summary.md`。
+- 驗證：focused pytest 6 passed、full pytest 507 passed、`ruff check .`、`git diff --check`、無前視日期稽核與 missing-string audit 全部通過。
+- `mode=shadow_observation_only`、`formal_champion_changed=False`、`formal_trade_effect=False`、`promotion_decision=blocked_before_promotion_review`。
+
+## 2026-07-14 四項影子強度排序
+
+- 新增 `src/abc_quant/features/shadow_strength.py`，以主力 proxy、無上影供給、前一日 20 日量比、融資 5 日變化四項各 25 分，合計 0～100。
+- 門檻固定取自 2026-01～03：主力 `>=7.5` 張、前 5 日上影供給次數 `<=0.5`、量比 `>=0.6959067`、融資 5 日變化 `>=0%`。
+- 原始融資餘額與外資買賣超原始股數明確不進入分數；任一項缺值即 `INSUFFICIENT_FEATURES`，不補零、不排名。
+- 排名母體為 2026H1 全部 909 筆訊號，含 0～<10% 中性結果；827 筆四項完整。D+5 分組只供驗證，不決定誰能進排名。
+- Apr-Jun holdout 完整樣本 230/247；累積 score 0/25/50/75/100 的 `D5 >=10%` 比率為 30.87%/31.22%/33.56%/39.74%/47.62%，loss 為 69.13%/68.78%/66.44%/60.26%/52.38%。
+- 累積門檻具單調性，但精確分箱不完全單調，且 75/100 分報酬中位數仍為負；只作影子強度排序，不是校準機率或交易 gate。
+- 輸出：`zhu_walkline_kd_d5_shadow_strength_rules.csv`、`zhu_walkline_kd_d5_shadow_strength_validation.csv`、`zhu_walkline_kd_d5_shadow_strength_ranked_rows.csv`、`zhu_walkline_kd_d5_shadow_strength_latest.csv`。
+- 驗證：focused pytest 11 passed、full pytest 517 passed、`ruff check .`、無前視、forward-label mutation 與缺值封鎖測試通過。
+- `mode=shadow_observation_only`、`formal_champion_changed=False`、`formal_trade_effect=False`、`promotion_decision=blocked_before_promotion_review`。
+
+## 2026-07-13 每日影子強度實跑
+
+- 本機 `daily_ohlcv_features`、籌碼、融資與產業資料已確認到 `2026-07-13`，重新執行無網路 scanner。
+- 大盤狀態為 `MARKET_HIGH_RISK_BREAKDOWN`，多方觀察名單 0 筆；另有 5 筆同日新鮮 KD recovery confirmation 可作影子排序。
+- 強度排序：9934 成霖 75、6944 兆聯實業 75、1434 福懋 50、9921 巨大 25、6517 保勝光學 25；沒有 100 分。
+- 五筆四項資料均完整，最新組件來源日期為 2026-07-09，嚴格早於訊號日。
+- 報告：`reports/zhu_walkline_shadow/2026-07-13_zhu_walkline_shadow_strength.md`；全部 `watch_only`。
+- 驗證：focused pytest 7 passed、full pytest 523 passed、`ruff check .`、輸出筆數／分數／來源日期 assertions 與 `git diff --check` 通過。
+
+## 2026-06-02 歷史每日影子強度實跑
+
+- 重新執行 `--asof 2026-06-02 --top-n 30 --no-web`；大盤為 `MARKET_PULLBACK_IN_UPTREND`，多方 6、風險 4。
+- Scanner 有 30 筆多方轉強觀察列；前五為 3231 緯創、6548 長科*、2357 華碩、2883 凱基金、3706 神達。
+- 另有 5 筆同日新鮮 KD recovery confirmation：1718 中纖、1714 和桐、6670 復盛應用、2727 王品各 75 分，2103 台橡 25 分；沒有 100 分。
+- 五筆四項資料均完整，最新組件來源日期為 2026-06-01，嚴格早於訊號日；未來 D+5 結果不參與排名。
+- 報告：`reports/zhu_walkline_shadow/2026-06-02_zhu_walkline_shadow_strength.md`；全部 `watch_only`。
+- 歷史重跑完成後已執行 `--asof latest`，確認 `latest_zhu_walkline_summary.json` 恢復為 2026-07-13。
+- 驗證：focused pytest 8 passed、full pytest 524 passed、`ruff check .`、歷史輸出 assertions、latest restore audit 與 `git diff --check` 通過。
+
+## 四項影子強度成為後續報告預設
+
+- 後續所有日期型 Zhu Walkline 回覆，以四項 strength 作主要個股排序；原 scanner rise score 僅作背景比較。
+- `run_zhu_walkline_shadow.py` 已預設自動產生日期版及 `latest` strength CSV／JSON／Markdown，不必再手動跑第二支腳本。
+- 固定規則已版本化於 `config/zhu_walkline_shadow_strength_rules.csv`；缺值不補零、不排名，原始融資餘額與外資股數不進分數。
+- 市場、類股仍先於個股；高風險大盤 gate 與正式策略邊界不可被 strength 覆蓋。
+- 最新端到端驗證以 2026-07-13 成功產出六個 dated/latest strength artifacts，全部維持 `watch_only`。
+- 驗證：focused pytest 10 passed、full pytest 526 passed、`ruff check .`、tracked-rule／enable-skip contract、output aliases 與 `git diff --check` 通過。
 
 ## 目前驗證
 - Focused Ruff: `.\.venv\Scripts\ruff.exe check scripts\backtest_zhu_walkline_driver_screen.py tests\test_zhu_walkline_driver_screen_backtest.py`，All checks passed。

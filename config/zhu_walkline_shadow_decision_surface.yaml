@@ -1,0 +1,48 @@
+mode: "shadow_observation_only"
+formal_champion_changed: false
+formal_trade_effect: false
+
+analysis:
+  market: "TW"
+  currency: "TWD"
+  timezone: "Asia/Taipei"
+  as_of: "2026-07-14"
+  horizon: "next_trading_day_adjusted_open_to_fifth_trading_day_adjusted_close"
+  tail_loss_net_return_pct: -3.0
+  output_dir: "reports/zhu_walkline_shadow_decision_surface_2026_07_14"
+
+data:
+  modeling_parquet: "reports/zhu_walkline_d10_deep_factor_research_2026_01_06/zhu_walkline_d10_deep_factor_full_market_modeling_rows.parquet"
+  source_summary_json: "reports/zhu_walkline_d10_deep_factor_research_2026_01_06/zhu_walkline_d10_deep_factor_summary.json"
+  sqlite_path: "C:/Users/User/Desktop/新增資料夾 (4)/state/tw_data_mirror.sqlite"
+  concept_snapshot_sqlite: "state/yahoo_concept_membership.sqlite"
+
+model:
+  feature_family: "technical_only"
+  l2_grid: [0.1, 1.0, 10.0, 100.0]
+  selection_metric: "brier"
+  maximum_iterations: 100
+  tolerance: 0.0000001
+  calibration_bins: 10
+  enforce_monotonic_gain_probabilities: true
+
+grouping:
+  pit_sector_table: "stock_pit_sector_membership_daily"
+  allowed_membership_modes: ["point_in_time_observed_asof"]
+  minimum_group_rows: 20
+  beta_prior_alpha: 1.0
+  beta_prior_beta: 1.0
+  liquidity_source: "point_in_time_avg_turnover_20_twd"
+  liquidity_quantiles: [0.3333333333, 0.6666666667]
+  size_source: "point_in_time_free_float_market_cap"
+  size_missing_policy: "INSUFFICIENT_FEATURES"
+  allow_paid_in_capital_fallback: false
+  concept_missing_policy: "insufficient_data"
+  allow_static_current_concept_backfill: false
+  market_trend_return20_threshold_pct: 2.0
+  market_volatility_reference_split: "DISCOVERY"
+
+governance:
+  live_deployable: false
+  next_required_gate: "forward_shadow_evidence_after_2026_07_14"
+  promotion_decision: "blocked_before_promotion_review"

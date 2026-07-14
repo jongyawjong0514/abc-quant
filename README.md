@@ -478,6 +478,181 @@ five-trading-day cooldown is exported as sensitivity.
 This is descriptive, evaluator-only research. It does not simulate an entry,
 apply costs, issue an order, or modify the formal strategy.
 
+### KD D+5 訊號日前籌碼與量價特徵
+
+The pre-signal sidecar extends the same three D+5 groups with local
+institutional flow, main-force/broker proxies, TDCC large-holder observations,
+margin balance, and prior price/volume structure. Every source row must satisfy
+`feature_date < signal_date`; signal-day and future rows are rejected by the
+no-lookahead audit. Missing chip or holder observations remain missing rather
+than being filled with zero.
+
+```powershell
+.\.venv\Scripts\python.exe `
+  scripts\analyze_zhu_walkline_kd_d5_pre_signal_features.py
+```
+
+The report includes all-event, corporate-action-excluded, same-stock cooldown,
+and combined robustness scopes. A univariate Jan-Mar discovery / Apr-Jun
+holdout table is feature-triage evidence only. The sidecar also emits an
+equal-weight 0-100 shadow strength rank using only four point-in-time inputs:
+prior-day main-force proxy, no prior-five-day upper-tail supply, prior-day
+20-day volume ratio, and five-day margin-balance change. Each component is 25
+points; any missing component produces `INSUFFICIENT_FEATURES` rather than a
+zero-filled score. Raw margin balance and raw foreign net-share counts are
+explicitly excluded. The score does not create a formal signal, order, or
+portfolio effect.
+
+Machine-readable score outputs are
+`zhu_walkline_kd_d5_shadow_strength_rules.csv`,
+`zhu_walkline_kd_d5_shadow_strength_validation.csv`,
+`zhu_walkline_kd_d5_shadow_strength_ranked_rows.csv`, and
+`zhu_walkline_kd_d5_shadow_strength_latest.csv` in the same report directory.
+The ranking universe contains all 2026H1 signals, including the neutral
+0%-to-<10% outcome rows; outcome groups are used only for evaluator-side
+threshold validation and never to select rank membership.
+
+The daily scanner now automatically scores every fresh same-day KD recovery
+confirmation with the frozen four rules and writes dated plus `latest` strength
+CSV/JSON/Markdown outputs. The strength report is the default primary stock
+ordering; the original scanner rise score remains secondary context. The
+standalone rerun command is:
+
+```powershell
+.\.venv\Scripts\python.exe `
+  scripts\score_zhu_walkline_daily_shadow_strength.py `
+  --asof 2026-07-13
+```
+
+The daily rank requires `trade_date == asof_date`, uses only component source
+dates strictly before the requested date, and always remains `watch_only`.
+Use `--skip-shadow-strength-report` on the scanner only for explicit diagnostics.
+Each dated report also writes
+`{date}_zhu_walkline_shadow_strength_trajectory.csv` and a matching `latest`
+alias. The companion file reconstructs D-10 through D for the stocks confirmed
+on D, with every component source strictly earlier than that observation date.
+Historical cross-sectional ranks are withheld because that stock universe is
+known only after D; the trajectory is retrospective evidence, not a live early
+candidate list.
+
+### D-5／D-3／D-1 提早低點觀察
+
+每日 scanner 另產生全市場提早觀察池。D-5 入池只看核心條件：月線正斜率、
+量比 `<=0.50`、有限度回檔，以及沒有長上影供給或持續破底。前五個交易日
+曾出現開收差 `<=1.2%` 與下影承接各只加 5 分；兩者不影響入池資格，也不能
+因調高總分門檻變成隱性硬條件。階段使用共同市場交易日曆，缺少應有交易日
+的個股不會被錯升級。
+
+```powershell
+.\.venv\Scripts\python.exe `
+  scripts\score_zhu_walkline_early_lowpoint.py `
+  --asof 2026-07-13
+```
+
+提早池不合併已確認候選的四項強度分數；四項強度仍是確認名單主報告的排序。
+輸出永遠是 `watch_only`／`avoid_chase`，不產生正式交易效果。
+
+### 四類機率與 PIT 分組決策面
+
+歷史 sidecar 將 D+5 結果分成四個互斥區間，強制
+`P(>=20%) <= P(>=10%) <= P(非虧損)`，並分開評估尾損機率。產業使用
+point-in-time lineage，市場狀態來自 label-free 全市場價格；缺少歷史自由流通
+市值或概念股資料時保留 `INSUFFICIENT_FEATURES`／`insufficient_data`。
+
+```powershell
+.\.venv\Scripts\python.exe `
+  scripts\analyze_zhu_walkline_shadow_decision_surface.py
+```
+
+`holdout_predictions_for_evaluation` 的列集合已受標籤成熟度與公司行動條件篩選，
+只能作歷史評估。預期報酬模型未通過 holdout 時，市場／產業 percentile 會
+fail closed 留空；不得把它當成 live 排名。
+
+### KD D+5 提早起漲參數最佳化
+
+The bounded optimizer tests whether T-5 or T-3 can replace the current T-1
+price-volume confirmation without losing D+5 >=10% precision, recall, balanced
+accuracy, loss control, or monthly coverage. It retains neutral 0%-to-<10%
+outcomes, removes corporate-action horizons, applies an outcome-independent
+same-stock cooldown, and uses chronological development/validation/holdout
+segments. Later audit showed that the original segment boundaries were not
+label-maturity purged, so those figures are exploratory rather than strict OOS.
+
+```powershell
+.\.venv\Scripts\python.exe `
+  scripts\optimize_zhu_walkline_early_start_parameters.py
+```
+
+The search is limited to T-5 volume/MA20 slope, T-3 return/K turn, and T-1
+return/volume/MA20 reclaim. It does not add a formal signal or change the daily
+four-component strength rank. Current evidence retains
+`T1_PRICE_VOLUME_CONFIRM`; T-5 is a high-recall watch pool only, while the tuned
+T-3 rule failed the independent May-June holdout.
+
+### D-10 through D trajectory and full-market replay
+
+The trajectory optimizer expands every event into exact stock trading days
+D-10 through D, then reports technical state and the frozen four-component
+score at every observation date. Final verification uses a label-maturity
+purge: a validation or holdout D-10 window must begin after every D+5 label in
+the prior segment is available. It also reports the return from the early alert
+to the same D+5 endpoint, separately from the original D-to-D+5 continuation
+label.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\optimize_zhu_walkline_d10_trajectory.py
+```
+
+Because event trajectories still know retrospectively which stocks confirm on
+D, the required deployment check is a full-market point-in-time replay. The
+following command applies exactly one frozen rule to the daily TWSE/TPEX PIT
+universe; there is no grid, top-N, or future-label filter:
+
+```powershell
+.\.venv\Scripts\python.exe `
+  scripts\replay_zhu_walkline_full_market_early_start.py
+```
+
+Selection features use raw OHLCV only. Adjusted D+5 returns, forward corporate
+actions, and linkage to a later formal KD confirmation are evaluator-only. The
+four-component score is added after candidate selection for reporting, and raw
+margin balance / foreign-share fields are not exported. The 2026H1 replay did
+not show an edge, so no early hard filter was added; new forward shadow evidence
+after 2026-07-14 is required before another review.
+
+### D-10 deep factors and PIT sector grouping
+
+The deep-factor challenger compares 61 causal technical features with 48
+strictly lagged institutional flow/volume-ratio features. It uses exact shared
+market-calendar D+1 open to D+5 close labels, costs, corporate-action exclusions,
+same-stock cooldown, calibration, and five-day moving-block uncertainty checks.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\analyze_zhu_walkline_d10_deep_factors.py
+```
+
+If the frozen modeling parquet already exists and only comparison/report logic
+changed, refresh without rebuilding the factor panel:
+
+```powershell
+.\.venv\Scripts\python.exe `
+  scripts\analyze_zhu_walkline_d10_deep_factors.py `
+  --refresh-evaluation-only
+```
+
+The grouped validator joins the frozen rows to point-in-time official sectors
+and shrinks small sector hit rates toward the strategy-wide rate. It deliberately
+does not backfill July concept lists into 2026H1 or treat nominal share capital as
+verified historical market size.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\analyze_zhu_walkline_grouped_validation.py
+```
+
+Both layers are shadow diagnostics. The selective technical threshold is a
+retrospective, regime-gated research candidate and does not replace the formal
+strategy or the four-component daily report order.
+
 ## 快速開始
 
 在 Windows PowerShell：
